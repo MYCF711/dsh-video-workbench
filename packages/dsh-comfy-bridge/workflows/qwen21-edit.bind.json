@@ -1,0 +1,72 @@
+{
+  "id": "qwen21-edit",
+  "label": "Qwen 改图",
+  "tabSub": "2.1 编辑 · 洗图 / 骨骼 / 换装",
+  "description": "Qwen-Image 2.1 图像编辑（接自官方 Hub「Qwen Image 2.1: Image Edit」，comfy.org/workflows/5fbe136ba6f9，由 ComfyUI 自己的 graphToPrompt 转成 API 格式，子图已展开为 459:* 前缀）。用两张参考图：图1 = 要被改的原图（构图/身份保留），图2 = 参考素材（风格/服装/姿态）。内建官方 Edit Prompt Enhancer（459:479），把简短指令扩写成专业编辑指令。",
+  "workflow": "qwen21-edit.json",
+  "order": 3,
+  "defaults": {
+    "prompt": "Replace costumes for the character",
+    "steps": 25,
+    "batch": 1
+  },
+  "vars": {
+    "prompt": {
+      "node": "459:500",
+      "input": "prompt"
+    },
+    "seed": {
+      "node": "459:458",
+      "input": "seed"
+    },
+    "steps": {
+      "node": "459:458",
+      "input": "steps"
+    },
+    "width": {
+      "node": "459:456",
+      "input": "width"
+    },
+    "height": {
+      "node": "459:456",
+      "input": "height"
+    },
+    "batch": {
+      "node": "459:456",
+      "input": "batch_size"
+    }
+  },
+  "always": {
+    "set": {
+      "459:484": {
+        "switch": true
+      }
+    },
+    "reason": "★ 关键开关。ComfySwitchNode(459:484) 在两条 prompt 之间切：on_false 是硬编码字符串 \"Replace costumes for the character\"，on_true 是 TextGenerate(459:500) 的增强后 prompt。原厂默认 switch=false ⇒ 用硬编码那句，用户写在 459:500 的指令【根本不进模型】。实测过：指令写「change to red traditional Chinese silk dress」，输出只是把长裤换成短裤 —— 因为模型只看到「Replace costumes」。所以必须强制 switch=true。"
+  },
+  "media": {
+    "ref_image_0": {
+      "node": "470",
+      "input": "image",
+      "label": "原图（要改的）",
+      "accept": "image/*",
+      "kind": "image",
+      "required": true
+    },
+    "ref_image_1": {
+      "node": "475",
+      "input": "image",
+      "label": "参考图（风格/服装/姿态）",
+      "accept": "image/*",
+      "kind": "image"
+    }
+  },
+  "outputs": {
+    "image": "461"
+  },
+  "notes": [
+    "459:479 是官方 Edit Prompt Enhancer 的 system prompt（5000+ 字符），别删 —— 它负责把简短指令扩写成专业编辑指令。",
+    "ComfySwitchNode(459:484) 必须 switch=true（已在 always.set 里强制）。",
+    "官方工作流有 images.image_1 ~ image_10 共 10 个图像槽，当前这版只接了两个。要更多槽需先在 workflow JSON 里补进 459:474 的 inputs。"
+  ]
+}

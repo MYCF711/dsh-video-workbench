@@ -1,0 +1,119 @@
+{
+ "modesCaps": {
+  "duration": false,
+  "batch": true,
+  "steps": true,
+  "steps2": true,
+  "aspect": true,
+  "secondPassToggle": "secondPass"
+ },
+ "submitted": {
+  "jobId": "comfy-mvcoapuy-2bxrxl",
+  "promptId": "03373f6c-afaf-4a52-a59e-6fbd4eb74780",
+  "nodes": 12
+ },
+ "result": {
+  "jobId": "comfy-mvcoapuy-2bxrxl",
+  "promptId": "03373f6c-afaf-4a52-a59e-6fbd4eb74780",
+  "modeId": "krea2",
+  "startedAt": 1792258267498,
+  "nodes": 12,
+  "length": null,
+  "toggles": {
+   "secondPass": false,
+   "redraw": false,
+   "loraChain": false
+  },
+  "pruned": [
+   {
+    "slot": "(固定剪枝) node 170",
+    "node": "170"
+   },
+   {
+    "slot": "(固定剪枝) node 171",
+    "node": "171"
+   },
+   {
+    "slot": "(固定剪枝) node 172",
+    "node": "172"
+   },
+   {
+    "slot": "(固定剪枝) node 174",
+    "node": "174"
+   },
+   {
+    "slot": "(固定剪枝) node 175",
+    "node": "175"
+   },
+   {
+    "slot": "(固定剪枝) node 179",
+    "node": "179"
+   },
+   {
+    "slot": "(固定剪枝) node 180",
+    "node": "180"
+   },
+   {
+    "slot": "(固定剪枝) node 181",
+    "node": "181"
+   },
+   {
+    "slot": "(固定剪枝) node 182",
+    "node": "182"
+   },
+   {
+    "slot": "(固定剪枝) node 183",
+    "node": "183"
+   },
+   {
+    "slot": "(固定剪枝) node 184",
+    "node": "184"
+   },
+   {
+    "slot": "(固定剪枝) node 187",
+    "node": "187"
+   },
+   {
+    "slot": "(固定剪枝) node 195",
+    "node": "195"
+   },
+   {
+    "slot": "(固定剪枝) node 196",
+    "node": "196"
+   },
+   {
+    "slot": "(固定剪枝) node 197",
+    "node": "197"
+   },
+   {
+    "slot": "(前端专用) node 176",
+    "node": "176"
+   },
+   {
+    "slot": "(级联剪枝 r1) node 173",
+    "node": "173"
+   }
+  ],
+  "completed": true,
+  "statusStr": "success",
+  "outputs": [
+   {
+    "nodeId": "202",
+    "kind": "images",
+    "filename": "ComfyUI_temp_eaduj_00001_.png",
+    "subfolder": "",
+    "type": "temp",
+    "url": "/api/view?filename=ComfyUI_temp_eaduj_00001_.png&subfolder=&type=temp"
+   },
+   {
+    "nodeId": "202",
+    "kind": "images",
+    "filename": "ComfyUI_temp_eaduj_00002_.png",
+    "subfolder": "",
+    "type": "temp",
+    "url": "/api/view?filename=ComfyUI_temp_eaduj_00002_.png&subfolder=&type=temp"
+   }
+  ],
+  "elapsedMs": 12255
+ }
+}

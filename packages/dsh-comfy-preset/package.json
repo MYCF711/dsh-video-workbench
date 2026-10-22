@@ -1,0 +1,20 @@
+{
+  "name": "dsh-comfy-preset",
+  "version": "0.1.0",
+  "description": "DSH agent preset: a video-workbench persona plus the comfy-mode-dispatch skill. Depends on dsh-comfy-bridge for generation; contributes no host or client code itself.",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "preset.yml",
+    "agent.cordis.yml",
+    "skills",
+    "index.js"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "agentPreset": {
+      "entry": "agent.cordis.yml",
+      "meta": "preset.yml"
+    }
+  }
+}

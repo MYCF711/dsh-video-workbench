@@ -1,0 +1,1045 @@
+{
+ "yz": {
+  "slots": [
+   {
+    "id": "",
+    "hidden": false,
+    "aria": "工作流",
+    "value": "yz",
+    "disabled": false,
+    "options": [
+     "多参 H3 ★",
+     "Krea2 生图",
+     "Qwen 生图",
+     "Qwen 改图"
+    ],
+    "w": 192,
+    "y": 123
+   },
+   {
+    "id": "slotAspect",
+    "hidden": false,
+    "aria": "画幅",
+    "value": "16:9",
+    "disabled": false,
+    "options": [
+     "1:1",
+     "2:3",
+     "3:2",
+     "3:4",
+     "4:3",
+     "9:16",
+     "16:9",
+     "21:9"
+    ],
+    "w": 137.2,
+    "y": 123
+   },
+   {
+    "id": "slotDyn",
+    "hidden": false,
+    "aria": "时长",
+    "value": "5",
+    "disabled": false,
+    "options": [
+     "5 秒",
+     "10 秒",
+     "15 秒"
+    ],
+    "w": 123.4,
+    "y": 123
+   },
+   {
+    "id": "slotSteps",
+    "hidden": false,
+    "aria": "步数",
+    "value": "10",
+    "disabled": false,
+    "options": [
+     "4 步",
+     "6 步",
+     "8 步",
+     "10 步",
+     "15 步",
+     "20 步"
+    ],
+    "w": 123.4,
+    "y": 123
+   },
+   {
+    "id": "slotSteps2",
+    "hidden": true,
+    "aria": null,
+    "value": null,
+    "disabled": null,
+    "options": [],
+    "w": 0,
+    "y": 0
+   },
+   {
+    "id": "",
+    "hidden": false,
+    "aria": null,
+    "value": null,
+    "disabled": null,
+    "options": [],
+    "w": 96,
+    "y": 123
+   }
+  ],
+  "visibleSlots": 5,
+  "overflowX": false,
+  "genW": 72,
+  "genY": 123,
+  "slotYs": [
+   123,
+   123,
+   123,
+   123,
+   123
+  ]
+ },
+ "krea2": {
+  "slots": [
+   {
+    "id": "",
+    "hidden": false,
+    "aria": "工作流",
+    "value": "krea2",
+    "disabled": false,
+    "options": [
+     "多参 H3 ★",
+     "Krea2 生图",
+     "Qwen 生图",
+     "Qwen 改图"
+    ],
+    "w": 160.5,
+    "y": 123
+   },
+   {
+    "id": "slotAspect",
+    "hidden": false,
+    "aria": "画幅",
+    "value": "16:9",
+    "disabled": false,
+    "options": [
+     "1:1",
+     "2:3",
+     "3:2",
+     "3:4",
+     "4:3",
+     "9:16",
+     "16:9",
+     "21:9"
+    ],
+    "w": 111.1,
+    "y": 123
+   },
+   {
+    "id": "slotDyn",
+    "hidden": false,
+    "aria": "张数",
+    "value": "1",
+    "disabled": false,
+    "options": [
+     "1 张",
+     "2 张",
+     "4 张",
+     "8 张"
+    ],
+    "w": 98.8,
+    "y": 123
+   },
+   {
+    "id": "slotSteps",
+    "hidden": false,
+    "aria": "一采步数",
+    "value": "8",
+    "disabled": false,
+    "options": [
+     "一采 4 步",
+     "一采 6 步",
+     "一采 8 步",
+     "一采 10 步",
+     "一采 15 步",
+     "一采 20 步"
+    ],
+    "w": 98.8,
+    "y": 123
+   },
+   {
+    "id": "slotSteps2",
+    "hidden": false,
+    "aria": "二采步数",
+    "value": "5",
+    "disabled": false,
+    "options": [
+     "二采 3 步",
+     "二采 5 步",
+     "二采 8 步",
+     "二采 10 步",
+     "二采 15 步"
+    ],
+    "w": 98.8,
+    "y": 123
+   },
+   {
+    "id": "",
+    "hidden": false,
+    "aria": null,
+    "value": null,
+    "disabled": null,
+    "options": [],
+    "w": 96,
+    "y": 123
+   }
+  ],
+  "visibleSlots": 6,
+  "overflowX": false,
+  "genW": 72,
+  "genY": 123,
+  "slotYs": [
+   123,
+   123,
+   123,
+   123,
+   123,
+   123
+  ]
+ },
+ "qwen21": {
+  "slots": [
+   {
+    "id": "",
+    "hidden": false,
+    "aria": "工作流",
+    "value": "qwen21",
+    "disabled": false,
+    "options": [
+     "多参 H3 ★",
+     "Krea2 生图",
+     "Qwen 生图",
+     "Qwen 改图"
+    ],
+    "w": 192,
+    "y": 123
+   },
+   {
+    "id": "slotAspect",
+    "hidden": false,
+    "aria": "画幅",
+    "value": "16:9",
+    "disabled": false,
+    "options": [
+     "1:1",
+     "2:3",
+     "3:2",
+     "3:4",
+     "4:3",
+     "9:16",
+     "16:9",
+     "21:9"
+    ],
+    "w": 137.2,
+    "y": 123
+   },
+   {
+    "id": "slotDyn",
+    "hidden": false,
+    "aria": "张数",
+    "value": "1",
+    "disabled": false,
+    "options": [
+     "1 张",
+     "2 张",
+     "4 张"
+    ],
+    "w": 123.4,
+    "y": 123
+   },
+   {
+    "id": "slotSteps",
+    "hidden": false,
+    "aria": "步数",
+    "value": "40",
+    "disabled": false,
+    "options": [
+     "10 步",
+     "20 步",
+     "30 步",
+     "40 步",
+     "50 步"
+    ],
+    "w": 123.4,
+    "y": 123
+   },
+   {
+    "id": "slotSteps2",
+    "hidden": true,
+    "aria": null,
+    "value": null,
+    "disabled": null,
+    "options": [],
+    "w": 0,
+    "y": 0
+   },
+   {
+    "id": "",
+    "hidden": false,
+    "aria": null,
+    "value": null,
+    "disabled": null,
+    "options": [],
+    "w": 96,
+    "y": 123
+   }
+  ],
+  "visibleSlots": 5,
+  "overflowX": false,
+  "genW": 72,
+  "genY": 123,
+  "slotYs": [
+   123,
+   123,
+   123,
+   123,
+   123
+  ]
+ },
+ "qwen21edit": {
+  "slots": [
+   {
+    "id": "",
+    "hidden": false,
+    "aria": "工作流",
+    "value": "qwen21-edit",
+    "disabled": false,
+    "options": [
+     "多参 H3 ★",
+     "Krea2 生图",
+     "Qwen 生图",
+     "Qwen 改图"
+    ],
+    "w": 192,
+    "y": 123
+   },
+   {
+    "id": "slotAspect",
+    "hidden": false,
+    "aria": "画幅",
+    "value": "16:9",
+    "disabled": false,
+    "options": [
+     "1:1",
+     "2:3",
+     "3:2",
+     "3:4",
+     "4:3",
+     "9:16",
+     "16:9",
+     "21:9"
+    ],
+    "w": 137.2,
+    "y": 123
+   },
+   {
+    "id": "slotDyn",
+    "hidden": false,
+    "aria": "张数",
+    "value": "1",
+    "disabled": false,
+    "options": [
+     "1 张",
+     "2 张",
+     "4 张"
+    ],
+    "w": 123.4,
+    "y": 123
+   },
+   {
+    "id": "slotSteps",
+    "hidden": false,
+    "aria": "步数",
+    "value": "25",
+    "disabled": false,
+    "options": [
+     "10 步",
+     "15 步",
+     "20 步",
+     "25 步",
+     "30 步"
+    ],
+    "w": 123.4,
+    "y": 123
+   },
+   {
+    "id": "slotSteps2",
+    "hidden": true,
+    "aria": null,
+    "value": null,
+    "disabled": null,
+    "options": [],
+    "w": 0,
+    "y": 0
+   },
+   {
+    "id": "",
+    "hidden": false,
+    "aria": null,
+    "value": null,
+    "disabled": null,
+    "options": [],
+    "w": 96,
+    "y": 123
+   }
+  ],
+  "visibleSlots": 5,
+  "overflowX": false,
+  "genW": 72,
+  "genY": 123,
+  "slotYs": [
+   123,
+   123,
+   123,
+   123,
+   123
+  ]
+ },
+ "batch4": {
+  "mediaCount": 4,
+  "headText": "完成\n·\n1.8s\n·\n4 个产物"
+ },
+ "beforeToggleOff": {
+  "slotHidden": false,
+  "visible": 6
+ },
+ "afterToggleOff": {
+  "slotHidden": true,
+  "visible": 5,
+  "overflowX": false
+ },
+ "narrow": {
+  "krea2@1100": {
+   "slots": [
+    {
+     "id": "",
+     "hidden": false,
+     "aria": "工作流",
+     "value": "krea2",
+     "disabled": false,
+     "options": [
+      "多参 H3 ★",
+      "Krea2 生图",
+      "Qwen 生图",
+      "Qwen 改图"
+     ],
+     "w": 160.5,
+     "y": 123
+    },
+    {
+     "id": "slotAspect",
+     "hidden": false,
+     "aria": "画幅",
+     "value": "16:9",
+     "disabled": false,
+     "options": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9"
+     ],
+     "w": 111.1,
+     "y": 123
+    },
+    {
+     "id": "slotDyn",
+     "hidden": false,
+     "aria": "张数",
+     "value": "1",
+     "disabled": false,
+     "options": [
+      "1 张",
+      "2 张",
+      "4 张",
+      "8 张"
+     ],
+     "w": 98.8,
+     "y": 123
+    },
+    {
+     "id": "slotSteps",
+     "hidden": false,
+     "aria": "一采步数",
+     "value": "8",
+     "disabled": false,
+     "options": [
+      "一采 4 步",
+      "一采 6 步",
+      "一采 8 步",
+      "一采 10 步",
+      "一采 15 步",
+      "一采 20 步"
+     ],
+     "w": 98.8,
+     "y": 123
+    },
+    {
+     "id": "slotSteps2",
+     "hidden": false,
+     "aria": "二采步数",
+     "value": "5",
+     "disabled": false,
+     "options": [
+      "二采 3 步",
+      "二采 5 步",
+      "二采 8 步",
+      "二采 10 步",
+      "二采 15 步"
+     ],
+     "w": 98.8,
+     "y": 123
+    },
+    {
+     "id": "",
+     "hidden": false,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 96,
+     "y": 123
+    }
+   ],
+   "visibleSlots": 6,
+   "overflowX": false,
+   "genW": 72,
+   "genY": 123,
+   "slotYs": [
+    123,
+    123,
+    123,
+    123,
+    123,
+    123
+   ]
+  },
+  "qwen21@1100": {
+   "slots": [
+    {
+     "id": "",
+     "hidden": false,
+     "aria": "工作流",
+     "value": "qwen21",
+     "disabled": false,
+     "options": [
+      "多参 H3 ★",
+      "Krea2 生图",
+      "Qwen 生图",
+      "Qwen 改图"
+     ],
+     "w": 192,
+     "y": 123
+    },
+    {
+     "id": "slotAspect",
+     "hidden": false,
+     "aria": "画幅",
+     "value": "16:9",
+     "disabled": false,
+     "options": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9"
+     ],
+     "w": 137.2,
+     "y": 123
+    },
+    {
+     "id": "slotDyn",
+     "hidden": false,
+     "aria": "张数",
+     "value": "1",
+     "disabled": false,
+     "options": [
+      "1 张",
+      "2 张",
+      "4 张"
+     ],
+     "w": 123.4,
+     "y": 123
+    },
+    {
+     "id": "slotSteps",
+     "hidden": false,
+     "aria": "步数",
+     "value": "40",
+     "disabled": false,
+     "options": [
+      "10 步",
+      "20 步",
+      "30 步",
+      "40 步",
+      "50 步"
+     ],
+     "w": 123.4,
+     "y": 123
+    },
+    {
+     "id": "slotSteps2",
+     "hidden": true,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 0,
+     "y": 0
+    },
+    {
+     "id": "",
+     "hidden": false,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 96,
+     "y": 123
+    }
+   ],
+   "visibleSlots": 5,
+   "overflowX": false,
+   "genW": 72,
+   "genY": 123,
+   "slotYs": [
+    123,
+    123,
+    123,
+    123,
+    123
+   ]
+  },
+  "krea2@760": {
+   "slots": [
+    {
+     "id": "",
+     "hidden": false,
+     "aria": "工作流",
+     "value": "krea2",
+     "disabled": false,
+     "options": [
+      "多参 H3 ★",
+      "Krea2 生图",
+      "Qwen 生图",
+      "Qwen 改图"
+     ],
+     "w": 102,
+     "y": 123
+    },
+    {
+     "id": "slotAspect",
+     "hidden": false,
+     "aria": "画幅",
+     "value": "16:9",
+     "disabled": false,
+     "options": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9"
+     ],
+     "w": 70.6,
+     "y": 123
+    },
+    {
+     "id": "slotDyn",
+     "hidden": false,
+     "aria": "张数",
+     "value": "1",
+     "disabled": false,
+     "options": [
+      "1 张",
+      "2 张",
+      "4 张",
+      "8 张"
+     ],
+     "w": 62.8,
+     "y": 123
+    },
+    {
+     "id": "slotSteps",
+     "hidden": false,
+     "aria": "一采步数",
+     "value": "8",
+     "disabled": false,
+     "options": [
+      "一采 4 步",
+      "一采 6 步",
+      "一采 8 步",
+      "一采 10 步",
+      "一采 15 步",
+      "一采 20 步"
+     ],
+     "w": 62.8,
+     "y": 123
+    },
+    {
+     "id": "slotSteps2",
+     "hidden": false,
+     "aria": "二采步数",
+     "value": "5",
+     "disabled": false,
+     "options": [
+      "二采 3 步",
+      "二采 5 步",
+      "二采 8 步",
+      "二采 10 步",
+      "二采 15 步"
+     ],
+     "w": 62.8,
+     "y": 123
+    },
+    {
+     "id": "",
+     "hidden": false,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 96,
+     "y": 123
+    }
+   ],
+   "visibleSlots": 6,
+   "overflowX": false,
+   "genW": 72,
+   "genY": 123,
+   "slotYs": [
+    123,
+    123,
+    123,
+    123,
+    123,
+    123
+   ]
+  },
+  "qwen21@760": {
+   "slots": [
+    {
+     "id": "",
+     "hidden": false,
+     "aria": "工作流",
+     "value": "qwen21",
+     "disabled": false,
+     "options": [
+      "多参 H3 ★",
+      "Krea2 生图",
+      "Qwen 生图",
+      "Qwen 改图"
+     ],
+     "w": 123,
+     "y": 123
+    },
+    {
+     "id": "slotAspect",
+     "hidden": false,
+     "aria": "画幅",
+     "value": "16:9",
+     "disabled": false,
+     "options": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9"
+     ],
+     "w": 87.9,
+     "y": 123
+    },
+    {
+     "id": "slotDyn",
+     "hidden": false,
+     "aria": "张数",
+     "value": "1",
+     "disabled": false,
+     "options": [
+      "1 张",
+      "2 张",
+      "4 张"
+     ],
+     "w": 79.1,
+     "y": 123
+    },
+    {
+     "id": "slotSteps",
+     "hidden": false,
+     "aria": "步数",
+     "value": "40",
+     "disabled": false,
+     "options": [
+      "10 步",
+      "20 步",
+      "30 步",
+      "40 步",
+      "50 步"
+     ],
+     "w": 79.1,
+     "y": 123
+    },
+    {
+     "id": "slotSteps2",
+     "hidden": true,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 0,
+     "y": 0
+    },
+    {
+     "id": "",
+     "hidden": false,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 96,
+     "y": 123
+    }
+   ],
+   "visibleSlots": 5,
+   "overflowX": false,
+   "genW": 72,
+   "genY": 123,
+   "slotYs": [
+    123,
+    123,
+    123,
+    123,
+    123
+   ]
+  },
+  "krea2@560": {
+   "slots": [
+    {
+     "id": "",
+     "hidden": false,
+     "aria": "工作流",
+     "value": "krea2",
+     "disabled": false,
+     "options": [
+      "多参 H3 ★",
+      "Krea2 生图",
+      "Qwen 生图",
+      "Qwen 改图"
+     ],
+     "w": 59.6,
+     "y": 123
+    },
+    {
+     "id": "slotAspect",
+     "hidden": false,
+     "aria": "画幅",
+     "value": "16:9",
+     "disabled": false,
+     "options": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9"
+     ],
+     "w": 41.3,
+     "y": 123
+    },
+    {
+     "id": "slotDyn",
+     "hidden": false,
+     "aria": "张数",
+     "value": "1",
+     "disabled": false,
+     "options": [
+      "1",
+      "2",
+      "4",
+      "8"
+     ],
+     "w": 36.7,
+     "y": 123
+    },
+    {
+     "id": "slotSteps",
+     "hidden": false,
+     "aria": "一采步数",
+     "value": "8",
+     "disabled": false,
+     "options": [
+      "一采 4",
+      "一采 6",
+      "一采 8",
+      "一采 10",
+      "一采 15",
+      "一采 20"
+     ],
+     "w": 36.7,
+     "y": 123
+    },
+    {
+     "id": "slotSteps2",
+     "hidden": false,
+     "aria": "二采步数",
+     "value": "5",
+     "disabled": false,
+     "options": [
+      "二采 3",
+      "二采 5",
+      "二采 8",
+      "二采 10",
+      "二采 15"
+     ],
+     "w": 36.7,
+     "y": 123
+    },
+    {
+     "id": "",
+     "hidden": false,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 72,
+     "y": 123
+    }
+   ],
+   "visibleSlots": 6,
+   "overflowX": false,
+   "genW": 72,
+   "genY": 123,
+   "slotYs": [
+    123,
+    123,
+    123,
+    123,
+    123,
+    123
+   ]
+  },
+  "qwen21@560": {
+   "slots": [
+    {
+     "id": "",
+     "hidden": false,
+     "aria": "工作流",
+     "value": "qwen21",
+     "disabled": false,
+     "options": [
+      "多参 H3 ★",
+      "Krea2 生图",
+      "Qwen 生图",
+      "Qwen 改图"
+     ],
+     "w": 72.3,
+     "y": 123
+    },
+    {
+     "id": "slotAspect",
+     "hidden": false,
+     "aria": "画幅",
+     "value": "16:9",
+     "disabled": false,
+     "options": [
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "9:16",
+      "16:9",
+      "21:9"
+     ],
+     "w": 51.7,
+     "y": 123
+    },
+    {
+     "id": "slotDyn",
+     "hidden": false,
+     "aria": "张数",
+     "value": "1",
+     "disabled": false,
+     "options": [
+      "1",
+      "2",
+      "4"
+     ],
+     "w": 46.5,
+     "y": 123
+    },
+    {
+     "id": "slotSteps",
+     "hidden": false,
+     "aria": "步数",
+     "value": "40",
+     "disabled": false,
+     "options": [
+      "10",
+      "20",
+      "30",
+      "40",
+      "50"
+     ],
+     "w": 46.5,
+     "y": 123
+    },
+    {
+     "id": "slotSteps2",
+     "hidden": true,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 0,
+     "y": 0
+    },
+    {
+     "id": "",
+     "hidden": false,
+     "aria": null,
+     "value": null,
+     "disabled": null,
+     "options": [],
+     "w": 72,
+     "y": 123
+    }
+   ],
+   "visibleSlots": 5,
+   "overflowX": false,
+   "genW": 72,
+   "genY": 123,
+   "slotYs": [
+    123,
+    123,
+    123,
+    123,
+    123
+   ]
+  }
+ },
+ "consoleErrors": []
+}

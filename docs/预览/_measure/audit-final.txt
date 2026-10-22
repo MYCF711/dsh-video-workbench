@@ -1,0 +1,147 @@
+{
+ "layout": {
+  "wbH": 660,
+  "healthH": 39,
+  "barH": 32,
+  "promptH": 133,
+  "resultH": 456,
+  "resultGrowing": true,
+  "order": [
+   "health",
+   "bar",
+   "prompt",
+   "result"
+  ]
+ },
+ "rowAligned": {
+  "ys": [
+   123,
+   123,
+   123,
+   123,
+   123,
+   123
+  ],
+  "allSameY": true
+ },
+ "controls": {
+  "mode": {
+   "x": 98.5,
+   "y": 123,
+   "w": 192,
+   "h": 28,
+   "borderWidth": "0px",
+   "radius": "8px",
+   "bg": "rgba(0, 0, 0, 0)",
+   "color": "rgb(97, 102, 107)",
+   "fontSize": "13px",
+   "overflow": "ok",
+   "text": "yz"
+  },
+  "aspect": {
+   "x": 298.5,
+   "y": 123,
+   "w": 137.2,
+   "h": 28,
+   "borderWidth": "0px",
+   "radius": "8px",
+   "bg": "rgba(0, 0, 0, 0)",
+   "color": "rgb(97, 102, 107)",
+   "fontSize": "13px",
+   "overflow": "ok",
+   "text": "16:9"
+  },
+  "duration": {
+   "x": 443.6,
+   "y": 123,
+   "w": 123.4,
+   "h": 28,
+   "borderWidth": "0px",
+   "radius": "8px",
+   "bg": "rgba(0, 0, 0, 0)",
+   "color": "rgb(97, 102, 107)",
+   "fontSize": "13px",
+   "overflow": "ok",
+   "text": "5"
+  },
+  "steps": {
+   "x": 575.1,
+   "y": 123,
+   "w": 123.4,
+   "h": 28,
+   "borderWidth": "0px",
+   "radius": "8px",
+   "bg": "rgba(0, 0, 0, 0)",
+   "color": "rgb(97, 102, 107)",
+   "fontSize": "13px",
+   "overflow": "ok",
+   "text": "10"
+  },
+  "seed": {
+   "x": 706.5,
+   "y": 123,
+   "w": 96,
+   "h": 28,
+   "borderWidth": "0px",
+   "radius": "8px",
+   "bg": "rgba(0, 0, 0, 0)",
+   "color": "rgb(97, 102, 107)",
+   "fontSize": "13px",
+   "overflow": "ok",
+   "text": ""
+  },
+  "gen": {
+   "x": 914.5,
+   "y": 123,
+   "w": 72,
+   "h": 28,
+   "borderWidth": "0px",
+   "radius": "8px",
+   "bg": "rgb(15, 17, 21)",
+   "color": "rgb(255, 255, 255)",
+   "fontSize": "13px",
+   "overflow": "ok",
+   "text": ""
+  }
+ },
+ "heights": {
+  "barTotal": 32,
+  "promptTotal": 133,
+  "resultTotal": 456
+ },
+ "capsules": 1,
+ "selectCount": 4,
+ "appearance": "none",
+ "arrowCount": 4
+}
+--- 文本宽度 vs 可用宽度 (1100px 视口) ---
+[
+ {
+  "sel": "#selMode",
+  "text": "多参 H3 ★",
+  "textW": 60,
+  "availW": 158,
+  "fits": true
+ },
+ {
+  "sel": "#selAspect",
+  "text": "16:9",
+  "textW": 23.8,
+  "availW": 103,
+  "fits": true
+ },
+ {
+  "sel": "#selDuration",
+  "text": "5 秒",
+  "textW": 23.6,
+  "availW": 89,
+  "fits": true
+ },
+ {
+  "sel": "#selSteps",
+  "text": "10 步",
+  "textW": 30.6,
+  "availW": 89,
+  "fits": true
+ }
+]

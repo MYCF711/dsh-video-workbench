@@ -1,0 +1,49 @@
+{
+  "name": "dsh-editor",
+  "version": "0.1.0",
+  "description": "Rough-cut timeline workbench for DeepSeek Harness: multi-track timeline, per-clip regeneration, LLM tools, SSE live sync.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "bin": {
+    "dsh-editor-install-ffmpeg": "./scripts/install-ffmpeg.mjs"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "install-ffmpeg": "node scripts/install-ffmpeg.mjs",
+    "test": "node test/verify-all.mjs"
+  },
+  "files": [
+    "lib",
+    "src",
+    "scripts",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "video",
+    "timeline",
+    "ffmpeg"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

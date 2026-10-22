@@ -1,0 +1,592 @@
+{
+  "14": {
+    "inputs": {
+      "audio": "None"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "加载音频"
+    }
+  },
+  "15": {
+    "inputs": {
+      "audio": "None"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "加载音频"
+    }
+  },
+  "19": {
+    "inputs": {
+      "image": "None"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "23": {
+    "inputs": {
+      "image": "None"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "27": {
+    "inputs": {
+      "video": "",
+      "force_rate": 0,
+      "custom_width": 0,
+      "custom_height": 0,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "AnimateDiff"
+    },
+    "class_type": "VHS_LoadVideo",
+    "_meta": {
+      "title": "Load Video (Upload) 🎥🅥🅗🅢"
+    }
+  },
+  "36": {
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_int8_convrot.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "37": {
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "38": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_minimax_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "43": {
+    "inputs": {
+      "image": "None"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "48": {
+    "inputs": {
+      "audio": "None"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "加载音频"
+    }
+  },
+  "49": {
+    "inputs": {
+      "image": "22785d770f0efdcf632f8e8a954a4b05032b63a4ac5a92e74da551fed6020ab2.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "50": {
+    "inputs": {
+      "image": "ccdfa9981fda9e6d1d6ca858ff717afd359a62c2ddf4d322449653d5814d265e.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "51": {
+    "inputs": {
+      "image": "c715baaee3fa989a7a8c94643fb7945e36f943b91a5a28182e44c895c565eec3.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "53": {
+    "inputs": {
+      "lora_name": "minimax_h3_dmad_full_dareties_v4_step600_comfy_fro.safetensors",
+      "strength_model": 0.8000000000000002,
+      "model": [
+        "192",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "192": {
+    "inputs": {
+      "unet_name": "minimax_h3_hybrid_fl2va_ref2va_b25-49-int8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "250": {
+    "inputs": {
+      "expression": "max(5, round(a * 24)) + (5 - (max(5, round(a * 24)) % 17)) % 17",
+      "values.a": [
+        "259",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "数学表达式"
+    }
+  },
+  "252": {
+    "inputs": {
+      "aspect_ratio": "16:9 (Widescreen)",
+      "megapixels": 1.5,
+      "multiple": 32
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "分辨率选择器"
+    }
+  },
+  "253": {
+    "inputs": {
+      "samples": [
+        "397",
+        0
+      ],
+      "vae": [
+        "36",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "254": {
+    "inputs": {
+      "samples": [
+        "397",
+        0
+      ],
+      "vae": [
+        "37",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE解码（音频）"
+    }
+  },
+  "255": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "K采样器选择"
+    }
+  },
+  "259": {
+    "inputs": {
+      "value": 10
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "视频时长（秒）"
+    }
+  },
+  "261": {
+    "inputs": {
+      "scheduler": "beta",
+      "steps": 10,
+      "denoise": 1,
+      "model": [
+        "329",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "基本调度器"
+    }
+  },
+  "263": {
+    "inputs": {
+      "text": "subject_definitions:\n<Subject 1> is the female doctor from <Picture 1>, preserving her facial identity, low black hair bun, white medical coat, green scrubs, and stethoscope.\n<Subject 2> is the young adult male patient from <Picture 2>, preserving his facial identity, short textured black hair, slate-blue T-shirt, black trousers, and white shoes.\n<Subject 3> is the consultation room from <Picture 3>, preserving the desk, monitor, rear window and blinds, cabinet, hospital posters, medical trolley, and black patient chair. The nearby exit is just beyond the original framing on the patient's side, screen right. Character identities follow <Picture 1> and <Picture 2>.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S2).\n<Audio 2> is the voice-timbre reference for <Subject 2> (S1).\n\nsummary:\n[reference generation + audio reference] A 14-second conclusion to the consultation. <Subject 2> thanks <Subject 1> and leaves <Subject 3>. She silently acknowledges him, then answers a vibrating smartphone and speaks affectionately to her husband. The patient follows <Audio 2>; all of the doctor's phone dialogue follows <Audio 1>.\n\nretention_analysis:\n<Subject 1> (appears in [Shot 1], [Shot 2], [Shot 3], [Shot 4]): fully_preserved - retain her identity, hairstyle, clothing, and stethoscope.\n<Subject 2> (appears in [Shot 1], [Shot 2]): fully_preserved - retain his identity and clothing throughout his farewell and departure.\n<Subject 3> (appears in [Shot 1], [Shot 2], [Shot 3], [Shot 4]): fully_preserved - retain furniture, daylight, desk-prop positions, and established spatial relationships.\n<Audio 1>: reference - retain the doctor's vocal identity and timbre during her affectionate phone conversation, adapting emotion without changing the speaker's voice; source dialogue and background sounds are not copied.\n<Audio 2>: reference - retain the patient's vocal identity and timbre during his polite farewell; source dialogue and background sounds are not copied.\n\ndetailed_description:\nContinue the same realistic live-action Chinese drama, 16:9, with matched daylight, color, character identities, and restrained performances. The doctor's voice remains tied to <Audio 1> as her delivery changes from clinical reserve to private warmth. The patient's voice remains tied to <Audio 2>. All dialogue is newly performed with synchronized Mandarin lip movement.\n\n[Shot 1] A medium close-up frames <Subject 2>, still seated in his slate-blue T-shirt, looking toward <Subject 1> off screen left. Her softly blurred white-coated shoulder remains at the left foreground edge. He briefly lowers his eyes, then looks back with a polite, accepting expression. <Subject 2> (S1), using the vocal identity and timbre of <Audio 2>, says with a brief hesitation after “那”: <d>[Chinese] 好吧，那……我先回去了，谢谢主任。</d> Complete the sentence by approximately 00:03.200. He then leans forward slightly to prepare to stand.\n\n[Shot 2] At 00:03.500, the camera cuts to the established medium-wide two-shot of <Subject 3>, with <Subject 1> behind the desk on screen left and <Subject 2> on screen right. He rises naturally, moving the black chair backward a short distance with a subdued scrape. She gives one small silent nod and follows him with her eyes. He walks around his side of the desk and exits frame right by approximately 00:06.400. His footsteps recede toward the nearby exit. At approximately 00:06.600, the black smartphone on the doctor's side of the desk starts vibrating against the tabletop. She looks down toward it.\n\n[Shot 3] At 00:07.200, the camera cuts to a tight desk-level insert of the vibrating phone beside the closed medical file. <Subject 1>'s right hand picks it up and taps once to answer. The vibration stops. Her right hand begins lifting the phone toward her ear, preserving the continuous physical action.\n\n[Shot 4] At 00:08.300, the camera cuts to a medium close-up of <Subject 1> with the phone at her right ear. Her shoulders relax and her expression softens. <Subject 1> (S2), using the vocal identity and timbre of <Audio 1> with affectionate, familiar delivery, says: <d>[Chinese] 喂，老公……</d> During the short listening pause, she raises her left wrist and glances at her watch around 00:09.700–00:10.300. Keeping the phone at her right ear, <Subject 1> (S2) continues with the same timbre referenced from <Audio 1>: <d>[Chinese] 刚好下班，你等我一下。</d> Finish by approximately 00:12.800. She lowers her wrist and holds a small private smile while listening until 00:14.000. Her husband's voice is not audible.\n\noverall_soundscape:\nContinuous quiet room ambience supports the synchronized chair scrape, clothing movement, receding footsteps, phone vibration against the desk, and phone-handling sounds. Generate these physical sounds independently of the voice-reference recordings. Use no ringtone, audible caller response, added comedy effects, or music.\n\nnon_diegetic_music:\nN/A"
+    },
+    "class_type": "Text",
+    "_meta": {
+      "title": "𝙆 文本"
+    }
+  },
+  "265": {
+    "inputs": {
+      "prompt": [
+        "263",
+        0
+      ],
+      "width": [
+        "252",
+        0
+      ],
+      "height": [
+        "252",
+        1
+      ],
+      "length": [
+        "250",
+        1
+      ],
+      "ref_image_size": "max",
+      "clip": [
+        "38",
+        0
+      ],
+      "vae": [
+        "36",
+        0
+      ],
+      "audio_vae": [
+        "37",
+        0
+      ],
+      "ref_images.ref_image_0": [
+        "51",
+        0
+      ],
+      "ref_images.ref_image_1": [
+        "49",
+        0
+      ],
+      "ref_images.ref_image_2": [
+        "50",
+        0
+      ],
+      "ref_images.ref_image_3": [
+        "43",
+        0
+      ],
+      "ref_images.ref_image_4": [
+        "19",
+        0
+      ],
+      "ref_images.ref_image_5": [
+        "23",
+        0
+      ],
+      "ref_videos.ref_video_0": [
+        "27",
+        0
+      ],
+      "ref_audios.ref_audio_0": [
+        "48",
+        0
+      ],
+      "ref_audios.ref_audio_1": [
+        "14",
+        0
+      ],
+      "ref_audios.ref_audio_2": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ReferenceToVideo",
+    "_meta": {
+      "title": "MiniMax H3 参考转视频"
+    }
+  },
+  "307": {
+    "inputs": {},
+    "class_type": "忽略多组孤海",
+    "_meta": {
+      "title": "忽略多组 孤海"
+    }
+  },
+  "308": {
+    "inputs": {},
+    "class_type": "忽略多组孤海",
+    "_meta": {
+      "title": "忽略多组 孤海"
+    }
+  },
+  "309": {
+    "inputs": {},
+    "class_type": "忽略多组孤海",
+    "_meta": {
+      "title": "忽略多组 孤海"
+    }
+  },
+  "328": {
+    "inputs": {
+      "conditioning": [
+        "265",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "条件零化"
+    }
+  },
+  "329": {
+    "inputs": {
+      "max_resolution": 1024,
+      "jpeg_quality": 80,
+      "suppress_default_preview": true,
+      "preview_frames": 1024,
+      "preview_fps": 12,
+      "tiny_vae": "taeh3.safetensors",
+      "model": [
+        "333",
+        0
+      ],
+      "vae": [
+        "36",
+        0
+      ]
+    },
+    "class_type": "ModelPreviewOverrideKJ",
+    "_meta": {
+      "title": "Model Preview Override"
+    }
+  },
+  "331": {
+    "inputs": {
+      "attention": "comfy kitchen attention",
+      "model": [
+        "343",
+        0
+      ]
+    },
+    "class_type": "ModelAttentionBackend",
+    "_meta": {
+      "title": "模型注意力后端"
+    }
+  },
+  "332": {
+    "inputs": {
+      "selection": "sol-attn",
+      "selection.tau": 1.3,
+      "start_percent": 0.2,
+      "end_percent": 1,
+      "dense_blocks": "",
+      "min_tokens": 12288,
+      "extra_tokens": 256,
+      "sink_conditioning": "exact_kv_and_rows",
+      "verbose": true,
+      "model": [
+        "331",
+        0
+      ]
+    },
+    "class_type": "BlockSparseAttention",
+    "_meta": {
+      "title": "模型稀疏注意力"
+    }
+  },
+  "333": {
+    "inputs": {
+      "shift_video": 12,
+      "shift_audio": 3.0000000000000004,
+      "model": [
+        "332",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "MiniMax H3 Sigma Shift"
+    }
+  },
+  "342": {
+    "inputs": {
+      "lora_name": "H3_Combat_V2.safetensors",
+      "strength_model": 0.6500000000000001,
+      "model": [
+        "400",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "343": {
+    "inputs": {
+      "lora_name": "H3_speed_slider_1.1.safetensors",
+      "strength_model": [
+        "366",
+        0
+      ],
+      "model": [
+        "345",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "344": {
+    "inputs": {
+      "lora_name": "Motion_Repair_V2.safetensors",
+      "strength_model": 0.3500000000000001,
+      "model": [
+        "342",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "345": {
+    "inputs": {
+      "lora_name": "H3_Fight_Flow_V1.safetensors",
+      "strength_model": 0.3500000000000001,
+      "model": [
+        "344",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "363": {
+    "inputs": {},
+    "class_type": "忽略多组孤海",
+    "_meta": {
+      "title": "忽略多组 孤海"
+    }
+  },
+  "364": {
+    "inputs": {
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "YZ_H3_",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "253",
+        0
+      ],
+      "audio": [
+        "254",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "366": {
+    "inputs": {
+      "值": 3,
+      "output_type": "int"
+    },
+    "class_type": "GoohaiUniversalSlider",
+    "_meta": {
+      "title": "速度滑块（-10 - +10）"
+    }
+  },
+  "397": {
+    "inputs": {
+      "seed": 252415803184721,
+      "cfg": 1,
+      "transition_step": 6,
+      "lowres_scale": 0.6000000000000001,
+      "rho": 0,
+      "w_min": 0.5,
+      "w_max": 1,
+      "upscaler_model": "h3_upscaler_lms_v0.1.safetensors",
+      "highres_tiling": true,
+      "upscaler_unload": true,
+      "model": [
+        "329",
+        0
+      ],
+      "positive": [
+        "265",
+        0
+      ],
+      "negative": [
+        "328",
+        0
+      ],
+      "vae": [
+        "36",
+        0
+      ],
+      "latent_image": [
+        "265",
+        1
+      ],
+      "sampler": [
+        "255",
+        0
+      ],
+      "sigmas": [
+        "261",
+        0
+      ]
+    },
+    "class_type": "SelfLiftH3Sampler",
+    "_meta": {
+      "title": "SelfLift Progressive Sampler (MiniMax H3)"
+    }
+  },
+  "400": {
+    "inputs": {
+      "lora_name": "MysticXXX_MMH3-V1.safetensors",
+      "strength_model": 0.45000000000000007,
+      "model": [
+        "53",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  }
+}

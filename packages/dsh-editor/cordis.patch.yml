@@ -1,0 +1,10 @@
+# dsh-editor bundle patch
+#
+# 装法：
+#   dsh plugin --profile <name> add dsh-editor
+#
+# 依赖服务：webServer（SSE + 命令路由）、tools（LLM 工具）
+# 依赖 dsh-comfy-bridge（生成走它的 /comfy-bridge/* 路由）
+- insert:
+    - id: dsh-editor
+      name: 'dsh-editor'

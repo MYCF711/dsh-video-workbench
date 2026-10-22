@@ -1,0 +1,60 @@
+# ── 依赖与构建 ──────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.build/
+dist/
+
+# ── 大文件：绝不进仓库 ──────────────────────────────────
+# whisper 模型（3.9GB）
+.models/
+# ffmpeg 二进制（83.58MB）—— 用 scripts/install-ffmpeg.mjs 安装
+packages/dsh-editor/bin/
+# 生成产物
+outputs/
+.frames/
+*.mp4
+*.webm
+*.mov
+*.wav
+*.mp3
+
+# ── DSH 运行时状态 ──────────────────────────────────────
+.state/
+.comfy-bridge/
+*.corrupt-*
+
+# ── 实测证据（体积大，需要时单独归档）───────────────────
+# ⚠ 这些是「真机实测」的证据，有价值但不该占仓库体积。
+#   完整现场见 D:\主工作区\_branch-archive\ 的带 docs 版本。
+docs/evidence/
+docs/预览/_shots/
+*.png
+*.jpg
+*.jpeg
+!docs/**/*.md
+
+# ── 临时与备份 ──────────────────────────────────────────
+.bak*
+*.bak
+*.bak-*
+.tmp-scripts/
+.test-cleanup-backup/
+.probe-backup/
+_verify6/
+.usertest/
+.src-backup-*/
+.verify-restart/
+_tmp*
+_diag*
+
+# ── 本机私有配置 ────────────────────────────────────────
+# ★ 配置由设置页生成，含本机绝对路径，不该进仓库
+config.json
+*.local.md
+AGENTS.local.md
+dsh-tok.txt
+
+# ── 编辑器 / OS ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
