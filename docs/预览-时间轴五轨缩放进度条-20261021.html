@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>时间轴 UI 预览 · 五轨 + 缩放 + 进度条</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   预览页 · 三件事用可交互实例演示给主人看
+     ① 默认 5 条轨道：2 视频 + 2 音频 + 1 文本（字幕）
+     ② 轨道长度可缩放（精细操作）
+     ③ 预览区进度条，可拖动
+
+   ★ 尺寸与颜色全部取自 DSH 实测值（不是凭印象写的）：
+       工具条按钮 28×28 / 圆角 8   ·  主按钮 38 高 / 字号 14 / 圆角 12
+       圆角阶 4 / 8 / 12 / 999     ·  字号 13
+   ★ 亮色主题（ui-preview-workflow：跟随默认，不自作主张用暗色）
+   ══════════════════════════════════════════════════════════════════ */
+
+:root{
+  --bg:#ffffff; --layer1:#f7f8f9; --layer2:#eef0f3;
+  --fg:#0f1115; --fg2:#4b5158; --fg3:#6b7075;
+  --border:#00000014;
+  --primary:#4176e6; --primary-fg:#ffffff;
+  --r4:4px; --r8:8px; --r12:12px;
+  --head:96px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  background:var(--bg); color:var(--fg); padding:20px;
+}
+h1{font-size:15px;font-weight:600;margin-bottom:4px}
+.hint{color:var(--fg3);font-size:12px;margin-bottom:16px}
+.wrap{display:flex;flex-direction:column;gap:12px;max-width:1200px}
+
+/* ── 工具条 ── */
+.toolbar{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  background:var(--layer1);border:.5px solid var(--border);border-radius:var(--r8);
+}
+.iconbtn{
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  border:0;border-radius:var(--r8);background:transparent;color:var(--fg);cursor:pointer;
+}
+.iconbtn:hover{background:var(--layer2)}
+.btn{
+  height:28px;padding:0 10px;border:0;border-radius:var(--r8);
+  background:var(--layer2);color:var(--fg);font-size:13px;cursor:pointer;
+}
+.btn:hover{background:var(--border)}
+.btn-primary{
+  height:38px;padding:0 16px;border:0;border-radius:var(--r12);
+  background:var(--primary);color:var(--primary-fg);font-size:14px;font-weight:600;cursor:pointer;
+}
+.spacer{flex:1}
+
+/* ── 预览区 ── */
+.preview{
+  background:#0b0b0d;border-radius:var(--r8);
+  height:260px;display:flex;align-items:center;justify-content:center;
+  color:#6b7075;font-size:13px;
+}
+
+/* ── ③ 进度条 + ② 缩放 ── */
+.transport{
+  display:flex;align-items:center;gap:12px;padding:8px 12px;
+  background:var(--layer1);border:.5px solid var(--border);border-radius:var(--r8);
+  flex-wrap:wrap;   /* ★ 窄屏时允许换行，否则进度条会被挤压到 0px */
+}
+/* ★ 实测（375px 宽）：不换行时 transportScrollW=453 vs clientW=373，溢出 80px，
+      且进度条被压成 width:0 —— progress 的 flex:1 拿不到空间，因为
+      .zoom 是 flex:none 占了 287px。
+   改法：① .transport 允许换行；② 进度条加 min-width，保底可拖。 */
+@media (max-width: 720px){
+  .transport{gap:8px}
+  .progress{min-width:160px;flex:1 1 100%;order:3}
+  .zoom{margin-left:auto}
+}
+.tcode{font:12px/1 ui-monospace,monospace;font-variant-numeric:tabular-nums;color:var(--fg2)}
+.playbtn{
+  width:28px;height:28px;border:0;border-radius:var(--r8);
+  background:transparent;color:var(--fg);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex:none;font-size:12px;
+}
+.playbtn:hover{background:var(--layer2)}
+
+.progress{
+  position:relative;flex:1;height:20px;display:flex;align-items:center;
+  cursor:pointer;min-width:0;
+}
+.progress-track{position:absolute;left:0;right:0;height:4px;border-radius:999px;background:var(--layer2);transition:height .12s}
+.progress-fill{position:absolute;left:0;height:4px;border-radius:999px;background:var(--primary);width:0%;pointer-events:none;transition:height .12s}
+.progress-thumb{
+  position:absolute;width:12px;height:12px;border-radius:999px;
+  background:var(--primary-fg);border:2px solid var(--primary);
+  transform:translateX(-50%);left:0%;box-shadow:0 1px 3px rgba(0,0,0,.25);
+  pointer-events:none;transition:transform .1s;
+}
+.progress:hover .progress-thumb,.progress.dragging .progress-thumb{transform:translateX(-50%) scale(1.3)}
+.progress:hover .progress-track,.progress:hover .progress-fill,
+.progress.dragging .progress-track,.progress.dragging .progress-fill{height:6px}
+.progress:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:var(--r4)}
+
+.zoom{display:flex;align-items:center;gap:6px;flex:none}
+.zoombtns{display:flex;gap:2px;background:var(--layer2);border-radius:var(--r8);padding:2px}
+.zoombtns button{
+  height:24px;min-width:30px;padding:0 6px;border:0;border-radius:var(--r4);
+  background:transparent;color:var(--fg2);font-size:12px;cursor:pointer;
+  font-variant-numeric:tabular-nums;
+}
+.zoombtns button.on{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.zoombtns button:hover:not(.on){background:rgba(0,0,0,.05)}
+
+/* ── ① 轨道区 ── */
+.timeline{
+  position:relative;
+  background:var(--layer1);border:.5px solid var(--border);border-radius:var(--r8);
+  overflow-x:auto;overflow-y:hidden;
+}
+.tl-inner{position:relative;min-width:100%}
+
+.ruler{position:relative;height:24px;border-bottom:.5px solid var(--border)}
+.ruler .tick{
+  position:absolute;top:6px;font-size:10px;color:var(--fg3);
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.ruler .tickline{position:absolute;top:18px;height:6px;border-left:1px solid var(--border)}
+
+.tracks{position:relative}
+.track{position:relative;display:flex;align-items:center;height:46px;border-bottom:.5px solid var(--border)}
+.track:last-child{border-bottom:0}
+.thead{
+  width:var(--head);flex:none;display:flex;align-items:center;gap:6px;
+  padding:0 10px;height:100%;border-right:.5px solid var(--border);
+  color:var(--fg2);font-size:12px;background:var(--layer1);
+  position:sticky;left:0;z-index:3;
+}
+.thead .dot{width:8px;height:8px;border-radius:var(--r4);flex:none}
+.thead .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tbody{position:relative;flex:1;height:100%;min-width:0}
+.clip{
+  position:absolute;top:9px;height:28px;border-radius:var(--r4);
+  display:flex;align-items:center;padding:0 8px;font-size:11px;
+  color:var(--fg);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  border:.5px solid var(--border);cursor:pointer;
+}
+.clip:hover{filter:brightness(1.05)}
+.clip.sel{outline:2px solid var(--primary);outline-offset:-1px}
+.tempty{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--fg3);font-size:11px;pointer-events:none}
+
+.playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--primary);pointer-events:none;left:var(--head);z-index:4}
+.playhead::before{content:'';position:absolute;top:0;left:-5px;width:12px;height:12px;background:var(--primary);border-radius:0 0 var(--r4) var(--r4)}
+
+.note{padding:10px 12px;background:var(--layer1);border:.5px solid var(--border);border-radius:var(--r8);color:var(--fg2);font-size:12px;line-height:1.75}
+.note b{color:var(--fg)}
+.note code{background:var(--layer2);padding:1px 5px;border-radius:var(--r4);font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>时间轴 UI 预览 · 五轨 + 缩放 + 进度条</h1>
+    <div class="hint">三件事都做成可点的：拖进度条、点缩放档位、看轨道数。放大到 400% 后可横向滚动。</div>
+  </div>
+
+  <div class="toolbar">
+    <button class="iconbtn" title="工程菜单">☰</button>
+    <button class="btn">素材</button>
+    <button class="btn">浏览</button>
+    <button class="btn">导入</button>
+    <div class="spacer"></div>
+    <button class="btn-primary">导出</button>
+  </div>
+
+  <div class="preview">预览画布</div>
+
+  <div class="transport">
+    <span class="tcode" id="cur">00:00.0</span>
+    <span class="tcode" style="color:var(--fg3)">/</span>
+    <span class="tcode" id="dur" style="color:var(--fg3)">00:10.0</span>
+    <button class="playbtn" id="play" title="播放">▶</button>
+    <div class="progress" id="prog" role="slider" aria-label="播放进度"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+      <div class="progress-track"></div>
+      <div class="progress-fill" id="fill"></div>
+      <div class="progress-thumb" id="thumb"></div>
+    </div>
+    <div class="zoom">
+      <span style="color:var(--fg3);font-size:12px">缩放</span>
+      <div class="zoombtns" id="zoombtns">
+        <button data-z="0.25">25%</button>
+        <button data-z="0.5">50%</button>
+        <button data-z="1" class="on">100%</button>
+        <button data-z="2">200%</button>
+        <button data-z="4">400%</button>
+        <button data-z="8">800%</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline" id="timeline">
+    <div class="tl-inner" id="tlInner">
+      <div class="playhead" id="ph"></div>
+      <div class="ruler" id="ruler"></div>
+      <div class="tracks" id="tracks"></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>三条改动说明：</b><br>
+    ① <b>默认五条轨道</b> —— 视频 1（主轨）· 视频 2（叠加）· 字幕 · 音频 1 · 音频 2。主轨用 ArtCraft 的 <code>main</code> 字段，其余进 <code>overlay[]</code> 与 <code>audio[]</code>。<br>
+    ② <b>缩放</b> —— 从 25~200% 扩到 <b>25 / 50 / 100 / 200 / 400 / 800%</b>；放大后轨道可横向滚动，轨道头固定在左侧不跟着滚。<br>
+    ③ <b>进度条</b> —— 预览区下方新增，可点击定位、可拖动；拖它时时间轴播放头同步跟随。键盘 ←→ 可微调 0.1 秒。
+  </div>
+</div>
+
+<script>
+(function(){
+  var TOTAL = 10;
+  var cur = 0, zoom = 1, playing = false, rafId = null, dragging = false;
+  var BASE_PX = 60;
+
+  var TRACKS = [
+    { id:'main', type:'video', name:'视频 1（主轨）', color:'#4176e6',
+      clips:[{s:0,e:4,label:'开场镜头'},{s:4,e:10,label:'主体动作'}] },
+    { id:'v2', type:'video', name:'视频 2', color:'#7aaaff',
+      clips:[{s:2,e:6.5,label:'叠加素材'}] },
+    { id:'sub', type:'text', name:'字幕', color:'#e0a33a',
+      clips:[{s:0.5,e:3,label:'第一句台词'},{s:4.5,e:8,label:'第二句台词'}] },
+    { id:'a1', type:'audio', name:'音频 1', color:'#3fae72',
+      clips:[{s:0,e:10,label:'背景音乐'}] },
+    { id:'a2', type:'audio', name:'音频 2', color:'#59c98a', clips:[] }
+  ];
+
+  function $(id){ return document.getElementById(id); }
+
+  function fmt(s){
+    var m = Math.floor(s/60), sec = s % 60;
+    var ss = String(Math.floor(sec)).padStart(2,'0');
+    var frac = sec % 1;
+    var str = String(m).padStart(2,'0') + ':' + ss;
+    return frac > 0.001 ? str + '.' + Math.round(frac*10) : str;
+  }
+
+  function render(){
+    var pxPerSec = BASE_PX * zoom;
+    var contentW = 96 + TOTAL * pxPerSec + 40;
+
+    $('tlInner').style.width = contentW + 'px';
+
+    renderRuler(pxPerSec);
+    renderTracks(pxPerSec);
+    updatePlayhead(pxPerSec);
+  }
+
+  function renderRuler(pxPerSec){
+    var r = $('ruler');
+    r.innerHTML = '';
+    var cands = [1,2,5,10,15,30];
+    var step = 30;
+    for (var i=0;i<cands.length;i++){ if (cands[i]*pxPerSec >= 72){ step = cands[i]; break; } }
+    for (var t=0; t<=TOTAL+0.0001; t+=step){
+      var x = 96 + t*pxPerSec;
+      var tk = document.createElement('div');
+      tk.className='tick'; tk.style.left = x+'px'; tk.textContent = fmt(t);
+      r.appendChild(tk);
+      var ln = document.createElement('div');
+      ln.className='tickline'; ln.style.left = x+'px';
+      r.appendChild(ln);
+    }
+  }
+
+  function renderTracks(pxPerSec){
+    var host = $('tracks');
+    host.innerHTML = '';
+    TRACKS.forEach(function(t){
+      var row = document.createElement('div'); row.className='track';
+      var head = document.createElement('div'); head.className='thead';
+      head.innerHTML = '<span class="dot" style="background:'+t.color+'"></span><span class="nm">'+t.name+'</span>';
+      row.appendChild(head);
+      var body = document.createElement('div'); body.className='tbody';
+      t.clips.forEach(function(c){
+        var el = document.createElement('div'); el.className='clip';
+        el.style.left = (c.s*pxPerSec)+'px';
+        el.style.width = Math.max(24,(c.e-c.s)*pxPerSec)+'px';
+        el.style.background = t.color+'22';
+        el.style.borderColor = t.color+'55';
+        el.textContent = c.label;
+        el.title = c.label + '  ' + fmt(c.s) + ' – ' + fmt(c.e);
+        el.onclick = function(){
+          [].forEach.call(document.querySelectorAll('.clip'), function(x){ x.classList.remove('sel'); });
+          el.classList.add('sel');
+          seek(c.s);
+        };
+        body.appendChild(el);
+      });
+      if (!t.clips.length){
+        var emp = document.createElement('div'); emp.className='tempty';
+        emp.textContent='空轨道 · 把素材拖进来';
+        body.appendChild(emp);
+      }
+      row.appendChild(body);
+      host.appendChild(row);
+    });
+  }
+
+  function updatePlayhead(pxPerSec){
+    $('ph').style.left = (96 + cur*pxPerSec) + 'px';
+  }
+
+  function setProgress(pct){
+    pct = Math.max(0, Math.min(100, pct));
+    $('fill').style.width = pct+'%';
+    $('thumb').style.left = pct+'%';
+    $('prog').setAttribute('aria-valuenow', Math.round(pct));
+  }
+
+  function seek(sec_){
+    cur = Math.max(0, Math.min(TOTAL, sec_));
+    setProgress((cur/TOTAL)*100);
+    $('cur').textContent = fmt(cur);
+    updatePlayhead(BASE_PX*zoom);
+  }
+
+  function pctFromEvent(e){
+    var r = $('prog').getBoundingClientRect();
+    return ((e.clientX - r.left) / r.width) * 100;
+  }
+
+  var prog = $('prog');
+  prog.addEventListener('pointerdown', function(e){
+    dragging = true; prog.classList.add('dragging');
+    try{ prog.setPointerCapture(e.pointerId); }catch(_){}
+    seek(pctFromEvent(e)/100*TOTAL);
+  });
+  prog.addEventListener('pointermove', function(e){
+    if (!dragging) return;
+    seek(pctFromEvent(e)/100*TOTAL);
+  });
+  prog.addEventListener('pointerup', function(e){
+    dragging = false; prog.classList.remove('dragging');
+    try{ prog.releasePointerCapture(e.pointerId); }catch(_){}
+  });
+  prog.addEventListener('pointercancel', function(){
+    dragging = false; prog.classList.remove('dragging');
+  });
+  prog.addEventListener('keydown', function(e){
+    if (e.key==='ArrowLeft'){ seek(cur-0.1); e.preventDefault(); }
+    else if (e.key==='ArrowRight'){ seek(cur+0.1); e.preventDefault(); }
+    else if (e.key==='Home'){ seek(0); e.preventDefault(); }
+    else if (e.key==='End'){ seek(TOTAL); e.preventDefault(); }
+  });
+
+  $('play').onclick = function(){
+    playing = !playing;
+    $('play').textContent = playing ? '❚❚' : '▶';
+    if (playing){
+      var t0 = performance.now(), c0 = cur;
+      var tick = function(now){
+        if (!playing) return;
+        seek(c0 + (now-t0)/1000);
+        if (cur >= TOTAL){ playing=false; $('play').textContent='▶'; return; }
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+    } else if (rafId){ cancelAnimationFrame(rafId); }
+  };
+
+  $('zoombtns').addEventListener('click', function(e){
+    var b = e.target.closest('button[data-z]');
+    if (!b) return;
+    zoom = parseFloat(b.dataset.z);
+    [].forEach.call($('zoombtns').children, function(x){ x.classList.toggle('on', x===b); });
+    render();
+  });
+
+  $('dur').textContent = fmt(TOTAL);
+  render();
+  seek(0);
+})();
+</script>
+</body>
+</html>

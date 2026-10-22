@@ -1,0 +1,140 @@
+{
+ "widths": {
+  "560": {
+   "viewport": 560,
+   "wbWidth": 528,
+   "wbOverflowX": false,
+   "barScrollOverflow": false,
+   "cols": "77.3281px 55.2344px 49.7188px 49.7031px 72px 174.016px",
+   "selectW": 77.3,
+   "aspectW": 55.2,
+   "durW": 49.7,
+   "stepsW": 49.7,
+   "seedW": 72,
+   "btnW": 72,
+   "barH": 32
+  },
+  "760": {
+   "viewport": 760,
+   "wbWidth": 728,
+   "wbOverflowX": false,
+   "barScrollOverflow": false,
+   "cols": "127.984px 91.4375px 82.2812px 82.2812px 96px 176.016px",
+   "selectW": 128,
+   "aspectW": 91.4,
+   "durW": 82.3,
+   "stepsW": 82.3,
+   "seedW": 96,
+   "btnW": 72,
+   "barH": 32
+  },
+  "1100": {
+   "viewport": 1100,
+   "wbWidth": 920,
+   "wbOverflowX": false,
+   "barScrollOverflow": false,
+   "cols": "191.984px 137.156px 123.422px 123.422px 96px 176.016px",
+   "selectW": 192,
+   "aspectW": 137.2,
+   "durW": 123.4,
+   "stepsW": 123.4,
+   "seedW": 96,
+   "btnW": 72,
+   "barH": 32
+  }
+ },
+ "interact": {
+  "initial": {
+   "mode": "yz",
+   "aspect": "16:9",
+   "dur": "5",
+   "steps": "10",
+   "resultChildren": 2,
+   "modeOptions": [
+    "多参 H3 ★",
+    "Krea2 生图",
+    "Qwen 生图",
+    "Qwen 改图"
+   ],
+   "durOptions": [
+    "5 秒",
+    "10 秒",
+    "15 秒"
+   ],
+   "stepsOptions": [
+    "4 步",
+    "6 步",
+    "8 步",
+    "10 步",
+    "15 步",
+    "20 步"
+   ]
+  },
+  "afterSwitchKrea2": {
+   "mode": "krea2",
+   "aspect": "16:9",
+   "dur": "5",
+   "steps": "8",
+   "resultChildren": 0,
+   "promptStart": "a young woman in a sunlit cafe, cinemati",
+   "switchVisible": true,
+   "switchLabel": "二采精修",
+   "switchChecked": "true"
+  },
+  "afterSwitchQwen": {
+   "mode": "qwen21",
+   "switchHidden": true,
+   "steps": "4"
+  },
+  "duringGen": {
+   "genDisabled": true,
+   "genText": "生成中…",
+   "cancelVisible": true,
+   "hasProgress": true,
+   "resultHTML": "<div class=\"wb-result-head\"><span>已提交，等待产出…</span><span>·</span><span>job-5rcgmu</span></div><div class=\"wb-progress\"><i style=\"width: 17.3628%;\"></i>"
+  },
+  "afterDone": {
+   "genDisabled": false,
+   "genText": "生成",
+   "cancelVisible": false,
+   "hasVideo": true,
+   "hasImg": false,
+   "mediaCount": 1,
+   "headText": "完成\n·\n1.7s\n·\n1 个产物"
+  },
+  "afterCancel": {
+   "genDisabled": false,
+   "cancelHidden": true,
+   "headText": "已取消\n·\njob-rjulhs"
+  }
+ },
+ "emptyState": {
+  "resultChildren": 0,
+  "resultText": "",
+  "resultHTML": "",
+  "hasEmptyClass": 0
+ },
+ "backToDone": {
+  "resultChildren": 2,
+  "mediaCount": 1
+ },
+ "seed": {
+  "value": "12345",
+  "spinnerHidden": "none"
+ },
+ "ctrlEnter": {
+  "genDisabled": true,
+  "genText": "生成中…"
+ },
+ "focusRing": {
+  "outline": "rgb(97, 102, 107) none 3px",
+  "outlineWidth": "3px",
+  "boxShadow": "rgb(65, 118, 230) 0px 0px 0px 2px"
+ },
+ "font": {
+  "fontFamily": "-apple-system",
+  "fontSize": "13px",
+  "lineHeight": "20px"
+ },
+ "consoleErrors": []
+}

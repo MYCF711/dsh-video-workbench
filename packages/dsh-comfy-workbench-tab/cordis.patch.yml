@@ -1,0 +1,9 @@
+# dsh-comfy-workbench-tab bundle patch
+#
+# 装法：
+#   dsh plugin --profile <name> add dsh-comfy-workbench-tab
+#
+# 依赖 dsh-comfy-bridge（同 profile 内先装 M1）。
+- insert:
+    - id: comfy-workbench-tab
+      name: 'dsh-comfy-workbench-tab'

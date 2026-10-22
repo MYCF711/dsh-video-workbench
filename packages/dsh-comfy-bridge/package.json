@@ -1,0 +1,38 @@
+{
+  "name": "dsh-comfy-bridge",
+  "version": "0.2.0",
+  "description": "DSH plugin: bridge local ComfyUI to DSH over HTTP routes, exposing pluggable workflows as endpoints. Brand-free: no model names or node ids in code.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./length": "./src/length.mjs",
+    "./workflows": "./src/workflows.mjs",
+    "./comfy": "./src/comfy.mjs",
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "src",
+    "workflows",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "comfyui",
+    "comfy",
+    "workflow",
+    "video",
+    "image"
+  ]
+}

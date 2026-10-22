@@ -1,0 +1,54 @@
+{
+  "id": "qwen21",
+  "label": "Qwen 生图",
+  "tabSub": "2.1 Turbo · 文生图",
+  "description": "Qwen-Image 2.1 Turbo 文生图（接自主人自己的 【Work-Fisher】Qwen-Image2.1基础工作流，只取「文生图12」组，经 ComfyUI 自己的转换 + cg-use-everywhere 补线后落盘，18 节点自包含）。",
+  "workflow": "qwen21-t2i.json",
+  "order": 2,
+  "defaults": {
+    "prompt": "Retro Cartoon Graffiti EDM Party Poster, neon colors, bold outlines, energetic composition",
+    "aspect": "16:9",
+    "steps": 40,
+    "batch": 1
+  },
+  "vars": {
+    "prompt": {
+      "node": "456",
+      "input": "prompt"
+    },
+    "aspect": {
+      "node": "406",
+      "input": "aspect_ratio"
+    },
+    "seed": {
+      "node": "442",
+      "input": "seed"
+    },
+    "steps": {
+      "node": "442",
+      "input": "steps"
+    },
+    "batch": {
+      "node": "405",
+      "input": "batch_size"
+    },
+    "megapixels": {
+      "node": "406",
+      "input": "megapixels"
+    }
+  },
+  "aspectMap": {
+    "1:1": "1:1 (Square)",
+    "2:3": "2:3 (Portrait Photo)",
+    "3:2": "3:2 (Landscape Photo)",
+    "3:4": "3:4 (Portrait)",
+    "4:3": "4:3 (Landscape)",
+    "9:16": "9:16 (Portrait Widescreen)",
+    "16:9": "16:9 (Widescreen)",
+    "21:9": "21:9 (Ultrawide)"
+  },
+  "media": {},
+  "outputs": {
+    "image": "461"
+  }
+}

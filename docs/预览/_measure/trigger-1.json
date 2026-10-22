@@ -1,0 +1,98 @@
+{
+ "before": {
+  "tag": "rest",
+  "w": 175.05,
+  "h": 28,
+  "border": "0px none rgb(97, 102, 107)",
+  "borderWidth": "0px",
+  "borderColor": "rgb(97, 102, 107)",
+  "borderStyle": "none",
+  "borderRadius": "8px",
+  "background": "rgba(0, 0, 0, 0)",
+  "color": "rgb(97, 102, 107)",
+  "fontSize": "13px",
+  "lineHeight": "20px",
+  "fontFamily": "-apple-system",
+  "fontWeight": "400",
+  "padding": "0px 4px 0px 8px",
+  "gap": "4px",
+  "display": "flex",
+  "alignItems": "center",
+  "outline": "rgb(97, 102, 107) none 3px",
+  "outlineOffset": "0px",
+  "boxShadow": "none",
+  "transition": "all",
+  "cursor": "pointer"
+ },
+ "hoverRules": [
+  {
+   "sel": "._2WTFBq_trigger:hover, ._2WTFBq_trigger[aria-expanded=\"true\"]",
+   "css": "background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary);"
+  },
+  {
+   "sel": ".wCInkW_trigger:hover",
+   "css": "background: var(--dsw-alias-interactive-bg-hover);"
+  },
+  {
+   "sel": ".foD-wG_trigger:hover, .foD-wG_trigger:focus-visible",
+   "css": "color: var(--dsw-alias-label-secondary);"
+  },
+  {
+   "sel": ".wq12jW_trigger:hover:not(:disabled)",
+   "css": "background: var(--dsw-alias-interactive-bg-hover);"
+  },
+  {
+   "sel": ".wq12jW_searchClear:hover, .wq12jW_searchClear:focus-visible",
+   "css": "background: var(--dsw-alias-interactive-bg-hover); outline: none;"
+  },
+  {
+   "sel": ".wq12jW_option:not(.wq12jW_modelOption):hover:not(:disabled), .wq12jW_option:focus-visible, .wq12jW_optionActive:not(:disabled)",
+   "css": "background: var(--dsw-alias-interactive-bg-hover);"
+  },
+  {
+   "sel": ".wq12jW_cell:hover, .wq12jW_cell:focus-visible",
+   "css": "background: var(--dsw-alias-interactive-bg-hover);"
+  },
+  {
+   "sel": ".dlU_AG_trigger:hover:not(:disabled)",
+   "css": "background: var(--dsw-alias-interactive-bg-hover);"
+  },
+  {
+   "sel": ".Rd79tq_trigger:hover, .Rd79tq_trigger[aria-expanded=\"true\"]",
+   "css": "background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-tertiary);"
+  },
+  {
+   "sel": ".ET65mq_trigger:hover",
+   "css": "background: var(--dsw-alias-interactive-bg-hover);"
+  },
+  {
+   "sel": ".oXE0lW_trigger:hover, .oXE0lW_trigger:focus-visible, .oXE0lW_switcherTrigger:hover, .oXE0lW_switcherTrigger:focus-visible",
+   "css": "color: var(--dsw-alias-label-primary);"
+  }
+ ],
+ "tokens": {
+  "--dsw-alias-border-l2": "",
+  "--dsw-alias-border-l1": "",
+  "--dsw-alias-border-l3": "",
+  "--dsw-alias-bg-layer-2": "",
+  "--dsw-alias-bg-layer-1": "",
+  "--dsw-alias-bg-layer-3": "",
+  "--dsw-alias-bg-base": "",
+  "--dsw-alias-bg-elevated": "",
+  "--dsw-alias-label-primary": "",
+  "--dsw-alias-label-secondary": "",
+  "--dsw-alias-label-tertiary": "",
+  "--dsw-alias-interactive-bg-hover": "",
+  "--dsw-alias-interactive-bg-active": "",
+  "--dsw-focus-ring-color": "",
+  "--dsw-focus-ring-width": "2px",
+  "--dsw-radius-sm": "8px",
+  "--dsw-radius-md": "12px",
+  "--dsw-radius-lg": "16px",
+  "--dsw-font-xs-13": "",
+  "--dsw-font-xxs-12": "",
+  "--dsw-alias-button-primary-fill": "",
+  "--dsw-alias-button-primary-hover": "",
+  "--dsw-elevation-panel": ""
+ }
+}

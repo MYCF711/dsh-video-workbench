@@ -1,0 +1,248 @@
+{
+  "id": "krea2",
+  "label": "Krea2 生图",
+  "tabSub": "双采极清 · 生图",
+  "description": "Krea2 双采极清生图流（接自主人自己的 ▶▷Krea2-双采极清生图流+SeedVR2-int8图像放大，由 ComfyUI 自己的 graphToPrompt 转换）。一采出图 + 二采精修（×1.5 放大后 5 步 denoise 0.5）。",
+  "workflow": "krea2-full.json",
+  "order": 1,
+  "defaults": {
+    "prompt": "a young woman in a sunlit cafe, cinematic lighting, shallow depth of field, film grain",
+    "aspect": "16:9",
+    "steps": 8,
+    "steps2": 5,
+    "batch": 1
+  },
+  "vars": {
+    "prompt": {
+      "node": "215",
+      "input": "text"
+    },
+    "aspect": {
+      "node": "211",
+      "input": "aspect_ratio"
+    },
+    "seed": {
+      "node": "203",
+      "input": "seed"
+    },
+    "steps": {
+      "node": "203",
+      "input": "steps"
+    },
+    "steps2": {
+      "node": "221",
+      "input": "steps"
+    },
+    "batch": {
+      "node": "210",
+      "input": "batch_size"
+    },
+    "megapixels": {
+      "node": "211",
+      "input": "megapixels"
+    },
+    "seedvrModel": {
+      "node": "197",
+      "input": "unet_name"
+    }
+  },
+  "always": {
+    "delete": [
+      "175",
+      "176",
+      "172"
+    ],
+    "reason": "SeedVR2 相关节点已改为可选开关（seedvr），不再永久删除。原先是外部粘贴图支路（187=pasted/image (10).png 本机没有），现在由开关决定是否启用、并从生成结果取图。\n\n175 BatchImageSaverCN：作者的「另存一份 JPG」节点，image←174(SeedVR2)，无下游、不在 outputs，会让每次生成多出一个 image_xxx.jpg。2026-10-18 永久删除。\n\n176 Image Comparer / 172 JoinImageWithAlpha：拆掉假 alpha 后不再需要。174 改为直接存 ImageSmartSharpen+ 的 RGB 输出。2026-10-18 画质修。"
+  },
+  "aspectMap": {
+    "1:1": "1:1 (Square)",
+    "2:3": "2:3 (Portrait)",
+    "3:2": "3:2 (Landscape)",
+    "3:4": "3:4 (Portrait)",
+    "4:3": "4:3 (Landscape)",
+    "9:16": "9:16 (Portrait Widescreen)",
+    "16:9": "16:9 (Widescreen)",
+    "21:9": "21:9 (Ultrawide)"
+  },
+  "toggles": {
+    "secondPass": {
+      "label": "二采精修",
+      "type": "bool",
+      "default": true,
+      "hint": "开：一采结果先 ×1.5 放大再跑二采（5 步 / denoise 0.5），细节更实。关：只用一采出图（更快）。",
+      "on": {
+        "nodes": [
+          "221",
+          "222",
+          "223",
+          "220"
+        ]
+      },
+      "off": {
+        "delete": [
+          "221",
+          "222",
+          "223",
+          "220"
+        ],
+        "rewire": {
+          "199": {
+            "image": [
+              "208",
+              0
+            ]
+          },
+          "195": {
+            "image": [
+              "208",
+              0
+            ]
+          },
+          "900": {
+            "image": [
+              "208",
+              0
+            ]
+          },
+          "190": {
+            "image": [
+              "208",
+              0
+            ]
+          }
+        }
+      }
+    },
+    "redraw": {
+      "label": "高清重绘（②组）",
+      "type": "bool",
+      "default": false,
+      "hint": "开：额外跑一遍 UltimateSDUpscale 重绘。",
+      "on": {
+        "nodes": [
+          "191",
+          "186",
+          "190",
+          "199",
+          "193",
+          "192",
+          "194"
+        ]
+      },
+      "off": {
+        "delete": [
+          "191",
+          "186",
+          "190",
+          "199",
+          "193",
+          "192",
+          "194"
+        ]
+      }
+    },
+    "loraChain": {
+      "label": "挂 LoRA",
+      "type": "bool",
+      "default": false,
+      "hint": "开：挂上 Turbo LoRA（官方 krea2_turbo_lora_rank_64_bf16，加速出图）。作者画布上 217 位置还有个「亚洲人像 LoRA」，但那个文件本机无公开来源 —— 无论开关与否都已从链路里摘掉。",
+      "on": {
+        "delete": [
+          "217"
+        ],
+        "rewire": {
+          "199": {
+            "model": [
+              "218",
+              0
+            ]
+          },
+          "218": {
+            "model": [
+              "214",
+              0
+            ]
+          }
+        }
+      },
+      "off": {
+        "delete": [
+          "217",
+          "218"
+        ],
+        "rewire": {
+          "199": {
+            "model": [
+              "214",
+              0
+            ]
+          },
+          "203": {
+            "model": [
+              "214",
+              0
+            ]
+          },
+          "221": {
+            "model": [
+              "214",
+              0
+            ]
+          }
+        }
+      }
+    },
+    "seedvr": {
+      "label": "SeedVR2 放大",
+      "type": "bool",
+      "default": false,
+      "hint": "开：用 SeedVR2 对结果做高质量放大（7B 或 3B，见下方模型选择）。关：完全不加载这两个模型。",
+      "on": {
+        "nodes": [
+          "170",
+          "171",
+          "172",
+          "173",
+          "174",
+          "179",
+          "180",
+          "181",
+          "182",
+          "183",
+          "184",
+          "187",
+          "195",
+          "196",
+          "197"
+        ]
+      },
+      "off": {
+        "delete": [
+          "170",
+          "171",
+          "172",
+          "173",
+          "174",
+          "175",
+          "179",
+          "180",
+          "181",
+          "182",
+          "183",
+          "184",
+          "187",
+          "195",
+          "196",
+          "197"
+        ]
+      }
+    }
+  },
+  "media": {},
+  "outputs": {
+    "image": "202",
+    "imageTwoPass": "220",
+    "imageUsd": "186",
+    "imageSeedvr": "174"
+  }
+}

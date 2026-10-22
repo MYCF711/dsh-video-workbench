@@ -1,0 +1,169 @@
+{
+  "id": "yz",
+  "label": "多参 H3",
+  "tabSub": "YZ金鱼 终极篇 · 主力",
+  "description": "全力模式：文戏武戏一个工作流，可上传参考图/参考视频/参考音频，武打链可开关。接入自 YZ金鱼-MiniMax H3 终极篇-文武双全（作者原件，由 ComfyUI 自己的 graphToPrompt 转换）。",
+  "workflow": "yz-ultimate-full.json",
+  "order": 0,
+  "primary": true,
+  "defaults": {
+    "prompt": "subject_definitions:\n<Subject 1> is the character in <Picture 1>.\n\n文戏：角色在室内自然交谈，镜头缓慢推进，表情细微变化。",
+    "aspect": "16:9",
+    "durationSec": 5,
+    "steps": 10
+  },
+  "vars": {
+    "prompt": {
+      "node": "263",
+      "input": "text"
+    },
+    "aspect": {
+      "node": "252",
+      "input": "aspect_ratio"
+    },
+    "durationSec": {
+      "node": "259",
+      "input": "value"
+    },
+    "steps": {
+      "node": "261",
+      "input": "steps"
+    },
+    "megapixels": {
+      "node": "252",
+      "input": "megapixels"
+    },
+    "steps2": {
+      "node": "397",
+      "input": "transition_step"
+    }
+  },
+  "aspectMap": {
+    "1:1": "1:1 (Square)",
+    "2:3": "2:3 (Portrait)",
+    "3:2": "3:2 (Landscape)",
+    "3:4": "3:4 (Portrait)",
+    "4:3": "4:3 (Landscape)",
+    "9:16": "9:16 (Portrait Widescreen)",
+    "16:9": "16:9 (Widescreen)",
+    "21:9": "21:9 (Ultrawide)"
+  },
+  "toggles": {
+    "wudA": {
+      "label": "武打模式",
+      "type": "bool",
+      "default": false,
+      "hint": "开：挂上 H3_Combat_V2 / H3_Fight_Flow_V1 / Motion_Repair_V2 / H3_speed_slider 四个 LoRA。关：完全不加载它们。",
+      "on": {
+        "nodes": [
+          "342",
+          "344",
+          "345",
+          "343",
+          "366"
+        ],
+        "rewire": {
+          "331": {
+            "model": [
+              "343",
+              0
+            ]
+          }
+        }
+      },
+      "off": {
+        "delete": [
+          "342",
+          "344",
+          "345",
+          "343",
+          "366"
+        ],
+        "rewire": {
+          "331": {
+            "model": [
+              "400",
+              0
+            ]
+          }
+        }
+      }
+    }
+  },
+  "media": {
+    "ref_image_0": {
+      "node": "51",
+      "input": "image",
+      "label": "参考图1",
+      "accept": "image/*",
+      "kind": "image"
+    },
+    "ref_image_1": {
+      "node": "49",
+      "input": "image",
+      "label": "参考图2",
+      "accept": "image/*",
+      "kind": "image"
+    },
+    "ref_image_2": {
+      "node": "50",
+      "input": "image",
+      "label": "参考图3",
+      "accept": "image/*",
+      "kind": "image"
+    },
+    "ref_image_3": {
+      "node": "43",
+      "input": "image",
+      "label": "参考图4",
+      "accept": "image/*",
+      "kind": "image"
+    },
+    "ref_image_4": {
+      "node": "19",
+      "input": "image",
+      "label": "参考图5",
+      "accept": "image/*",
+      "kind": "image"
+    },
+    "ref_image_5": {
+      "node": "23",
+      "input": "image",
+      "label": "参考图6",
+      "accept": "image/*",
+      "kind": "image"
+    },
+    "ref_video_0": {
+      "node": "27",
+      "input": "video",
+      "label": "参考视频1",
+      "accept": "video/*",
+      "kind": "video"
+    },
+    "ref_audio_0": {
+      "node": "48",
+      "input": "audio",
+      "label": "参考音频1",
+      "accept": "audio/*",
+      "kind": "audio"
+    },
+    "ref_audio_1": {
+      "node": "14",
+      "input": "audio",
+      "label": "参考音频2",
+      "accept": "audio/*",
+      "kind": "audio"
+    },
+    "ref_audio_2": {
+      "node": "15",
+      "input": "audio",
+      "label": "参考音频3",
+      "accept": "audio/*",
+      "kind": "audio"
+    }
+  },
+  "capabilities": {"h3Labels": true},
+  "outputs": {
+    "video": "364"
+  }
+}

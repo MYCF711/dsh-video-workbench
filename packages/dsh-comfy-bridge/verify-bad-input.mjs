@@ -1,0 +1,306 @@
+/**
+ * 异常输入验收 —— 把「输入校验」变成可自动复跑的断言。
+ *
+ * ══════════════════════════════════════════════════════════════════════
+ * 为什么需要这一套
+ *
+ *   2026-10-19 我主动测了 17 项异常输入，发现 5 个真实缺陷：
+ *     · 空提示词 / 纯空格     → 一路提交到 CLIPTextEncode，出一张随机图
+ *     · 伪装成图的文本        → 被当成图片传上去
+ *     · 非法 base64           → Buffer.from 静默截断，传垃圾字节
+ *     · 不存在的槽名          → 被静默忽略，用户以为传上了
+ *     · 单图 50MB             → 没有大小上限
+ *
+ *   命中率约 30%（5/17）—— 每测 3 项就有一个真缺陷。
+ *   ⇒ 值得做成常驻验收：改代码后自动复测，防止修好的又坏回去。
+ *
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * 检查原则：**异常输入必须被明确拒绝，且拒绝理由要说人话。**
+ *   不接受「静默忽略」「静默用默认值」「传到下游才失败」。
+ *
+ * 用法：
+ *   node verify-bad-input.mjs
+ *   node verify-bad-input.mjs --base http://127.0.0.1:19499
+ *
+ * 退出码：有没被拒绝的 → 1
+ */
+
+import fs from "node:fs";
+import path from "node:path";
+
+// ★ 2026-10-21：符号类字符的判定是【纯校验逻辑】，
+//   直接调这个函数，不走网络（原因见下方「符号类字符不被误拒」的注释）。
+import { hasVisibleText } from "./src/text-guard.mjs";
+
+// ★ 2026-10-19：跑之前记下 ComfyUI input 目录的快照，跑完删掉新增的。
+//   原因见下方 cleanup 的注释 —— 验收不该留垃圾。
+const INPUT_DIR = "D:\\Comfy-Desktop\\ComfyUI-Shared\\input";
+const SNAPSHOT = (() => {
+  try { return new Set(fs.readdirSync(INPUT_DIR)); } catch { return new Set(); }
+})();
+
+const args = process.argv.slice(2);
+const argOf = (k, d) => {
+  const i = args.indexOf(k);
+  return i >= 0 && args[i + 1] ? args[i + 1] : d;
+};
+const BASE = argOf("--base", "http://127.0.0.1:19499");
+
+let pass = 0;
+let fail = 0;
+const failures = [];
+
+function ok(name, detail = "") {
+  pass++;
+  console.log(`  ✅ ${name}${detail ? "  " + detail : ""}`);
+}
+function bad(name, detail = "") {
+  fail++;
+  failures.push(name);
+  console.log(`  ❌ ${name}${detail ? "  " + detail : ""}`);
+}
+
+/** 提交一次 generate，返回 { accepted, error, promptId } */
+async function tryGenerate(body) {
+  const res = await fetch(`${BASE}/comfy-bridge/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let j = null;
+  try { j = JSON.parse(text); } catch { /* 非 JSON */ }
+  if (res.ok && j && !j.error) {
+    return { accepted: true, promptId: j.promptId };
+  }
+  return { accepted: false, error: j?.error ?? text.slice(0, 120) };
+}
+
+/**
+ * 本次测试上传到 ComfyUI input 目录的文件 —— 跑完要删掉。
+ *
+ * ★★ 2026-10-19 加（实测发现）：
+ *   verify-bad-input.mjs 的「⑤ 正常输入仍能通过」组必须提交真实请求，
+ *   而真实请求会上传文件到 ComfyUI 的 input 目录。
+ *   每跑一次验收就多一个 wb_ref_image_0_ok_xxxxxx.png。
+ *
+ *   实测：验收前 108 个文件 → 验收后 109 个。
+ *   （我先前手工清过一次 46 个，就是历次验收累积的。）
+ *
+ *   ⇒ cancel() 只撤队列，撤不掉已落盘的文件。这里补一个删除。
+ */
+const uploaded = [];
+function noteUpload(body) {
+  // 从 body.files 里推断我们会写出什么文件名 —— 与 index.js 的命名规则一致：
+  //   wb_<slot>_<safeBase>_<随机6位><ext>
+  // 但随机段在服务端生成，客户端不知道。
+  // ⇒ 换个办法：跑之前记下 input 目录的快照，跑完对比新增。
+}
+
+/** 撤掉刚提交的任务，别占队列 */
+async function cancel(promptId) {
+  if (!promptId) return;
+  try {
+    await fetch("http://127.0.0.1:8188/queue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ delete: [promptId] }),
+    });
+  } catch { /* 忽略 */ }
+}
+
+// 1×1 的合法 PNG（67 字节）
+const PNG_1PX =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+console.log("═".repeat(62));
+console.log("  异常输入验收（必须全部被拒，且理由说人话）");
+console.log("═".repeat(62));
+console.log(`  实例 ${BASE}`);
+
+// ─── A. 提示词校验 ──────────────────────────────────────────────
+console.log("\n① 提示词");
+
+{
+  const r = await tryGenerate({ modeId: "krea2", prompt: "", steps: 4 });
+  if (r.accepted) bad("空提示词被拒", "★ 被接受了 —— 会生成随机的图");
+  else ok("空提示词被拒", r.error.slice(0, 40));
+  await cancel(r.promptId);
+}
+{
+  const r = await tryGenerate({ modeId: "krea2", prompt: "    ", steps: 4 });
+  if (r.accepted) bad("纯空格提示词被拒", "★ 被接受了");
+  else ok("纯空格提示词被拒", r.error.slice(0, 40));
+  await cancel(r.promptId);
+}
+
+// ★ 2026-10-19 加（独立复核第二轮发现）：
+//   1. 不可见字符的「类别」要覆盖全 —— U+2800(So) / U+00AD(Cf) 曾穿透黑名单
+//   2. 长度要有上限 —— 实测 100000 / 1050000 字符都曾被接受
+//   3. 符号不能误拒 —— 我改白名单时漏了 \p{S}，$ + = < > 全被拒
+{
+  const invisibles = [
+    ["U+2800 盲文空白", "\u2800"],
+    ["U+00AD 软连字符", "\u00ad"],
+    ["混合不可见", "\u2060\u2800\u00ad\ufeff"],
+    ["U+3164 韩文填充", "\u3164"],
+  ];
+  for (const [name, ch] of invisibles) {
+    const r = await tryGenerate({ modeId: "krea2", prompt: ch, steps: 4 });
+    if (r.accepted) bad(`${name}被拒`, "★ 被接受了 —— 会生成随机的图");
+    else ok(`${name}被拒`);
+    await cancel(r.promptId);
+  }
+}
+{
+  /**
+   * ★★ 2026-10-21 改（总验收里这条报红，我查明原因后改的）
+   *
+   * —— 原来的写法：对每个符号调 tryGenerate（真实提交到 ComfyUI），
+   *   只要 accepted === false 就记「被误拒」。
+   *
+   * —— 问题：这把【校验逻辑】和【网络可达性】耦合了。
+   *   ComfyUI 一关，tryGenerate 必然返回 accepted:false
+   *   ⇒ 14 个符号全被记成「误拒」⇒ 断言红。
+   *   而实际上校验函数是对的 —— 我单独实测 hasVisibleText：
+   *     $ + = < > | ~ ^ ∑ ℃ √ ∞ ≈ ≠   全部返回 true
+   *
+   * —— 这条断言真正要验的是【校验逻辑】，不是【能不能提交】。
+   *   ⇒ 直接调 hasVisibleText（纯函数，零网络）。
+   *     真实提交的可用性由「⑤ 正常输入仍能通过」那组负责。
+   */
+  const syms = ["$", "+", "=", "<", ">", "|", "~", "^", "∑", "℃", "√", "∞", "≈", "≠"];
+  const rejected = [];
+  for (const s of syms) {
+    if (!hasVisibleText(s)) rejected.push(s);          // 光有符号也算有内容
+    if (!hasVisibleText(`符号 ${s}`)) rejected.push(`${s}(混合)`);  // 混在文字里更算
+  }
+  if (rejected.length === 0) {
+    ok("符号类字符不被误拒", `${syms.length} 项全过（纯函数，不依赖 ComfyUI）`);
+  } else {
+    bad("符号类字符不被误拒", `★ 误拒 ${rejected.length} 个：${rejected.join(" ")}`);
+  }
+}
+{
+  const r1 = await tryGenerate({ modeId: "krea2", prompt: "a".repeat(100000), steps: 4 });
+  if (r1.accepted) bad("超长提示词被拒", "★ 100000 字符被接受了");
+  else ok("超长提示词被拒", r1.error.slice(0, 40));
+  await cancel(r1.promptId);
+}
+
+// ─── B. 数值越界（ComfyUI schema 应挡住）────────────────────────
+console.log("\n② 数值越界");
+const numericCases = [
+  ["steps=0", { modeId: "krea2", prompt: "x", steps: 0 }],
+  ["steps=-1", { modeId: "krea2", prompt: "x", steps: -1 }],
+  ["steps=99999", { modeId: "krea2", prompt: "x", steps: 99999 }],
+  ["batch=0", { modeId: "krea2", prompt: "x", steps: 4, batch: 0 }],
+  ["batch=-5", { modeId: "krea2", prompt: "x", steps: 4, batch: -5 }],
+  ["megapixels=0", { modeId: "krea2", prompt: "x", steps: 4, megapixels: 0 }],
+  ["megapixels=999", { modeId: "krea2", prompt: "x", steps: 4, megapixels: 999 }],
+  ["aspect=100:1", { modeId: "krea2", prompt: "x", steps: 4, aspect: "100:1" }],
+];
+for (const [name, body] of numericCases) {
+  const r = await tryGenerate(body);
+  if (r.accepted) bad(`${name} 被拒`, "★ 被接受了");
+  else ok(`${name} 被拒`);
+  await cancel(r.promptId);
+}
+
+// ─── C. 模式校验 ────────────────────────────────────────────────
+console.log("\n③ 模式");
+{
+  const r = await tryGenerate({ modeId: "nope", prompt: "x" });
+  if (r.accepted) bad("未知模式被拒", "★ 被接受了");
+  else ok("未知模式被拒", r.error.slice(0, 40));
+  await cancel(r.promptId);
+}
+
+// ─── D. 素材校验（2026-10-19 新增的四道）────────────────────────
+console.log("\n④ 素材");
+
+{
+  // 伪装成图的文本 —— 魔数不对
+  const r = await tryGenerate({
+    modeId: "qwen21-edit", prompt: "x", steps: 4,
+    files: { ref_image_0: { base64: Buffer.from("hello world").toString("base64"), filename: "fake.png" } },
+  });
+  if (r.accepted) bad("伪装成图的文本被拒", "★ 被接受了");
+  else ok("伪装成图的文本被拒", r.error.slice(0, 50));
+  await cancel(r.promptId);
+}
+{
+  // 非法 base64 —— 长度对不上
+  const r = await tryGenerate({
+    modeId: "qwen21-edit", prompt: "x", steps: 4,
+    files: { ref_image_0: { base64: "!!!not-base64!!!", filename: "a.png" } },
+  });
+  if (r.accepted) bad("非法 base64 被拒", "★ 被接受了");
+  else ok("非法 base64 被拒", r.error.slice(0, 50));
+  await cancel(r.promptId);
+}
+{
+  // 不存在的槽名 —— krea2 没有 media 槽
+  const r = await tryGenerate({
+    modeId: "krea2", prompt: "x", steps: 4,
+    files: { bogus_slot: { base64: PNG_1PX, filename: "a.png" } },
+  });
+  if (r.accepted) bad("未知槽名被拒", "★ 被接受了（会被静默忽略）");
+  else ok("未知槽名被拒", r.error.slice(0, 50));
+  await cancel(r.promptId);
+}
+{
+  // 必填槽缺失 —— qwen21-edit 的原图
+  const r = await tryGenerate({ modeId: "qwen21-edit", prompt: "x", steps: 4 });
+  if (r.accepted) bad("必填素材缺失被拒", "★ 被接受了（会用内置示例图跑）");
+  else ok("必填素材缺失被拒", r.error.slice(0, 50));
+  await cancel(r.promptId);
+}
+
+// ─── E. 正常输入仍应通过（防止校验过头）─────────────────────────
+console.log("\n⑤ 正常输入仍能通过（防止校验过头）");
+{
+  const r = await tryGenerate({ modeId: "krea2", prompt: "a cat", steps: 4 });
+  if (r.accepted) ok("正常文本生图");
+  else bad("正常文本生图", `★ 被误拒：${r.error.slice(0, 60)}`);
+  await cancel(r.promptId);
+}
+{
+  const r = await tryGenerate({
+    modeId: "qwen21-edit", prompt: "make it red", steps: 4,
+    files: { ref_image_0: { base64: PNG_1PX, filename: "ok.png" } },
+  });
+  if (r.accepted) ok("正常改图（带合法 PNG）");
+  else bad("正常改图", `★ 被误拒：${r.error.slice(0, 60)}`);
+  await cancel(r.promptId);
+}
+
+// ─── 清理本次上传的文件 ────────────────────────────────────────
+//   办法：跑之前已经记了 input 目录快照（见文件开头的 SNAPSHOT），
+//   这里对比出新增文件并删掉。
+/**
+ * ★ 2026-10-21 修：原来是异步 IIFE，脚本不等它就退出。
+ *   实测：跑完 input/ 里还留 wb_ref_image_0_src_*.png。
+ *   ⇒ 改成 await + 先等 1 秒（让最后的上传请求落地）。
+ */
+await new Promise((r) => setTimeout(r, 1000));
+try {
+  const now = new Set(fs.readdirSync(INPUT_DIR));
+  const created = [...now].filter((n) => !SNAPSHOT.has(n));
+  if (created.length) {
+    let gone = 0;
+    for (const n of created) {
+      try { fs.unlinkSync(path.join(INPUT_DIR, n)); gone++; } catch { /* 删不掉就算了 */ }
+    }
+    console.log(`\n  清理了 ${gone} / ${created.length} 个本次上传的文件`);
+  }
+} catch { /* input 目录读不到就算了 */ }
+
+console.log("\n" + "═".repeat(62));
+console.log(`  通过 ${pass} / ${pass + fail}`);
+if (fail) {
+  console.log(`  失败：${failures.join(" · ")}`);
+  process.exit(1);
+}
+console.log("  异常输入验收全过");

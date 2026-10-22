@@ -1,0 +1,24 @@
+# dsh-comfy-bridge bundle patch
+#
+# 这是 `dsh.bundle.patch` 层：用官方 CLI 装包时
+#
+#   dsh plugin --profile <name> add dsh-comfy-bridge
+#
+# 命令会把 dsh-comfy-bridge 追加进 `dsh.profile.bundles`，
+# 并合并本文件（insert 一行插件记录）。
+#
+# ⚠ 如果 profile 的 cordis.patch.yml 里已有手工挂载行，先删掉再切到 bundle 通道，
+#   否则会双挂载（两个实例，两个 Remote）。
+#
+# 可选配置：
+#   comfyBase    ComfyUI 地址，默认 http://127.0.0.1:8188
+#   clientId     提交任务时带的 client_id
+#
+#   - insert:
+#       - id: comfy-bridge
+#         name: 'dsh-comfy-bridge'
+#         config:
+#           comfyBase: http://127.0.0.1:8188
+- insert:
+    - id: comfy-bridge
+      name: 'dsh-comfy-bridge'

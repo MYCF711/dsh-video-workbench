@@ -1,0 +1,706 @@
+{
+  "170": {
+    "inputs": {
+      "seed": 959948902156062,
+      "steps": 1,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "197",
+        0
+      ],
+      "positive": [
+        "181",
+        0
+      ],
+      "negative": [
+        "181",
+        1
+      ],
+      "latent_image": [
+        "180",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "171": {
+    "inputs": {
+      "image": [
+        "184",
+        0
+      ]
+    },
+    "class_type": "SplitImageWithAlpha",
+    "_meta": {
+      "title": "分离图像Alpha"
+    }
+  },
+  "172": {
+    "inputs": {
+      "image": [
+        "173",
+        0
+      ],
+      "alpha": [
+        "171",
+        1
+      ]
+    },
+    "class_type": "JoinImageWithAlpha",
+    "_meta": {
+      "title": "合并图像Alpha"
+    }
+  },
+  "173": {
+    "inputs": {
+      "noise_radius": 7,
+      "preserve_edges": 0.75,
+      "sharpen": 1,
+      "ratio": 1,
+      "image": [
+        "171",
+        0
+      ]
+    },
+    "class_type": "ImageSmartSharpen+",
+    "_meta": {
+      "title": "🔧 Image Smart Sharpen"
+    }
+  },
+  "174": {
+    "inputs": {
+      "filename_prefix": "Krea2-SVR-20261018",
+      "images": [
+        "173",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "175": {
+    "inputs": {
+      "子文件夹名称": "▶单图简单转换_ImageToolkit",
+      "文件夹策略": "固定文件夹（覆盖同名文件）",
+      "文件命名": "保持原文件名",
+      "自定义前缀": "图片_",
+      "序号起始": 1,
+      "序号位数": 4,
+      "输出格式": "JPG",
+      "质量": 90,
+      "同名文件处理": "自动加序号",
+      "保留工作流信息": "不保留",
+      "image": [
+        "174",
+        0
+      ]
+    },
+    "class_type": "BatchImageSaverCN",
+    "_meta": {
+      "title": "💾 图像批量保存"
+    }
+  },
+  "176": {
+    "inputs": {
+      "rgthree_comparer": {
+        "images": [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_cqloq_00003_.png&type=temp&subfolder=&rand=0.32196639462630083"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_cqloq_00004_.png&type=temp&subfolder=&rand=0.4019713672235721"
+          }
+        ]
+      },
+      "image_a": [
+        "187",
+        0
+      ],
+      "image_b": [
+        "172",
+        0
+      ]
+    },
+    "class_type": "Image Comparer (rgthree)",
+    "_meta": {
+      "title": "Image Comparer (rgthree)"
+    }
+  },
+  "179": {
+    "inputs": {
+      "tile_size": 512,
+      "overlap": 128,
+      "temporal_size": 4096,
+      "temporal_overlap": 8,
+      "samples": [
+        "170",
+        0
+      ],
+      "vae": [
+        "196",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeTiled",
+    "_meta": {
+      "title": "VAE解码（分块）"
+    }
+  },
+  "180": {
+    "inputs": {
+      "tile_size": 512,
+      "overlap": 128,
+      "temporal_size": 4096,
+      "temporal_overlap": 8,
+      "pixels": [
+        "182",
+        0
+      ],
+      "vae": [
+        "196",
+        0
+      ]
+    },
+    "class_type": "VAEEncodeTiled",
+    "_meta": {
+      "title": "VAE编码（分块）"
+    }
+  },
+  "181": {
+    "inputs": {
+      "model": [
+        "197",
+        0
+      ],
+      "vae_conditioning": [
+        "180",
+        0
+      ]
+    },
+    "class_type": "SeedVR2Conditioning",
+    "_meta": {
+      "title": "应用 SeedVR2 条件"
+    }
+  },
+  "182": {
+    "inputs": {
+      "resized_images": [
+        "183",
+        0
+      ]
+    },
+    "class_type": "SeedVR2Preprocess",
+    "_meta": {
+      "title": "预处理 SeedVR2 输入"
+    }
+  },
+  "183": {
+    "inputs": {
+      "resize_type": "scale by multiplier",
+      "resize_type.multiplier": 1.5,
+      "scale_method": "lanczos",
+      "input": [
+        "195",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "调整图像/掩码大小"
+    }
+  },
+  "184": {
+    "inputs": {
+      "color_correction_method": "adain",
+      "images": [
+        "179",
+        0
+      ],
+      "original_resized_images": [
+        "183",
+        0
+      ]
+    },
+    "class_type": "SeedVR2PostProcessing",
+    "_meta": {
+      "title": "后处理 SeedVR2 输出"
+    }
+  },
+  "186": {
+    "inputs": {
+      "filename_prefix": "Krea2-USD-20261018",
+      "images": [
+        "199",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "187": {
+    "inputs": {
+      "image": "pasted/image (10).png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "加载图像"
+    }
+  },
+  "190": {
+    "inputs": {
+      "image": [
+        "223",
+        0
+      ]
+    },
+    "class_type": "GetImageSize+",
+    "_meta": {
+      "title": "🔧 Get Image Size"
+    }
+  },
+  "191": {
+    "inputs": {
+      "model_name": "OmniSR_X4_DIV2K.safetensors"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "加载放大模型"
+    }
+  },
+  "192": {
+    "inputs": {
+      "value": 2
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "边分块数"
+    }
+  },
+  "193": {
+    "inputs": {
+      "value_1": "(a*c+64*d)/d",
+      "value_2": "(b*c+64*d)/d",
+      "a": [
+        "190",
+        0
+      ],
+      "b": [
+        "190",
+        1
+      ],
+      "c": [
+        "194",
+        0
+      ],
+      "d": [
+        "192",
+        0
+      ]
+    },
+    "class_type": "SimpleMathDual+",
+    "_meta": {
+      "title": "🔧 Simple Math Dual"
+    }
+  },
+  "194": {
+    "inputs": {
+      "value": 1.5
+    },
+    "class_type": "PrimitiveFloat",
+    "_meta": {
+      "title": "放大倍数"
+    }
+  },
+  "195": {
+    "inputs": {
+      "image": [
+        "223",
+        0
+      ],
+      "alpha": [
+        "900",
+        0
+      ]
+    },
+    "class_type": "JoinImageWithAlpha",
+    "_meta": {
+      "title": "合并图像Alpha"
+    }
+  },
+  "196": {
+    "inputs": {
+      "vae_name": "seedvr2_ema_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "197": {
+    "inputs": {
+      "unet_name": "seedvr2_7b_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "198": {
+    "inputs": {
+      "seed": 666
+    },
+    "class_type": "Seed (rgthree)",
+    "_meta": {
+      "title": "Seed (rgthree)"
+    }
+  },
+  "199": {
+    "inputs": {
+      "upscale_by": [
+        "194",
+        0
+      ],
+      "seed": [
+        "198",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.2,
+      "mode_type": "Linear",
+      "tile_width": [
+        "193",
+        0
+      ],
+      "tile_height": [
+        "193",
+        2
+      ],
+      "mask_blur": 16,
+      "tile_padding": 64,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 1,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 8,
+      "seam_fix_padding": 16,
+      "force_uniform_tiles": true,
+      "tiled_decode": false,
+      "batch_size": 1,
+      "image": [
+        "223",
+        0
+      ],
+      "model": [
+        "218",
+        0
+      ],
+      "positive": [
+        "215",
+        0
+      ],
+      "negative": [
+        "209",
+        0
+      ],
+      "vae": [
+        "213",
+        0
+      ],
+      "upscale_model": [
+        "191",
+        0
+      ]
+    },
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Ultimate SD Upscale"
+    }
+  },
+  "202": {
+    "inputs": {
+      "images": [
+        "208",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "预览图像"
+    }
+  },
+  "203": {
+    "inputs": {
+      "seed": [
+        "216",
+        0
+      ],
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "218",
+        0
+      ],
+      "positive": [
+        "215",
+        0
+      ],
+      "negative": [
+        "209",
+        0
+      ],
+      "latent_image": [
+        "210",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "208": {
+    "inputs": {
+      "samples": [
+        "203",
+        0
+      ],
+      "vae": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "209": {
+    "inputs": {
+      "conditioning": [
+        "215",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "条件零化"
+    }
+  },
+  "210": {
+    "inputs": {
+      "width": [
+        "211",
+        0
+      ],
+      "height": [
+        "211",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "空Latent图像"
+    }
+  },
+  "211": {
+    "inputs": {
+      "aspect_ratio": "9:16 (Portrait Widescreen)",
+      "megapixels": 1,
+      "multiple": 8
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "分辨率选择器"
+    }
+  },
+  "212": {
+    "inputs": {
+      "clip_name": "qwen3vl_4b_fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "加载CLIP"
+    }
+  },
+  "213": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "加载VAE"
+    }
+  },
+  "214": {
+    "inputs": {
+      "unet_name": "Krea2\\Krea2-moodyKrea2Mix_v8_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNet加载器"
+    }
+  },
+  "215": {
+    "inputs": {
+      "text": "鎏金烈焰舞姬（炽金绯红色调 · 沙漠神殿）\n主体： 画面核心是一位赤发炽烈的女性舞姬，她身披由鎏金流苏与绯红轻纱构成的华美舞衣，肌肤如蜜色琥珀般泛着暖光，瞳孔如熔金落日般燃烧着灼灼光焰，头戴缀满金叶与红玉的额饰，额饰中央镶嵌的太阳纹红宝石如炭火般跳动着微光，长发在升腾的热浪光流中飞扬如焰舌，整体姿态舒展而奔放，仿佛是从神殿祭火中走出的沙漠之焰，散发着“热情与神性交融”的史诗级氛围。\n要点： 赤发与金瞳的视觉统一性、流苏与红玉的奢华细节、热浪光流与飞扬纱幔的动态张力，共同构成核心视觉符号，传递出“炽热、神圣与自由”的主题，营造出如熔金落日般的神殿祭舞氛围。\n前景： 画面左下角是一级半掩在流沙中的古老石阶，石阶上雕刻着太阳图腾的浮雕，缝隙间透出橙金色的地热微光，几串金色铃铛与红纱缠绕在断裂的石柱上，随热风轻轻摆动，与角色舞衣的飘带走向自然衔接，构成视觉基底，强化画面的古文明仪式感。\n中景： 画面中央区域是角色的半身特写，她舒展双臂如展翼，右手高举间指间金铃轻颤，手臂缠绕的金色臂钏与腕链清晰可见，锁骨间垂坠的红玉项链与腰间层叠的金片腰封在动作中流转生辉，轻纱衣料在热光下呈现出半透的绯红渐变与鎏金滚边，营造“神性庄严与灼热生命力”交织的视觉层次。\n背景： 背景是一片燃烧般的黄昏沙漠神殿，巨大的落日悬于地平线，将整片天空染成绯红与鎏金的渐变，风蚀的砂岩立柱与神殿拱门在逆光中形成庄严的剪影，空气中升腾着金色的热浪光纹与细小飞舞的尘埃微粒，光纹呈弧形向画面右上方的落日汇聚，与角色舞衣的金红配色完美呼应，营造“古国日暮祭典”的史诗级空间感。\n构图： 采用竖版 9:16 偏右重心 + 低角度仰视构图，角色位于画面中上部，高举双臂的姿态形成向上的视觉焦点；背景热浪与霞光自右上方落日处向下倾泻至角色身后，营造神圣笼罩般的视觉引导；前景石阶与流沙占据画面底部 1/4，形成视觉稳定基座，整体构图饱满炽烈、极具祭典仪式的戏剧张力。\n视觉引导： 通过角色迎光起舞的姿态、飞扬纱幔与热浪光流的同向延伸、铃铛与金片的动态点缀，将观者视线牢牢锁定于“沙漠舞姬”的核心形象；背景落日金红与角色衣饰的色调高度统一，形成视觉连贯性，强化“烈日神殿祭舞”的叙事氛围。\n色调： 整体为炽烈暖调黄昏色调，主色调为鎏金与绯红，辅以蜜色肌肤、砂岩赭褐与落日橙红，色彩浓郁饱满如熔金流动，通过逆光剪影与热浪扭曲的光影对比营造出“神殿落日祭典”氛围，符合“炽热神圣”的主题表达。\n风格： 异域史诗写实风格，带有古文明神殿美学与热带生命力的交融，画面细节极度精致，金片的层叠、轻纱的透光、铃铛的反光、热浪的扭曲均真实可触，光影层次炽烈，偏向“沙漠古国 + 落日祭舞”的叙事表达，传递出热烈、神圣与自由奔放交织的氛围。\n光影氛围： 采用逆光剪影与暖调轮廓光的双重打光，主光源来自画面右上方低垂的落日，在角色纱衣与发丝边缘形成炽热的金色轮廓光，在金饰与红玉处形成跳动的炙热反光，背景热浪中加入扭曲的空气折射与飞舞的金色尘埃粒子，整体氛围炽烈、庄严、充满祭典的仪式感，仿佛置身于“千年神殿的落日祭舞”之中。",
+      "clip": [
+        "212",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP文本编码"
+    }
+  },
+  "216": {
+    "inputs": {
+      "seed": 916445091492280
+    },
+    "class_type": "Seed (rgthree)",
+    "_meta": {
+      "title": "Seed (rgthree)"
+    }
+  },
+  "217": {
+    "inputs": {
+      "lora_name": "Krea2-功能\\Krea2-亚洲hina_krea2Turbo_lora_tqd_v4.0.safetensors",
+      "strength_model": 1,
+      "model": [
+        "214",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "218": {
+    "inputs": {
+      "lora_name": "Krea2-功能\\krea2_turbo_lora_rank_64_bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "217",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "LoRA加载器（仅模型）"
+    }
+  },
+  "220": {
+    "inputs": {
+      "filename_prefix": "Krea2-2ST-20261018",
+      "images": [
+        "223",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像"
+    }
+  },
+  "221": {
+    "inputs": {
+      "seed": [
+        "216",
+        0
+      ],
+      "steps": 5,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.5,
+      "model": [
+        "218",
+        0
+      ],
+      "positive": [
+        "215",
+        0
+      ],
+      "negative": [
+        "209",
+        0
+      ],
+      "latent_image": [
+        "222",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "K采样器"
+    }
+  },
+  "222": {
+    "inputs": {
+      "upscale_method": "bicubic",
+      "scale_by": 1.5,
+      "samples": [
+        "203",
+        0
+      ]
+    },
+    "class_type": "LatentUpscaleBy",
+    "_meta": {
+      "title": "缩放Latent（比例）"
+    }
+  },
+  "223": {
+    "inputs": {
+      "samples": [
+        "221",
+        0
+      ],
+      "vae": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码"
+    }
+  },
+  "900": {
+    "inputs": {
+      "image": [
+        "223",
+        0
+      ],
+      "channel": "red"
+    },
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Image to Mask（供 SeedVR2 支路取 alpha）"
+    }
+  }
+}

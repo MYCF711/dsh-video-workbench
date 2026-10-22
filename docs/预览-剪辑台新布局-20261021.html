@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>剪辑台 · 新布局预览（可交互）</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   所有值取自 DSH 实际运行时的 document.body（2026-10-21 实测）
+   不存在 --dsw-alias-label-quaternary，不用它。
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --bg-base:#fff;
+  --bg-layer-1:#fff;
+  --bg-layer-2:#fff;
+  --bg-layer-3:#fff;
+  --label-primary:#0f1115;
+  --label-secondary:#61666b;
+  --label-tertiary:#81858c;
+  --border-l1:#0000000a;
+  --border-l2:#0000001a;
+  --border-l3:#0000001f;
+  --border-l4:#00000029;
+  --hover:#2631480f;
+  --active:#2631481a;
+  --menu-fill:#f8f9fa94;
+  --elevation:0 0 0 .5px #00000029, 0 3px 8px 0 #0000000a, 0 0 20px 0 #0000000d;
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+  --brand:#4176e6;
+  --brand-fg:#fff;
+  --scrollbar:#e5e5e5;
+  /* 语义色：保持硬编码（状态语义必须稳定） */
+  --ok:rgb(46,160,67);
+  --warn:rgb(163,106,3);
+  --err:rgb(207,34,46);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;
+  font-size:13px;line-height:1.5;
+  color:var(--label-primary);background:#f2f3f5;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── 模拟 DSH 外壳（左侧会话栏 + 顶部 tab）──────────────────── */
+.shell{display:flex;height:100vh}
+.rail{
+  width:180px;flex:none;background:#fafafa;border-right:.5px solid var(--border-l3);
+  padding:10px 8px;font-size:12px;color:var(--label-tertiary);
+}
+.rail-item{padding:6px 8px;border-radius:var(--radius-sm);margin-bottom:2px}
+.rail-item.on{background:var(--hover);color:var(--label-primary)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* DSH tab 行（25px 高，13px 字号，500 字重 —— 实测） */
+.tabbar{
+  height:38px;flex:none;display:flex;align-items:center;gap:2px;
+  padding:0 12px;border-bottom:.5px solid var(--border-l3);background:var(--bg-base);
+}
+.tab{
+  height:25px;padding:0 10px;font-size:13px;font-weight:500;
+  color:var(--label-secondary);border:0;background:transparent;border-radius:6px;
+  cursor:pointer;display:flex;align-items:center;
+}
+.tab:hover{background:var(--hover);color:var(--label-primary)}
+.tab.on{color:var(--label-primary);background:var(--hover)}
+
+/* ── 剪辑台本体 ─────────────────────────────────────────────── */
+.stage{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
+
+/* 预览区 */
+.preview{
+  flex:1 1 auto;min-height:120px;display:flex;flex-direction:column;
+  padding:12px 16px 0;
+}
+.canvas-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.canvas{
+  aspect-ratio:16/9;max-height:100%;max-width:100%;height:100%;
+  background:#111;border-radius:var(--radius-md);position:relative;
+  display:flex;align-items:flex-end;justify-content:center;padding-bottom:8%;
+}
+.subtitle{
+  color:#fff;font-size:13px;font-weight:700;
+  text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 0 #000,-1px -1px 0 #000;
+}
+
+/* 播放进度条（细线，不是滑块圆点） */
+.scrub{
+  height:32px;display:flex;align-items:center;gap:10px;
+  font-variant-numeric:tabular-nums;font-size:12px;color:var(--label-tertiary);
+}
+.line{flex:1;height:2px;background:var(--border-l4);border-radius:1px;position:relative;cursor:pointer}
+.line:hover{height:4px}
+.line .fill{position:absolute;left:0;top:0;bottom:0;background:var(--brand);border-radius:1px;width:18%}
+.line .knob{
+  position:absolute;left:18%;top:50%;width:10px;height:10px;border-radius:50%;
+  background:var(--brand);transform:translate(-50%,-50%);opacity:0;transition:opacity .12s;
+}
+.line:hover .knob{opacity:1}
+.time{flex:none;min-width:86px;text-align:right}
+
+/* ★ 工具栏：主人定「放在预览与时间轴之间，紧贴时间轴上方」 */
+.toolbar{
+  flex:none;height:40px;display:flex;align-items:center;gap:6px;
+  padding:0 12px;border-top:.5px solid var(--border-l3);border-bottom:.5px solid var(--border-l3);
+  background:var(--bg-base);
+}
+.tb-group{display:flex;align-items:center;gap:2px}
+.tb-sep{width:.5px;height:18px;background:var(--border-l4);margin:0 6px}
+.tb-btn{
+  height:28px;min-width:28px;padding:0 8px;border:0;border-radius:var(--radius-sm);
+  background:transparent;color:var(--label-primary);cursor:pointer;
+  font-size:13px;font-family:inherit;display:inline-flex;align-items:center;gap:6px;
+  white-space:nowrap;
+}
+.tb-btn:hover{background:var(--hover)}
+.tb-btn:active{background:var(--active)}
+.tb-btn[disabled]{color:var(--label-tertiary);cursor:not-allowed}
+.tb-btn[disabled]:hover{background:transparent}
+/* 快捷键标注 —— 用文字代替 tooltip */
+.kbd{
+  font-size:11px;color:var(--label-tertiary);font-family:inherit;
+  padding:1px 4px;border-radius:4px;background:var(--border-l1);
+}
+.tb-btn:hover .kbd{background:var(--border-l2);color:var(--label-secondary)}
+.tb-primary{
+  height:28px;padding:0 12px;border:0;border-radius:var(--radius-sm);
+  background:var(--brand);color:var(--brand-fg);cursor:pointer;
+  font-size:13px;font-weight:500;font-family:inherit;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.tb-primary:hover{filter:brightness(1.06)}
+.spacer{flex:1;min-width:0}
+.zoom{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:var(--label-tertiary);min-width:120px;
+}
+.zoom .line{height:2px}
+.zoom .line:hover{height:4px}
+.zoom .fill{width:45%}
+.zoom .knob{left:45%}
+
+/* 时间轴 */
+.timeline{flex:0 1 auto;height:280px;min-height:120px;display:flex;flex-direction:column;background:var(--bg-base)}
+.ruler{
+  flex:none;height:26px;display:flex;border-bottom:.5px solid var(--border-l3);
+  font-size:11px;color:var(--label-tertiary);font-variant-numeric:tabular-nums;
+}
+.ruler-left{width:92px;flex:none;border-right:.5px solid var(--border-l3)}
+.ruler-track{flex:1;position:relative;overflow:hidden}
+.tick{position:absolute;top:0;bottom:0;border-left:.5px solid var(--border-l2);padding-left:4px;line-height:26px}
+
+.tracks{flex:1;min-height:0;overflow:auto}
+.track{display:flex;height:48px;border-bottom:.5px solid var(--border-l1)}
+.track.selected{background:var(--hover)}
+.track-head{
+  width:92px;flex:none;display:flex;align-items:center;gap:4px;padding:0 8px;
+  border-right:.5px solid var(--border-l3);
+  font-size:12px;color:var(--label-secondary);min-width:0;
+}
+.track-head .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track-head .mini{
+  width:18px;height:18px;flex:none;border:0;border-radius:4px;background:transparent;
+  color:var(--label-tertiary);cursor:pointer;display:grid;place-items:center;font-size:11px;
+}
+.track-head .mini:hover{background:var(--hover);color:var(--label-primary)}
+.track-lane{flex:1;position:relative;min-width:0;background:
+  repeating-linear-gradient(90deg,transparent 0 59px,var(--border-l1) 59px 60px)}
+.clip{
+  position:absolute;top:4px;bottom:4px;border-radius:6px;overflow:hidden;
+  font-size:11px;color:#fff;padding:2px 6px;white-space:nowrap;text-overflow:ellipsis;
+  display:flex;align-items:center;
+}
+.clip.video{background:#2f6fd0}
+.clip.audio{background:#8b5cf6}
+.clip.text{background:#0f9d58}
+.playhead{position:absolute;top:0;bottom:0;width:1.5px;background:var(--err);left:18%;z-index:5;pointer-events:none}
+
+/* ── 右侧检查器抽屉 ─────────────────────────────────────────── */
+.inspector{
+  position:absolute;top:8px;right:8px;bottom:8px;width:320px;
+  background:var(--menu-fill);
+  -webkit-backdrop-filter:blur(40px) saturate(150%);
+  backdrop-filter:blur(40px) saturate(150%);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--elevation);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateX(calc(100% + 16px));
+  opacity:0;pointer-events:none;
+  transition:transform .16s ease-out,opacity .16s ease-out;
+  z-index:30;
+}
+.inspector.open{transform:none;opacity:1;pointer-events:auto}
+.insp-head{
+  height:40px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px;border-bottom:.5px solid var(--border-l3);
+}
+.insp-title{font-size:13px;font-weight:500}
+.insp-close{
+  width:24px;height:24px;border:0;border-radius:6px;background:transparent;
+  color:var(--label-secondary);cursor:pointer;font-size:15px;line-height:1;
+}
+.insp-close:hover{background:var(--hover);color:var(--label-primary)}
+.insp-tabs{display:flex;gap:2px;padding:8px 8px 0;flex:none}
+.insp-tab{
+  height:30px;padding:0 10px;border:0;background:transparent;border-radius:6px;
+  font-size:12px;color:var(--label-secondary);cursor:pointer;font-family:inherit;
+  position:relative;
+}
+.insp-tab:hover{background:var(--hover);color:var(--label-primary)}
+.insp-tab.on{color:var(--label-primary);font-weight:500}
+.insp-tab.on::after{
+  content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;
+  background:var(--brand);border-radius:1px;
+}
+.insp-body{flex:1;min-height:0;overflow:auto;padding:12px}
+.insp-pane{display:none}
+.insp-pane.on{display:block}
+
+/* 素材面板：固定双列 */
+.media-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.media-card{
+  border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;
+  border:.5px solid var(--border-l2);background:var(--bg-base);
+}
+.media-card:hover{border-color:var(--border-l4)}
+.media-thumb{aspect-ratio:16/9;background:#e8eaed;display:grid;place-items:center;color:var(--label-tertiary);font-size:11px}
+.media-meta{padding:6px 8px}
+.media-name{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.media-sub{font-size:11px;color:var(--label-tertiary);margin-top:2px}
+/* 列表视图：一行一个单列 */
+.media-list{display:flex;flex-direction:column;gap:2px}
+.media-row{
+  display:flex;align-items:center;gap:8px;height:40px;padding:0 8px;
+  border-radius:6px;cursor:pointer;
+}
+.media-row:hover{background:var(--hover)}
+.media-row .thumb{width:48px;height:28px;flex:none;border-radius:4px;background:#e8eaed}
+.media-row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.media-row .sub{flex:none;font-size:11px;color:var(--label-tertiary)}
+
+/* 表单行（属性/导出共用） */
+.row{display:flex;align-items:center;min-height:32px;padding:0 8px;border-radius:var(--radius-sm);gap:8px}
+.row:hover{background:var(--hover)}
+.row .lbl{width:70px;flex:none;font-size:12px;color:var(--label-secondary)}
+.row .val{flex:1;min-width:0;font-size:12px;text-align:right;color:var(--label-primary);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .chev{flex:none;color:var(--label-tertiary);font-size:11px}
+/* 菜单行 —— 快捷键标注不能溢出。
+   ★ 实测问题：加了 .row .lbl{width:70px} 之后，label 占 70px，
+     剩下的 val 还要装 kbd，窄菜单里 kbd 会顶到右边界外面。
+   ⇒ 菜单行用独立的类，不用 .row 的固定 70px 标签宽。 */
+.menu-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:30px;padding:0 10px;border-radius:6px;cursor:pointer;
+  font-size:12.5px;color:var(--label-primary);
+}
+.menu-row:hover{background:var(--hover)}
+.menu-row .mn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu-row .mk{flex:none;white-space:nowrap}
+.menu-row.disabled{color:var(--label-tertiary);cursor:default}
+.menu-row.disabled:hover{background:transparent}
+
+.sec{font-size:11px;color:var(--label-tertiary);padding:12px 8px 6px;font-weight:500}
+
+
+/* 输入框：无 UA 边框（① 号问题的修法） */
+.inp{
+  height:28px;border:0;border-radius:var(--radius-sm);background:transparent;
+  padding:0 8px;font-size:13px;font-family:inherit;color:var(--label-primary);
+  width:100%;
+}
+.inp:hover{background:var(--hover)}
+.inp:focus{outline:none;background:var(--bg-base);box-shadow:inset 0 0 0 1px var(--brand)}
+.inp::placeholder{color:var(--label-tertiary)}
+
+/* 按钮 */
+.btn{
+  height:32px;padding:0 14px;border:0;border-radius:var(--radius-sm);
+  background:var(--brand);color:var(--brand-fg);font-size:13px;font-weight:500;
+  font-family:inherit;cursor:pointer;width:100%;
+}
+.btn:hover{filter:brightness(1.06)}
+.btn.ghost{background:transparent;color:var(--label-primary);border:.5px solid var(--border-l4)}
+.btn.ghost:hover{background:var(--hover)}
+
+/* 工程名（顶部） */
+.topline{display:flex;align-items:center;gap:8px;padding:8px 12px 0}
+.project-name{
+  height:28px;border:0;border-radius:var(--radius-sm);background:transparent;
+  padding:0 8px;font-size:13px;font-weight:500;font-family:inherit;
+  color:var(--label-primary);width:140px;
+}
+.project-name:hover{background:var(--hover)}
+.project-name:focus{outline:none;background:var(--bg-base);box-shadow:inset 0 0 0 1px var(--brand)}
+
+/* 说明条 */
+.note{
+  margin:0 12px 8px;padding:6px 10px;border-radius:var(--radius-sm);
+  background:var(--hover);font-size:11px;color:var(--label-secondary);line-height:1.6;
+}
+.note b{color:var(--label-primary);font-weight:500}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- 模拟 DSH 左栏 -->
+  <aside class="rail">
+    <div class="rail-item on">继续优化DSH全自动视频…</div>
+    <div class="rail-item">代号_慕容</div>
+    <div class="rail-item">TCL电视</div>
+    <div class="rail-item">agent创造</div>
+  </aside>
+
+  <div class="main">
+    <!-- DSH tab 行 -->
+    <div class="tabbar">
+      <button class="tab">对话</button>
+      <button class="tab">轨迹</button>
+      <button class="tab">视频工作台</button>
+      <button class="tab on">剪辑台</button>
+    </div>
+
+    <div class="stage">
+      <div class="topline">
+        <input class="project-name" value="未命名粗剪" />
+        <button class="tb-btn" title="重命名">✎</button>
+      </div>
+
+      <div class="note">
+        <b>新布局：</b>预览（上）→ 工具栏（紧贴时间轴上方）→ 时间轴（下）→ 右侧检查器抽屉。
+        点右侧「素材 / 属性 / 字幕 / 导出」按钮切换内容。
+      </div>
+
+      <!-- 预览 -->
+      <div class="preview">
+        <div class="canvas-wrap">
+          <div class="canvas"><div class="subtitle">你就是吗</div></div>
+        </div>
+        <div class="scrub">
+          <span class="time" style="text-align:left">00:00:00:00</span>
+          <div class="line"><div class="fill"></div><div class="knob"></div></div>
+          <span class="time">00:00:27:12</span>
+        </div>
+      </div>
+
+      <!-- ★ 工具栏：紧贴时间轴上方 -->
+      <div class="toolbar">
+        <button class="tb-primary">＋ 导入</button>
+        <div class="tb-sep"></div>
+        <div class="tb-group">
+          <button class="tb-btn">分割 <span class="kbd">Ctrl K</span></button>
+          <button class="tb-btn">删除 <span class="kbd">Del</span></button>
+          <button class="tb-btn">复制 <span class="kbd">Ctrl D</span></button>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="tb-group">
+          <button class="tb-btn" title="撤销">↶</button>
+          <button class="tb-btn" title="重做">↷</button>
+        </div>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" id="moreBtn">⋯ <span style="font-size:11px;color:var(--label-tertiary)">更多</span></button>
+
+        <div class="spacer"></div>
+
+        <div class="zoom">
+          <span>缩放</span>
+          <button class="tb-btn" style="min-width:22px;padding:0 4px">−</button>
+          <div class="line"><div class="fill"></div><div class="knob"></div></div>
+          <button class="tb-btn" style="min-width:22px;padding:0 4px">＋</button>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="tb-group">
+          <button class="tb-btn" title="增高轨道 Ctrl+=">行高 ＋</button>
+          <button class="tb-btn" title="减矮轨道 Ctrl+-">行高 −</button>
+        </div>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" data-insp="export">导出 →</button>
+      </div>
+
+      <!-- 时间轴 -->
+      <div class="timeline">
+        <div class="ruler">
+          <div class="ruler-left"></div>
+          <div class="ruler-track">
+            <span class="tick" style="left:0">00:00</span>
+            <span class="tick" style="left:120px">00:03</span>
+            <span class="tick" style="left:240px">00:06</span>
+            <span class="tick" style="left:360px">00:09</span>
+            <span class="tick" style="left:480px">00:12</span>
+            <span class="tick" style="left:600px">00:15</span>
+            <div class="playhead" style="left:18%"></div>
+          </div>
+        </div>
+        <div class="tracks">
+          <div class="track">
+            <div class="track-head"><span class="nm">视频 2</span><button class="mini">🔊</button><button class="mini">👁</button></div>
+            <div class="track-lane"></div>
+          </div>
+          <div class="track selected">
+            <div class="track-head"><span class="nm">视频 1</span><button class="mini">🔊</button><button class="mini">👁</button></div>
+            <div class="track-lane">
+              <div class="clip video" style="left:0;width:34%">H3短剧_00009.mp4</div>
+              <div class="clip video" style="left:34.5%;width:28%">002.mp4</div>
+            </div>
+          </div>
+          <div class="track">
+            <div class="track-head"><span class="nm">音频 1</span><button class="mini">🔊</button></div>
+            <div class="track-lane"><div class="clip audio" style="left:0;width:62%">H3短剧_00009-audio.mp4</div></div>
+          </div>
+          <div class="track">
+            <div class="track-head"><span class="nm">音频 2</span><button class="mini">🔊</button></div>
+            <div class="track-lane"></div>
+          </div>
+          <div class="track">
+            <div class="track-head"><span class="nm">字幕</span><button class="mini">👁</button></div>
+            <div class="track-lane">
+              <div class="clip text" style="left:2%;width:14%">你就是吗</div>
+              <div class="clip text" style="left:17%;width:16%">好吧那我先回去了</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧检查器 -->
+      <div class="inspector" id="inspector">
+        <div class="insp-head">
+          <span class="insp-title" id="inspTitle">素材</span>
+          <button class="insp-close" id="inspClose">×</button>
+        </div>
+        <div class="insp-tabs">
+          <button class="insp-tab on" data-pane="media">素材</button>
+          <button class="insp-tab" data-pane="props">属性</button>
+          <button class="insp-tab" data-pane="subs">字幕</button>
+          <button class="insp-tab" data-pane="export">导出</button>
+          <button class="insp-tab" data-pane="keys">快捷键</button>
+        </div>
+        <div class="insp-body">
+          <!-- 素材：固定双列 -->
+          <div class="insp-pane on" data-pane="media">
+            <div style="display:flex;gap:4px;margin-bottom:10px">
+              <button class="tb-btn" id="viewGrid" style="background:var(--hover)">⊞ 网格</button>
+              <button class="tb-btn" id="viewList">☰ 列表</button>
+            </div>
+            <div class="media-grid" id="mediaGrid">
+              <div class="media-card"><div class="media-thumb">▶</div><div class="media-meta"><div class="media-name">H3短剧_00009.mp4</div><div class="media-sub">视频 · 12.4s</div></div></div>
+              <div class="media-card"><div class="media-thumb">▶</div><div class="media-meta"><div class="media-name">002.mp4</div><div class="media-sub">视频 · 8.1s</div></div></div>
+              <div class="media-card"><div class="media-thumb">🖼</div><div class="media-meta"><div class="media-name">封面.png</div><div class="media-sub">图片 · 1.2MB</div></div></div>
+              <div class="media-card"><div class="media-thumb">♪</div><div class="media-meta"><div class="media-name">BGM.m4a</div><div class="media-sub">音频 · 2:31</div></div></div>
+            </div>
+            <div class="media-list" id="mediaList" style="display:none">
+              <div class="media-row"><div class="thumb"></div><span class="nm">H3短剧_00009.mp4</span><span class="sub">12.4s</span></div>
+              <div class="media-row"><div class="thumb"></div><span class="nm">002.mp4</span><span class="sub">8.1s</span></div>
+              <div class="media-row"><div class="thumb"></div><span class="nm">封面.png</span><span class="sub">1.2MB</span></div>
+              <div class="media-row"><div class="thumb"></div><span class="nm">BGM.m4a</span><span class="sub">2:31</span></div>
+            </div>
+          </div>
+
+          <!-- 属性 -->
+          <div class="insp-pane" data-pane="props">
+            <div class="sec">片段</div>
+            <div class="row"><span class="lbl">名称</span><span class="val">H3短剧_00009.mp4</span></div>
+            <div class="row"><span class="lbl">起点</span><span class="val">00:00:00:00</span></div>
+            <div class="row"><span class="lbl">时长</span><span class="val">12.4s</span></div>
+            <div class="sec">变换</div>
+            <div class="row"><span class="lbl">缩放</span><span class="val">100%</span></div>
+            <div class="row"><span class="lbl">旋转</span><span class="val">0°</span></div>
+            <div class="sec">音频</div>
+            <div class="row"><span class="lbl">音量</span><span class="val">0 dB</span></div>
+            <div class="row"><span class="lbl">速度</span><span class="val">1.00x</span></div>
+          </div>
+
+          <!-- 字幕 -->
+          <div class="insp-pane" data-pane="subs">
+            <div class="sec">贴稿生成</div>
+            <textarea class="inp" id="scriptBox" style="height:90px;resize:none;padding:8px;border:.5px solid var(--border-l2)" placeholder="每行一条字幕，生成后可在时间轴上逐条修改"></textarea>
+            <div class="row" style="margin-top:8px"><span class="lbl">每条</span><span class="val">3 秒</span></div>
+            <button class="btn" style="margin-top:8px" id="genSub">生成字幕</button>
+            <div class="sec">从音轨识别</div>
+            <button class="btn ghost" id="asrBtn">从音轨识别（whisper medium）</button>
+            <div id="asrMsg" style="font-size:11px;color:var(--label-tertiary);margin-top:6px"></div>
+          </div>
+
+          <!-- 导出 -->
+          <div class="insp-pane" data-pane="export">
+            <div class="sec">导出工程</div>
+            <div class="row"><span class="lbl">格式</span><span class="val">MP4</span><span class="chev">›</span></div>
+            <div class="row"><span class="lbl">质量</span><span class="val">较高 · 推荐</span><span class="chev">›</span></div>
+            <div class="row"><span class="lbl">音频</span><span class="val">包含</span><span class="chev">›</span></div>
+            <div class="sec">保存位置</div>
+            <div class="row"><span class="lbl">目标</span><span class="val">保存到磁盘</span><span class="chev">›</span></div>
+            <button class="btn" style="margin-top:16px" id="doExport">开始导出</button>
+            <div id="expMsg" style="font-size:11px;color:var(--label-tertiary);margin-top:6px"></div>
+          </div>
+
+          <!-- ★ 快捷键设置（主人追加要求：可自定义 + 同步到菜单提示） -->
+          <div class="insp-pane" data-pane="keys">
+            <input class="inp" id="keySearch" placeholder="搜索快捷键"
+                   style="height:32px;border:.5px solid var(--border-l3);margin-bottom:8px" />
+            <div id="keyList"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:.5px solid var(--border-l3)">
+              <span style="font-size:11px;color:var(--label-tertiary)">点键位即可重设 · Esc 取消</span>
+              <button class="tb-btn" id="resetAllKeys" style="border:.5px solid var(--border-l4)">恢复全部默认</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 更多菜单（二级菜单，带快捷键标注） -->
+      <div id="moreMenu" style="
+        position:absolute;display:none;z-index:40;
+        background:var(--menu-fill);
+        -webkit-backdrop-filter:blur(40px) saturate(150%);
+        backdrop-filter:blur(40px) saturate(150%);
+        border-radius:var(--radius-lg);box-shadow:var(--elevation);
+        padding:6px;min-width:200px;">
+        <div class="menu-row"><span class="mn">提取音频</span></div>
+        <div class="menu-row"><span class="mn">添加书签</span><span class="mk"><span class="kbd">M</span></span></div>
+        <div class="menu-row"><span class="mn">添加关键帧</span></div>
+        <div class="menu-row"><span class="mn">波纹删除</span><span class="mk"><span class="kbd">Shift Del</span></span></div>
+        <div class="menu-row"><span class="mn">自动吸附</span><span class="mk"><span class="kbd">S</span></span></div>
+        <div class="menu-row"><span class="mn">场景切换</span></div>
+        <div style="height:.5px;background:var(--border-l3);margin:4px 8px"></div>
+        <div class="menu-row disabled"><span class="mn">定格帧（未实装）</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 检查器打开/关闭
+const insp = document.getElementById('inspector');
+const titleEl = document.getElementById('inspTitle');
+function openInsp(pane){
+  insp.classList.add('open');
+  document.querySelectorAll('.insp-tab').forEach(t=>{
+    const on = t.dataset.pane === pane;
+    t.classList.toggle('on', on);
+    if(on) titleEl.textContent = t.textContent;
+  });
+  document.querySelectorAll('.insp-pane').forEach(p=>{
+    p.classList.toggle('on', p.dataset.pane === pane);
+  });
+  // ★ 快捷键面板按需渲染（它依赖当前 store 状态，每次打开都要重画）
+  if (pane === 'keys' && typeof renderKeys === 'function') {
+    setTimeout(renderKeys, 0);
+  }
+}
+document.getElementById('inspClose').onclick = ()=> insp.classList.remove('open');
+document.querySelectorAll('.insp-tab').forEach(t=>{
+  t.onclick = ()=> openInsp(t.dataset.pane);
+});
+document.querySelectorAll('[data-insp]').forEach(b=>{
+  b.onclick = ()=> openInsp(b.dataset.insp);
+});
+
+// 素材视图切换
+const grid = document.getElementById('mediaGrid');
+const list = document.getElementById('mediaList');
+document.getElementById('viewGrid').onclick = (e)=>{
+  grid.style.display='grid'; list.style.display='none';
+  e.currentTarget.style.background='var(--hover)';
+  document.getElementById('viewList').style.background='transparent';
+};
+document.getElementById('viewList').onclick = (e)=>{
+  grid.style.display='none'; list.style.display='flex';
+  e.currentTarget.style.background='var(--hover)';
+  document.getElementById('viewGrid').style.background='transparent';
+};
+
+/**
+ * 更多菜单的开合
+ *
+ * ★ 2026-10-21 修掉两个真 bug（预览时实际遇到）：
+ *   ① 点 moreBtn 打开后立刻被 document 的监听器关掉
+ *      —— 因为监听器挂在冒泡阶段，而 stopPropagation 写在了 onclick 里
+ *         但按钮的 click 已经冒泡到 document（时序问题）
+ *   ② 点菜单内部任何一项也会关掉菜单（用户想选东西，结果菜单没了）
+ *
+ * ⇒ 正确做法：document 监听器里判断「点击目标是否在菜单内或按钮内」，
+ *   在就放过。这是下拉菜单的标准写法，实装时也照这个来。
+ */
+const moreBtn = document.getElementById('moreBtn');
+const moreMenu = document.getElementById('moreMenu');
+
+function closeMenu(){ moreMenu.style.display = 'none'; }
+
+moreBtn.onclick = (e)=>{
+  e.stopPropagation();
+  const open = moreMenu.style.display === 'block';
+  if (open) { closeMenu(); return; }
+  const r = moreBtn.getBoundingClientRect();
+  const stageR = document.querySelector('.stage').getBoundingClientRect();
+  moreMenu.style.display = 'block';
+  moreMenu.style.left = Math.max(8, r.left - stageR.left) + 'px';
+  moreMenu.style.top = (r.bottom - stageR.top + 4) + 'px';
+};
+
+document.addEventListener('click', (e)=>{
+  if (moreMenu.contains(e.target) || moreBtn.contains(e.target)) return;
+  closeMenu();
+});
+
+// Esc 关闭（DSH 的浮层都支持）
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape') closeMenu();
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   快捷键系统（预览页里的可运行版本）
+   —— 逻辑与 src/shortcuts.js 一致，这里内联成一份便于交互演示。
+   实装时会引用真实模块，不重复实现。
+   ══════════════════════════════════════════════════════════════════ */
+const KEY_STORE = 'artcraft.shortcuts.v1';
+const KEY_DEFS = [
+  { id:'split',        group:'剪辑', name:'分割片段',   def:'Mod+K' },
+  { id:'splitRipple',  group:'剪辑', name:'波纹删除',   def:'Shift+Delete' },
+  { id:'delete',       group:'剪辑', name:'删除片段',   def:'Delete' },
+  { id:'duplicate',    group:'剪辑', name:'复制片段',   def:'Mod+D' },
+  { id:'undo',         group:'历史', name:'撤销',       def:'Mod+Z' },
+  { id:'redo',         group:'历史', name:'重做',       def:'Mod+Shift+Z' },
+  { id:'zoomIn',       group:'视图', name:'放大时间轴', def:'=' },
+  { id:'zoomOut',      group:'视图', name:'缩小时间轴', def:'-' },
+  { id:'trackTaller',  group:'视图', name:'增高轨道',   def:'Mod+=' },
+  { id:'trackShorter', group:'视图', name:'减矮轨道',   def:'Mod+-' },
+  { id:'addBookmark',  group:'标记', name:'添加书签',   def:'M' },
+  { id:'toggleSnap',   group:'标记', name:'自动吸附',   def:'S' },
+];
+
+const CODE_LABEL = {
+  Equal:'=', Minus:'-', Comma:',', Period:'.', Slash:'/',
+  Delete:'Del', Backspace:'退格', Enter:'Enter', Escape:'Esc',
+  Space:'空格', Tab:'Tab', ArrowUp:'↑', ArrowDown:'↓', ArrowLeft:'←', ArrowRight:'→',
+};
+const NAMED = { '=':'Equal','-':'Minus',',':'Comma','.':'Period','/':'Slash',
+  Delete:'Delete',Backspace:'Backspace',Enter:'Enter',Escape:'Escape',
+  Space:'Space',Tab:'Tab' };
+
+function keyToCode(k){
+  if (!k) return '';
+  if (k.length === 1) {
+    const up = k.toUpperCase();
+    if (/[A-Z]/.test(up)) return 'Key' + up;
+    if (/[0-9]/.test(k)) return 'Digit' + k;
+  }
+  return NAMED[k] ?? k;
+}
+function buildChord(mods, code){
+  if (!code) return '';
+  const head = ['Mod','Alt','Shift'].filter(m => mods.has(m));
+  return [...head, code].join('+');
+}
+function normalizeChord(input){
+  if (!input) return '';
+  const parts = input.split('+').map(s=>s.trim()).filter(Boolean);
+  const mods = new Set(); let key = '';
+  for (const p of parts){
+    const low = p.toLowerCase();
+    if (low==='mod'||low==='ctrl'||low==='control'||low==='cmd'||low==='command'||low==='meta') mods.add('Mod');
+    else if (low==='shift') mods.add('Shift');
+    else if (low==='alt'||low==='option') mods.add('Alt');
+    else key = p;
+  }
+  return buildChord(mods, keyToCode(key));
+}
+function chordFromEvent(e){
+  const mods = new Set();
+  if (e.ctrlKey||e.metaKey) mods.add('Mod');
+  if (e.shiftKey) mods.add('Shift');
+  if (e.altKey) mods.add('Alt');
+  if (/^(Shift|Control|Alt|Meta)$/.test(e.code)) return '';
+  return buildChord(mods, e.code);
+}
+function chordToLabel(chord){
+  if (!chord) return '';
+  return chord.split('+').map(p=>{
+    if (p==='Mod') return 'Ctrl';
+    if (p==='Shift'||p==='Alt') return p;
+    if (p.startsWith('Key')) return p.slice(3);
+    if (p.startsWith('Digit')) return p.slice(5);
+    return CODE_LABEL[p] ?? p;
+  }).join('+');
+}
+
+function loadOv(){
+  try { return JSON.parse(localStorage.getItem(KEY_STORE) || '{}') || {}; }
+  catch { return {}; }
+}
+let keyOv = loadOv();
+let keyCurrent = {};
+function rebuild(){
+  const ov = loadOv();
+  keyCurrent = {};
+  for (const d of KEY_DEFS) {
+    keyCurrent[d.id] = ov[d.id] ? normalizeChord(ov[d.id]) : normalizeChord(d.def);
+  }
+}
+rebuild();
+function saveOv(){ try { localStorage.setItem(KEY_STORE, JSON.stringify(keyOv)); } catch {} }
+function findConflict(chord, exceptId){
+  for (const d of KEY_DEFS){
+    if (d.id === exceptId) continue;
+    if (keyCurrent[d.id] === chord) return d;
+  }
+  return null;
+}
+function setKey(id, chord){
+  const def = KEY_DEFS.find(d=>d.id===id);
+  const norm = normalizeChord(chord);
+  if (!norm) return { ok:false, reason:'键位为空' };
+  const clash = findConflict(norm, id);
+  if (clash) return { ok:false, reason:`与「${clash.name}」冲突` };
+  if (norm === normalizeChord(def.def)) delete keyOv[id];
+  else keyOv[id] = norm;
+  saveOv(); rebuild();
+  return { ok:true };
+}
+function resetAllKeys(){
+  keyOv = {}; saveOv(); rebuild();
+}
+
+let keyCapturing = null;
+let keyError = {};
+
+function renderKeys(){
+  const box = document.getElementById('keyList');
+  if (!box) return;
+  const q = (document.getElementById('keySearch').value || '').trim().toLowerCase();
+  const groups = [];
+  for (const d of KEY_DEFS){
+    const label = chordToLabel(keyCurrent[d.id]);
+    if (q && !(d.name.toLowerCase().includes(q) || label.toLowerCase().includes(q) || d.group.includes(q))) continue;
+    let g = groups.find(x=>x.name===d.group);
+    if (!g) { g = { name:d.group, items:[] }; groups.push(g); }
+    g.items.push({ ...d, label, isCustom: Boolean(loadOv()[d.id]) });
+  }
+
+  if (groups.length === 0){
+    box.innerHTML = `<div style="padding:24px 8px;text-align:center;color:var(--label-tertiary);font-size:12px">没有匹配「${q}」的快捷键</div>`;
+    return;
+  }
+
+  box.innerHTML = groups.map(g => `
+    <div style="padding:10px 0 4px;font-size:11px;color:var(--label-tertiary);font-weight:500">${g.name}</div>
+    ${g.items.map(it => `
+      <div class="key-row" data-id="${it.id}"
+           style="display:flex;align-items:center;justify-content:space-between;height:28px;padding:0 8px;border-radius:6px">
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px">
+          ${it.name}${it.isCustom ? '<span style="margin-left:6px;font-size:10px;color:var(--label-tertiary)">已改</span>' : ''}
+        </span>
+        ${keyError[it.id] ? `<span style="flex:none;font-size:11px;color:rgb(207,34,46);margin-right:8px">${keyError[it.id]}</span>` : ''}
+        <span class="key-val" data-id="${it.id}"
+              style="flex:none;font-size:12px;color:${keyCapturing===it.id ? 'var(--brand)' : 'var(--label-secondary)'};cursor:pointer;padding:2px 4px;border-radius:4px;font-variant-numeric:tabular-nums">
+          ${keyCapturing === it.id ? '按下新键…' : it.label}
+        </span>
+      </div>`).join('')}
+  `).join('');
+
+  // 行 hover
+  box.querySelectorAll('.key-row').forEach(r => {
+    r.onmouseenter = () => r.style.background = 'var(--hover)';
+    r.onmouseleave = () => r.style.background = 'transparent';
+  });
+  // 点键位开始录制
+  box.querySelectorAll('.key-val').forEach(v => {
+    v.onclick = () => { keyCapturing = v.dataset.id; keyError = {}; renderKeys(); };
+  });
+}
+
+// 录制按键
+document.addEventListener('keydown', (e) => {
+  if (!keyCapturing) return;
+  e.preventDefault(); e.stopPropagation();
+  if (e.key === 'Escape') { keyCapturing = null; keyError = {}; renderKeys(); return; }
+  const chord = chordFromEvent(e);
+  if (!chord) return;
+  const r = setKey(keyCapturing, chord);
+  if (!r.ok) { keyError = { [keyCapturing]: r.reason }; renderKeys(); return; }
+  keyCapturing = null; keyError = {}; renderKeys();
+}, true);
+
+document.getElementById('keySearch').addEventListener('input', renderKeys);
+document.getElementById('resetAllKeys').onclick = () => { resetAllKeys(); keyError = {}; renderKeys(); };
+
+// 切到快捷键 tab 时渲染
+const _origOpenInsp = window.openInspForKeys;
+document.querySelectorAll('.insp-tab').forEach(t => {
+  if (t.dataset.pane === 'keys') {
+    t.addEventListener('click', () => setTimeout(() => renderKeys(), 0));
+  }
+});
+// 打开导出时也会经过 openInsp，这里兼容从别处入口进来
+document.querySelectorAll('[data-insp="export"]').forEach(el => {
+  el.addEventListener('click', () => setTimeout(() => renderKeys(), 0));
+});
+
+
+
+// 假交互，让人看得出状态
+document.getElementById('asrBtn').onclick = ()=>{
+  const m = document.getElementById('asrMsg');
+  m.style.color='var(--label-secondary)';
+  m.textContent='识别中…（预览页是静态的，实装后这里调真接口）';
+  setTimeout(()=>{ m.textContent='识别出 4 条字幕（音频 10.1 秒）'; }, 900);
+};
+document.getElementById('doExport').onclick = ()=>{
+  document.getElementById('expMsg').textContent='导出中…（预览页不实际导出）';
+};
+document.getElementById('genSub').onclick = ()=>{
+  document.getElementById('asrMsg').textContent='（预览页不实际生成）';
+};
+</script>
+</body>
+</html>

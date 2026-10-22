@@ -1,0 +1,454 @@
+{
+ "tabOk": true,
+ "yz": {
+  "found": true,
+  "selectCount": 4,
+  "selects": [
+   {
+    "aria": "工作流",
+    "value": "yz",
+    "options": [
+     "多参 H3 ★",
+     "Krea2 生图",
+     "Qwen 生图",
+     "Qwen 改图"
+    ],
+    "w": 304.3,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "画幅",
+    "value": "16:9",
+    "options": [
+     "1:1",
+     "2:3",
+     "3:2",
+     "3:4",
+     "4:3",
+     "9:16",
+     "16:9",
+     "21:9"
+    ],
+    "w": 217.4,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "时长",
+    "value": "5",
+    "options": [
+     "5 秒",
+     "10 秒",
+     "15 秒"
+    ],
+    "w": 195.6,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "步数",
+    "value": "10",
+    "options": [
+     "4 步",
+     "6 步",
+     "8 步",
+     "10 步",
+     "15 步",
+     "20 步"
+    ],
+    "w": 195.6,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   }
+  ],
+  "buttons": [
+   {
+    "t": "生成",
+    "w": 72,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgb(15, 17, 21)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "13px",
+    "padding": "0px 14px",
+    "disabled": false
+   },
+   {
+    "t": "○ 武打模式",
+    "w": 79.8,
+    "h": 24,
+    "y": 154,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "12px",
+    "padding": "0px 10px 0px 8px",
+    "disabled": false
+   }
+  ],
+  "bar": {
+   "cols": "304.328px 217.375px 195.641px 195.641px 96px 72.0156px",
+   "h": 33,
+   "overflow": false,
+   "childYs": [
+    117,
+    117,
+    117,
+    117,
+    117,
+    117
+   ]
+  }
+ },
+ "paddingSource": {
+  "computed": "0px 26px 0px 8px",
+  "inline": "0px 26px 0px 8px",
+  "candidates": []
+ },
+ "krea2": {
+  "found": true,
+  "selectCount": 5,
+  "selects": [
+   {
+    "aria": "工作流",
+    "value": "krea2",
+    "options": [
+     "多参 H3 ★",
+     "Krea2 生图",
+     "Qwen 生图",
+     "Qwen 改图"
+    ],
+    "w": 255.8,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "画幅",
+    "value": "16:9",
+    "options": [
+     "1:1",
+     "2:3",
+     "3:2",
+     "3:4",
+     "4:3",
+     "9:16",
+     "16:9",
+     "21:9"
+    ],
+    "w": 177.1,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "张数",
+    "value": "1",
+    "options": [
+     "1 张",
+     "2 张",
+     "4 张",
+     "8 张"
+    ],
+    "w": 157.4,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "一采步数",
+    "value": "8",
+    "options": [
+     "一采 4 步",
+     "一采 6 步",
+     "一采 8 步",
+     "一采 10 步",
+     "一采 15 步",
+     "一采 20 步"
+    ],
+    "w": 157.4,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "二采步数",
+    "value": "5",
+    "options": [
+     "二采 3 步",
+     "二采 5 步",
+     "二采 8 步",
+     "二采 10 步",
+     "二采 15 步"
+    ],
+    "w": 157.4,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   }
+  ],
+  "buttons": [
+   {
+    "t": "生成",
+    "w": 72,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgb(15, 17, 21)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "13px",
+    "padding": "0px 14px",
+    "disabled": false
+   },
+   {
+    "t": "● 二采精修",
+    "w": 77.4,
+    "h": 24,
+    "y": 154,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(38, 49, 72, 0.1)",
+    "color": "rgb(15, 17, 21)",
+    "fontSize": "12px",
+    "padding": "0px 10px 0px 8px",
+    "disabled": false
+   },
+   {
+    "t": "○ 高清重绘（②组）",
+    "w": 127.8,
+    "h": 24,
+    "y": 154,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "12px",
+    "padding": "0px 10px 0px 8px",
+    "disabled": false
+   },
+   {
+    "t": "○ 挂 LoRA",
+    "w": 74.7,
+    "h": 24,
+    "y": 154,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "12px",
+    "padding": "0px 10px 0px 8px",
+    "disabled": false
+   }
+  ],
+  "bar": {
+   "cols": "255.75px 177.062px 157.391px 157.391px 157.406px 96px 72px",
+   "h": 33,
+   "overflow": false,
+   "childYs": [
+    117,
+    117,
+    117,
+    117,
+    117,
+    117,
+    117
+   ]
+  }
+ },
+ "krea2BeforeOff": {
+  "n": 5
+ },
+ "krea2AfterOff": {
+  "n": 4,
+  "labels": [
+   "工作流",
+   "画幅",
+   "张数",
+   "步数"
+  ]
+ },
+ "qwen21edit": {
+  "found": true,
+  "selectCount": 4,
+  "selects": [
+   {
+    "aria": "工作流",
+    "value": "qwen21-edit",
+    "options": [
+     "多参 H3 ★",
+     "Krea2 生图",
+     "Qwen 生图",
+     "Qwen 改图"
+    ],
+    "w": 304.3,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "画幅",
+    "value": "16:9",
+    "options": [
+     "1:1",
+     "2:3",
+     "3:2",
+     "3:4",
+     "4:3",
+     "9:16",
+     "16:9",
+     "21:9"
+    ],
+    "w": 217.4,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": true
+   },
+   {
+    "aria": "张数",
+    "value": "1",
+    "options": [
+     "1 张",
+     "2 张",
+     "4 张",
+     "8 张"
+    ],
+    "w": 195.6,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   },
+   {
+    "aria": "步数",
+    "value": "4",
+    "options": [
+     "4 步",
+     "6 步",
+     "8 步",
+     "10 步",
+     "15 步",
+     "20 步"
+    ],
+    "w": 195.6,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgba(0, 0, 0, 0)",
+    "color": "rgb(97, 102, 107)",
+    "fontSize": "13px",
+    "padding": "0px 26px 0px 8px",
+    "disabled": false
+   }
+  ],
+  "buttons": [
+   {
+    "t": "生成",
+    "w": 72,
+    "h": 28,
+    "y": 117,
+    "border": "0px",
+    "radius": "8px",
+    "bg": "rgb(15, 17, 21)",
+    "color": "rgb(255, 255, 255)",
+    "fontSize": "13px",
+    "padding": "0px 14px",
+    "disabled": false
+   }
+  ],
+  "bar": {
+   "cols": "304.328px 217.375px 195.641px 195.641px 96px 72.0156px",
+   "h": 33,
+   "overflow": false,
+   "childYs": [
+    117,
+    117,
+    117,
+    117,
+    117,
+    117
+   ]
+  }
+ },
+ "errors": []
+}

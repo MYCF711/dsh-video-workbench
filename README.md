@@ -1,0 +1,312 @@
+# DSH 视频工作台
+
+把「视频工作站」做成 DeepSeek Harness 插件：**生成走本机 ComfyUI，剪辑在 DSH 内完成**。
+
+对标 YUH Studio 的创作链路（角色卡 / 分镜 / 逐镜生成 / 首尾帧衔接 / 拼接），全部跑在 DSH 里。
+
+---
+
+## 一 · 它是什么
+
+四个模块，装进 DSH 后中栏多出两个 tab：
+
+| tab | 干什么 |
+|---|---|
+| **视频工作台** | 写提示词、选参数、提交 ComfyUI 生成、看产物 |
+| **剪辑台** | 多轨时间轴、预览、分割/复制/粘贴、字幕、导出成片 |
+
+加一个设置页：填 ComfyUI 路径、看模型清单、一键启停 ComfyUI。
+
+### 三个工作流，三个职责，不混用
+
+```
+krea2         → 生图（文生图 + 双采精修）
+qwen21-edit   → 改图 / 洗图 / 生骨骼图 / 换装
+yz            → 生视频（H3 文武双全）
+```
+
+---
+
+## 二 · 装之前需要什么
+
+| 依赖 | 说明 |
+|---|---|
+| **DeepSeek Harness** | 桌面端。插件挂在它的 Web GUI 上 |
+| **Node.js ≥ 22** | 插件用 ESM，宿主会加载 `.mjs` |
+| **ComfyUI** | 本机安装，默认 `127.0.0.1:8188` |
+| **模型** | 见下面的清单。**这是最大的门槛** |
+| **ffmpeg** | 剪辑台导出需要。包内自带一份，或用 `scripts/install-ffmpeg.mjs` |
+
+### 模型清单（会自动检查）
+
+插件会从工作流反推需要哪些模型，在设置页逐个标「已找到 / 缺失」。
+
+当前工作流声明了 **26 个**模型引用，其中必须的大件：
+
+| 模型 | 用途 | 大约 |
+|---|---|---|
+| `Krea2-moodyKrea2Mix_v8_int8_convrot.safetensors` | Krea2 主模型（生图） | 大 |
+| `qwen_image_2.1_int8_convrot.safetensors` | Qwen 主模型（改图） | 大 |
+| `qwen3vl_4b_fp8_scaled.safetensors` | Qwen 视觉编码器 | 中 |
+| `qwen_image_vae.safetensors` | VAE | 小 |
+| `seedvr2_7b_int8_convrot.safetensors` | 放大模型 | 大 |
+| `OmniSR_X4_DIV2K.safetensors` | 超分 | 小 |
+| H3 系列（多个） | 生视频主模型 + LoRA | **很大**（19.5GB 主模型） |
+
+★ **完整的清单不写在文档里** —— 它会随工作流变化。
+  装好后打开 **设置 → ComfyUI 与环境 → 体检**，那里是唯一准确的清单。
+
+★ H3 主模型 19.5GB，RTX 5070 Ti（16GB）跑之前需要先卸模型释放显存。
+  插件里已有对应逻辑，但这是硬件现实，不是能绕过的。
+
+---
+
+## 三 · 安装
+
+### 3.1 装 ComfyUI
+
+自己按官方方式装。插件不代装。
+
+### 3.2 装插件
+
+**方式 A：从 GitHub 装**（推荐）
+
+```bash
+dsh plugin --profile <你的profile> add github:<owner>/<repo>
+```
+
+**方式 B：本地开发**
+
+```jsonc
+// <DSH_HOME>/profiles/<profile>/package.json
+{
+  "dependencies": {
+    "dsh-comfy-bridge":         "link:D:/path/to/DSH视频工作台/packages/dsh-comfy-bridge",
+    "dsh-comfy-workbench-tab":  "link:D:/path/to/DSH视频工作台/packages/dsh-comfy-workbench-tab",
+    "dsh-editor":               "link:D:/path/to/DSH视频工作台/packages/dsh-editor",
+    "dsh-video-knowledge":      "link:D:/path/to/DSH视频工作台/packages/dsh-video-knowledge"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "dsh-comfy-bridge",
+        "dsh-comfy-workbench-tab",
+        "dsh-editor"
+      ]
+    }
+  }
+}
+```
+
+★ `dsh-video-knowledge` 只作依赖、不进 bundles（它没有插件入口）。
+
+### 3.3 填路径（**必做，否则跑不起来**）
+
+插件**不内置任何本机路径**。启动后：
+
+1. 点左下角 **设置**
+2. 左侧选 **ComfyUI 与环境**
+3. 填三项：
+
+| 字段 | 填什么 |
+|---|---|
+| ComfyUI 安装目录 | 含 `ComfyUI\main.py` 与 `ComfyUI\.venv\Scripts\python.exe` 的目录 |
+| 输出目录 | 产物写哪。留空用 `<ComfyUI>\output`。**建议显式填** |
+| 输入目录 | 上传素材写哪。留空用 `<ComfyUI>\input` |
+
+4. 点 **保存** → **体检**
+
+体检会告诉你：ComfyUI 通不通、版本、缺哪些模型、该放到哪个子目录。
+
+### 3.4 启动 ComfyUI
+
+两个办法：
+
+- **用插件**：底部状态栏有一个 `ComfyUI` 圆点。红点 = 未连接，点一下启动；绿点 = 已连接，点一下关闭
+- **自己启动**：只要 `127.0.0.1:8188` 通就行
+
+★ 长时间不用建议关掉，省设备损耗。
+
+---
+
+## 四 · 架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 浏览器侧（client）                                        │
+│   dsh-comfy-workbench-tab                                │
+│     ├─ 视频工作台 tab   conversation.view                │
+│     └─ 剪辑台 tab       conversation.view                │
+│          └─ dsh-editor 的时间轴（通过 props/API 驱动）     │
+└──────────────────┬──────────────────────────────────────┘
+                   │ HTTP（同源）
+┌──────────────────▼──────────────────────────────────────┐
+│ 宿主侧（host, Node）                                       │
+│   dsh-comfy-bridge    /comfy-bridge/*                    │
+│     ├─ 工作流 bind 层（运行时输入，不写死节点 id）           │
+│     ├─ WebSocket 进度总线                                 │
+│     ├─ 路径配置 + 模型清单                                 │
+│     └─ ffmpeg 能力（抽帧 / 衔接质检 / 字幕）                │
+│   dsh-editor          /timeline/*                         │
+│     ├─ 时间轴权威状态 + SSE                                │
+│     ├─ LLM 工具（Agent 操控时间轴）                        │
+│     └─ 导出（时间轴 → ffmpeg 一次成片）                     │
+└──────────────────┬──────────────────────────────────────┘
+                   │ HTTP / WebSocket
+┌──────────────────▼──────────────────────────────────────┐
+│ ComfyUI  127.0.0.1:8188                                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 两条重要的架构事实
+
+**① host 与 client 是两棵独立的 cordis 树。**
+`ctx.provide()` 跨不过进程边界。所以 M1（bridge）必须用
+`ctx.webServer.register()` 暴露 HTTP 路由，M2（UI）用 `fetch` 调。
+
+**② ComfyUI 的 WebSocket `progress` 是定向发送的。**
+
+```python
+# ComfyUI main.py:464
+server_instance.send_sync("progress", progress, server_instance.client_id)
+```
+
+第三个参数是 target sid ⇒ 只发给那一个 socket。
+所以建 WebSocket 时必须带 `?clientId=<与提交任务时相同的值>`。
+不带的话只收得到 `status`，永远收不到 `progress`。
+
+---
+
+## 五 · 开发
+
+### 构建
+
+```bash
+# 只改了 client 侧（UI）
+cd packages/dsh-comfy-workbench-tab
+node build.mjs
+
+# 改了 host 侧（*.mjs）—— 无需构建，直接重启实例
+```
+
+### 验收
+
+```bash
+cd packages
+
+# 全部（会真跑 ComfyUI，约 5 分钟）
+node verify-all.mjs
+
+# 只跑不碰 ComfyUI 的静态检查
+node verify-all.mjs --static
+```
+
+### 单独跑某个模块
+
+```bash
+cd packages/dsh-comfy-workbench-tab
+node verify-editor-console.mjs    # 剪辑台 145 项
+node verify-assets.mjs            # 资产库 46 项
+
+cd packages/dsh-comfy-bridge
+node verify-m1.mjs                # 桥与工作流
+node verify-subtitle.mjs          # 字幕
+```
+
+### 变异测试是必须的
+
+每条新断言都要验「改坏代码它会不会变红」。没做过变异测试的断言，
+很可能是个永远绿的空断言。
+
+```bash
+# 例：把某条 CSS 改坏，确认断言变红
+# 断言太松 → 假绿（坏代码通过）
+# 断言太紧 → 假红（好代码失败）
+# 两个都要防
+```
+
+---
+
+## 六 · 已知限制
+
+| 项 | 状态 |
+|---|---|
+| 剪辑台底座 | OpenCut（`opencut-wasm`）+ `@storyteller/ui-video-editor` 改编版 |
+| **授权** | **OpenCut 主仓是 AGPL-3.0，分发前必须确认授权状态** |
+| 复制粘贴 | 用模块内存剪贴板，**不用系统剪贴板**，刷新即丢 |
+| 实时进度 | 依赖 ComfyUI WebSocket；ComfyUI 离线时显示「无法判断」，不误报 0% |
+| H3 显存 | 主模型 19.5GB > 16GB 显存，需要卸载其他模型 |
+| 配置存放 | 优先 `COMFY_BRIDGE_CONFIG_DIR`；否则用 `DSH_PROFILE_DIR`（**可能属于别的 profile**），设置页会提示 |
+
+---
+
+## 七 · 排障
+
+### tab 不出现
+
+```bash
+node -e "import('./packages/dsh-editor/lib/index.js').then(m=>console.log('OK:',Object.keys(m))).catch(e=>console.log('FAIL:',e.message))"
+```
+
+打包时最容易漏的是**跨包依赖**。上面这条命令会立刻暴露。
+
+### 路径含中文时什么都不能用
+
+检查有没有人还在用 `new URL(import.meta.url).pathname` ——
+它**不做 percent-decoding**，中文路径会变成 `%E4%B8%BB...`。
+必须用 `fileURLToPath()`。
+
+### 资产库空 / 剪辑台看不到素材
+
+```bash
+# 看 assets.json 在哪
+node -e "console.log(require('node:path').resolve('packages/dsh-editor/outputs/assets.json'))"
+```
+
+`pickOutDir()` 会按 `WORKSPACE_ROOT/outputs` → `PKG_DIR/outputs` → `cwd/outputs` 找
+第一个含 `timeline-state.json` 的目录。找错就会「有数据但看不到」。
+
+### ffmpeg 找不到
+
+```
+FFMPEG_PATH 环境变量 → dsh-editor/bin/ffmpeg.exe → imageio-ffmpeg → PATH
+```
+
+四级都失败时导出和字幕会报错。装一份到 `packages/dsh-editor/bin/` 即可。
+
+---
+
+## 八 · 目录
+
+```
+packages/
+├── verify-all.mjs                一键总验收
+├── dsh-comfy-bridge/             M1  host 侧桥
+│   ├── src/*.mjs
+│   ├── workflows/*.json + *.bind.json
+│   └── verify-*.mjs
+├── dsh-comfy-workbench-tab/      M2  中栏两个 tab
+│   ├── src/                      可读源码
+│   ├── lib/                      实际加载（client.js IIFE + index.js ESM）
+│   └── verify-*.mjs
+├── dsh-editor/                   时间轴宿主
+│   ├── src/*.mjs
+│   ├── lib/index.js
+│   └── test/
+└── dsh-video-knowledge/          提示词规则（被 dsh-editor 引用）
+```
+
+---
+
+## 九 · 许可
+
+本项目自身的代码随作者意愿。
+
+⚠ **但它依赖的 OpenCut（`opencut-wasm`）是 AGPL-3.0。**
+  如果你要分发这个插件，**必须先确认**：
+  - 这份改编代码的来源与授权
+  - AGPL 的传染性是否覆盖你的分发形态
+
+  在确认之前，**不要公开分发二进制或源码**。

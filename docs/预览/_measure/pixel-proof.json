@@ -1,0 +1,97 @@
+{
+ "image": {
+  "w": 2170,
+  "h": 1664,
+  "dsf": 2
+ },
+ "centers": {
+  "page": {
+   "x": 542.5,
+   "y": 390,
+   "l": 0,
+   "t": 0,
+   "w": 1085,
+   "h": 780
+  },
+  "panel": {
+   "x": 542.5,
+   "y": 412,
+   "l": 82.5,
+   "t": 82,
+   "w": 920,
+   "h": 660
+  },
+  "bar": {
+   "x": 542.5,
+   "y": 137,
+   "l": 82.5,
+   "t": 121,
+   "w": 920,
+   "h": 32
+  },
+  "modeSelect": {
+   "x": 194.5,
+   "y": 137,
+   "l": 98.5,
+   "t": 123,
+   "w": 192,
+   "h": 28
+  },
+  "genBtn": {
+   "x": 950.5,
+   "y": 137,
+   "l": 914.5,
+   "t": 123,
+   "w": 72,
+   "h": 28
+  },
+  "prompt": {
+   "x": 542.5,
+   "y": 225.5,
+   "l": 98.5,
+   "t": 165,
+   "w": 888,
+   "h": 121
+  },
+  "health": {
+   "x": 542.5,
+   "y": 101.5,
+   "l": 82.5,
+   "t": 82,
+   "w": 920,
+   "h": 39
+  },
+  "result": {
+   "x": 542.5,
+   "y": 514,
+   "l": 82.5,
+   "t": 286,
+   "w": 920,
+   "h": 456
+  }
+ },
+ "pixels": {
+  "stageBg": "rgb(245,246,247)",
+  "panelInterior": "rgb(255,255,255)",
+  "promptBg": "rgb(245,246,247)",
+  "modeSelectBg": "rgb(255,255,255)"
+ },
+ "dominant": {
+  "genBtn": {
+   "color": "rgb(15,17,21)",
+   "hits": 479,
+   "distinct": 52
+  },
+  "prompt": {
+   "color": "rgb(245,246,247)",
+   "hits": 48004,
+   "distinct": 391
+  }
+ },
+ "checks": {
+  "stageIsPlatformGray": true,
+  "promptIsGrayFill": true,
+  "panelIsWhite": true,
+  "genBtnIsPrimaryFill": true
+ }
+}

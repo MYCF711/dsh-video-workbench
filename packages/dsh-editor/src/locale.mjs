@@ -1,0 +1,31 @@
+export const zh = {
+  "view.label": "粗剪",
+  "toolbar.addShot": "＋ 分镜",
+  "toolbar.addVideoTrack": "＋视频轨",
+  "toolbar.addAudioTrack": "＋音频轨",
+  "inspector.prompt": "提示词",
+  "inspector.regenerate": "⟳ 重新生成",
+  "inspector.stop": "■ 停止",
+  "inspector.replace": "替换",
+  "inspector.remove": "移除",
+  "inspector.trim": "单段裁剪（在成片上再裁）",
+  "inspector.history": "生成历史",
+  "empty.title": "时间轴是空的",
+  "empty.hint": "点「＋ 分镜」加一段，填提示词后生成",
+};
+
+export const en = {
+  "view.label": "Rough Cut",
+  "toolbar.addShot": "+ Shot",
+  "toolbar.addVideoTrack": "+ Video",
+  "toolbar.addAudioTrack": "+ Audio",
+  "inspector.prompt": "Prompt",
+  "inspector.regenerate": "⟳ Regenerate",
+  "inspector.stop": "■ Stop",
+  "inspector.replace": "Replace",
+  "inspector.remove": "Remove",
+  "inspector.trim": "Trim (on rendered clip)",
+  "inspector.history": "History",
+  "empty.title": "Timeline is empty",
+  "empty.hint": "Press “+ Shot”, write a prompt, then generate",
+};

@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>视频工作台 · 参数区预览</title>
+<!--
+  ============================================================================
+  视频工作台 · 参数区可交互预览（单文件 / 零依赖 / 双击即开）
+  ============================================================================
+  设计输入：D:\主工作区\DSH视频工作站\docs\方案-工作台参数区UI.md
+  样式来源：D:\主工作区\DSH视频工作站 19499 实例实机测量（2026 实测，非推断）
+            测量脚本：D:\主工作区\_scratch\workbench-ui-measure\
+              measure-states2.mjs / measure-settings.mjs / dump-tokens.mjs
+
+  ── 实机量到的官方数值（浅色主题）────────────────────────────────────────────
+  官方下拉 trigger（.wq12jW_trigger，模型选择；.dlU_AG_trigger，访问模式）
+      height            28px
+      border-width      0px   （★ 官方没有边框）
+      border-radius     8px   = var(--dsw-radius-sm)
+      background        transparent（静止）
+      background hover  rgba(38,49,72,0.06) = var(--dsw-alias-interactive-bg-hover)
+      color             rgb(97,102,107)     = var(--dsw-alias-label-secondary)
+      font-size         13px / line-height 20px = var(--dsw-font-xs-13)
+      padding           0 4px 0 8px
+      cursor            pointer
+      focus-visible     box-shadow 0 0 0 2px rgb(65,118,230)  ← 不是 outline
+                        （2px = --dsw-focus-ring-width；#4176e6 = --dsw-alias-state-business-primary）
+      expanded (:hover) 与 hover 同底色
+
+  ── 方案书里被实测推翻的两条 ────────────────────────────────────────────────
+  ① 方案书 §3.1 要求 border:1px solid var(--dsw-alias-border-l2) + bg-layer-2
+     → 官方实际是 0 边框 + 透明底。本文照**官方**做，参数区整体给一层容器底，
+       控件靠 hover 变色区分（这也是 DSH 自己在输入框条里的做法）。
+  ② 方案书 §3.3 列的 --dsw-focus-ring-color「已实测存在」→ 实际解析为 transparent
+     （404 个 token 里只有它和 --dsw-hovercard-bg 是空值）。焦点环真值是
+     --dsw-alias-state-business-primary。本文不用 focus-ring-color。
+
+  ── 尺寸一致性承诺 ──────────────────────────────────────────────────────────
+  本文所有尺寸集中在下方 :root 的 --wb-* 变量里，实装到
+  src/WorkbenchView.js 时逐项照抄，不得另起数值。
+  ============================================================================
+-->
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   ① 主题 token 层
+   —— 全部来自 19499 实机解析（dump-tokens.mjs，404 个 token / 402 个有值）
+   —— 每个 var() 都带降级种子：token 不存在时静默降级的坑见 forge-ui §3
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* ── 实机解析出的浅色值，作为降级种子 ── */
+  --dsw-alias-border-l1: #0000000a;
+  --dsw-alias-border-l2: #0000001a;
+  --dsw-alias-border-l3: #0000001f;
+  --dsw-alias-border-l4: #00000029;
+  --dsw-alias-bg-layer-1: #fff;
+  --dsw-alias-bg-layer-2: #fff;
+  --dsw-alias-bg-base: #fff;
+  --dsw-alias-label-primary: #0f1115;
+  --dsw-alias-label-secondary: #61666b;
+  --dsw-alias-label-tertiary: #81858c;
+  --dsw-alias-interactive-bg-hover: #2631480f;
+  --dsw-alias-interactive-bg-active: #2631481a;
+  --dsw-alias-interactive-bg-hover-solid: #f1f3f5;
+  --dsw-alias-button-primary-fill: #0f1115;
+  --dsw-alias-button-primary-fg: #ffffff;
+  --dsw-alias-button-primary-hover: #43454a;
+  --dsw-alias-state-business-primary: #4176e6;
+  --dsw-alias-bg-module-platform: #f5f6f7;
+  --dsw-specific-input-major: #fff;
+  --dsw-radius-sm: 8px;
+  --dsw-radius-md: 12px;
+  --dsw-radius-lg: 16px;
+}
+
+/* ★ 暗色主题覆盖 —— 值取自 19499 实例的 body[data-ds-dark-theme]（实测）
+   关键：button-primary-fill 在暗色下翻转成近白，文字必须跟着翻转成近黑，
+        否则就是白字白底看不见。 */
+:root[data-ds-dark-theme],
+body[data-ds-dark-theme] {
+  --dsw-alias-label-primary: #f9fafb;
+  --dsw-alias-label-secondary: #a8adb8;
+  --dsw-alias-label-tertiary: #8b909a;
+  --dsw-alias-button-primary-fill: #f9fafb;
+  --dsw-alias-button-primary-fg: #0f1115;   /* ★ 暗色下底近白 → 文字必须近黑 */
+  --dsw-alias-button-primary-hover: #ebeef2;
+  --dsw-alias-interactive-bg-hover: #ffffff14;
+  --dsw-alias-interactive-bg-active: #ffffff1f;
+  --dsw-alias-bg-base: #151517;
+  --dsw-alias-bg-layer-2: #2b2c2e;
+  --dsw-alias-border-l1: #ffffff0f;
+  --dsw-alias-border-l2: #ffffff1f;
+  --dsw-alias-state-business-primary: #4b8bf5;
+  --dsw-alias-bg-module-platform: #1b1b1c;
+  --dsw-specific-input-major: #1b1b1c;
+}
+  --dsw-focus-ring-width: 2px;
+  --dsw-font-xs-13: 13px/20px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dsw-font-xxs-12: 12px/18px -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dsw-elevation-panel: 0 0 0 0.5px #00000029, 0 3px 8px 0 #00000008, 0 0 16px 0 #00000005;
+
+  /* ══ ② 参数区几何（★ 实装时逐项照抄这一段） ══ */
+  --wb-bar-height: 32px;        /* 方案书 §3.1：一行高度上限 */
+  --wb-ctrl-height: 28px;       /* 实测：官方 trigger 28px */
+  --wb-ctrl-radius: var(--dsw-radius-sm, 8px);
+  --wb-ctrl-pad: 0 26px 0 8px;  /* 右侧留自绘箭头位 */
+  --wb-ctrl-pad-seed: 0 8px;    /* 种子输入框不需要箭头位 */
+  --wb-gap: 8px;
+  --wb-seed-width: 96px;        /* 方案书 §3.1 */
+  --wb-btn-width: 72px;         /* 生成按钮，与 28px 控件同高 */
+  --wb-arrow-size: 9px;
+  --wb-arrow-right: 8px;
+  --wb-prompt-min-rows: 5;      /* 方案书 §四：最少 5 行 */
+  --wb-pad-x: 16px;
+  --wb-pad-y: 12px;
+
+  color-scheme: light;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ③ 预览外壳（不属于工作台本身，只为把两种状态摆给人看）
+   ══════════════════════════════════════════════════════════════════════════ */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--dsw-alias-bg-module-platform, #f5f6f7);
+  color: var(--dsw-alias-label-primary, #0f1115);
+  font: var(--dsw-font-xs-13, 13px/20px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 16px 40px;
+}
+
+/* 预览控制条 —— 明确标注"这不是工作台的一部分" */
+.preview-bar {
+  width: min(920px, 100%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: var(--dsw-radius-md, 12px);
+  background: var(--dsw-alias-bg-layer-1, #fff);
+  box-shadow: 0 0 0 0.5px var(--dsw-alias-border-l2, #0000001a);
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary, #61666b);
+}
+.preview-bar b { color: var(--dsw-alias-label-primary, #0f1115); font-weight: 600; }
+.preview-bar .spacer { flex: 1 1 auto; }
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--dsw-radius-sm, 8px);
+  background: var(--dsw-alias-interactive-bg-hover, #2631480f);
+}
+.seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #61666b);
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  padding: 3px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.seg button:hover { color: var(--dsw-alias-label-primary, #0f1115); }
+.seg button[aria-pressed="true"] {
+  background: var(--dsw-specific-input-major, #fff);
+  color: var(--dsw-alias-label-primary, #0f1115);
+  font-weight: 600;
+  box-shadow: 0 0 0 0.5px var(--dsw-alias-border-l2, #0000001a);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ④ 工作台面板 —— 这就是要实装的东西
+   ══════════════════════════════════════════════════════════════════════════ */
+.wb {
+  width: min(920px, 100%);
+  height: 660px;
+  display: flex;
+  flex-direction: column;
+  background: var(--dsw-alias-bg-base, #fff);
+  border-radius: var(--dsw-radius-lg, 16px);
+  box-shadow: 0 0 0 0.5px var(--dsw-alias-border-l2, #0000001a), 0 4px 20px 0 rgba(0,0,0,.04);
+  overflow: hidden;
+  /* 给"成果区占满剩余"一个可预期的容器 */
+  contain: layout;
+}
+
+/* ── 顶部状态行 ── */
+.wb-health {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px var(--wb-pad-x, 16px);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary, #61666b);
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #0000000a);
+}
+.wb-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex: none;
+  /* 语义色：成功绿，按方案书 §3.3 硬编码，不走 token */
+  background: rgb(46, 160, 67);
+}
+.wb-dot[data-state="down"] { background: rgb(248, 81, 73); }
+.wb-dot[data-state="probing"] { background: rgb(139, 148, 158); }
+.wb-health .sep { color: var(--dsw-alias-border-l4, #00000029); }
+.wb-health .vram { color: var(--dsw-alias-label-tertiary, #81858c); }
+.wb-health .warn { color: rgb(210, 153, 34); }
+
+/* ══ ⑤ 参数条：四个下拉 + 种子 + 生成，一行 ══
+   grid（不是 flex）：保证各列对齐；每个 minmax(0,…) 里的 0 是必须的，
+   否则 grid 项有 min-content 下限，窄容器下永不收缩。 */
+.wb-bar {
+  flex: none;
+  display: grid;
+  /* ★ 实测结论（三档视口实测，见 verify-all.json）：
+     - minmax(0,…)  → 560px 视口下「画幅」只剩 62.9px，8 档比值被裁
+     - minmax(64px,…) → 560px 视口下总宽超出，出现横向溢出（更糟）
+     正解是第三种：保留 minmax(0,…) 让列能收缩（永不溢出），
+     同时在窄容器用 @media 把「秒 / 步」后缀去掉 —— 这样 64px 也放得下。
+     见下方 @media (max-width: 700px)。 */
+  /* ★ 2026-10-18 增量：列数不再是固定 6 —— 二采步数槽存在时是 7 列。
+     用 repeat 的「自动填充」表达：显式列只声明到步数，后面交给 auto-flow，
+     隐藏槽（slotSteps2[hidden]）不占列。 */
+  grid-template-columns:
+    minmax(0, 1.4fr)   /* 1 工作流 */
+    minmax(0, 1fr)     /* 2 画幅   */
+    minmax(0, 0.9fr)   /* 3 时长/张数 */
+    minmax(0, 0.9fr)   /* 4 步数   */
+    var(--wb-seed-width, 96px)  /* 5 种子 */
+    auto;              /* 6 生成 */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 0.9fr);
+
+  /* 有二采步数时（krea2），步数2 插在步数与种子之间：
+     显式重排 —— 步数2 占第 5 列，种子退到第 6，生成退到第 7。 */
+  --wb-col-shift: 0;
+  gap: var(--wb-gap, 8px);
+  align-items: center;
+  /* ★ 必须：grid 项默认 stretch，会让 auto 列里的按钮被拉成整列宽（实测踩到：
+     「生成」按钮被拉到 218.66px，与工作流下拉同宽）。改成 start 后按钮回到内容宽。 */
+  justify-items: start;
+  /* ★ 必须：六槽同行。实测踩到按钮折到第二行（y=157 vs 121）——
+     根因是参数条里有 7 个直接子元素（含开关），超出声明的 6 列，
+     第 7 个自动换行。下面把「开关 + 生成 + 取消」打包进第 6 列的一个容器里。 */
+  grid-template-rows: var(--wb-bar-height, 32px);
+  height: var(--wb-bar-height, 32px);
+  padding: 0 var(--wb-pad-x, 16px);
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #0000000a);
+}
+
+/* 第 6 列的内容容器：开关（可选）+ 生成 + 取消，三者内联不换行 */
+.wb-actions {
+  /* 不写死列号：6 槽时落在第 6 列，7 槽时（有二采步数）自动落到第 7 列。
+     写死 grid-column:6 会让七个槽同时抢第 6 格，从而换行。 */
+  display: flex;
+  align-items: center;
+  gap: var(--wb-gap, 8px);
+  justify-self: start;
+  white-space: nowrap;
+}
+
+/* 有二采步数槽时切到 7 列：多出的一列给「二采步数」，插在步数之后 */
+.wb-bar:has(> #slotSteps2:not([hidden])) {
+  grid-template-columns:
+    minmax(0, 1.3fr)   /* 1 工作流 */
+    minmax(0, 0.9fr)   /* 2 画幅   */
+    minmax(0, 0.8fr)   /* 3 时长/张数 */
+    minmax(0, 0.8fr)   /* 4 一采步数 */
+    minmax(0, 0.8fr)   /* 5 二采步数 */
+    var(--wb-seed-width, 96px)  /* 6 种子 */
+    auto;              /* 7 生成 */
+}
+
+/* 窄容器：缩短文案、压缩种子框，保证六个槽都放得下且不溢出 */
+@media (max-width: 700px) {
+  .wb-bar { --wb-seed-width: 72px; --wb-gap: 6px; --wb-arrow-right: 6px; }
+  .wb-select { padding-right: 20px; }
+  .wb-btn { padding: 0 10px; min-width: 56px; }
+}
+@media (max-width: 560px) {
+  .wb-bar { --wb-pad-x: 10px; }
+  .wb-switch { display: none; }   /* 极窄时开关让位，参数优先 */
+}
+
+/* 下拉/输入框要撑满自己的列，只有按钮保持内容宽 */
+.wb-bar > .wb-field { width: 100%; }
+
+/* 自绘箭头的定位壳 */
+.wb-field { position: relative; min-width: 0; }
+
+/* ── 下拉框：照抄实测的官方 trigger ── */
+.wb-select,
+.wb-input {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  height: var(--wb-ctrl-height, 28px);
+  min-width: 0;
+  padding: var(--wb-ctrl-pad, 0 8px 0 18px);   /* ★ 左边留 18px 给箭头 */
+  border: 0;                                  /* 实测官方 0px 边框 */
+  border-radius: var(--wb-ctrl-radius, 8px);
+  background: transparent;                    /* 实测官方透明底 */
+  color: var(--dsw-alias-label-secondary, #61666b);
+  font: var(--dsw-font-xs-13, 13px/20px inherit);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  outline: none;
+}
+.wb-select:hover,
+.wb-input:hover {
+  /* ★ hover 只改文字色，底色由 .wb-hl 内层控制宽度 */
+  color: var(--dsw-alias-label-primary, #0f1115);
+}
+/* ★ hover 底色的宽度 = 文字宽度（用内层 span 包住三角+文字） */
+.wb-hl {
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  height: var(--wb-ctrl-height, 28px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 4px;
+  border-radius: var(--wb-ctrl-radius, 8px);
+  pointer-events: none;
+  white-space: nowrap;
+}
+.wb-field:hover .wb-hl {
+  background: var(--dsw-alias-interactive-bg-hover, #2631480f);
+}
+.wb-select:active,
+.wb-input:active {
+  background: var(--dsw-alias-interactive-bg-active, #2631481a);
+}
+/* 焦点环：实测官方是 box-shadow，不是 outline */
+.wb-select:focus-visible,
+.wb-input:focus-visible,
+.wb-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--dsw-focus-ring-width, 2px) var(--dsw-alias-state-business-primary, #4176e6);
+}
+
+/* 自绘箭头 ▾ */
+.wb-arrow {
+  position: absolute;
+  left: 5px;                       /* ★ 三角在文字左边 */
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: var(--wb-arrow-size, 9px);
+  line-height: 1;
+  color: var(--dsw-alias-label-tertiary, #81858c);
+  opacity: .9;
+}
+
+/* 种子输入框：无箭头位 */
+.wb-input {
+  padding: var(--wb-ctrl-pad-seed, 0 8px);
+  cursor: text;
+}
+.wb-input::placeholder { color: var(--dsw-alias-label-tertiary, #81858c); }
+/* number 的上下箭头在 28px 高里会把数字挤成两行，去掉 */
+.wb-input::-webkit-outer-spin-button,
+.wb-input::-webkit-inner-spin-button { appearance: none; -webkit-appearance: none; margin: 0; }
+.wb-input[type="number"] { -moz-appearance: textfield; }
+
+/* ── 行内开关（武打模式等），跟在种子后、生成前 ── */
+.wb-switch {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--wb-ctrl-height, 28px);
+  padding: 0 8px 0 4px;
+  border: 0;
+  border-radius: var(--wb-ctrl-radius, 8px);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #61666b);
+  font: var(--dsw-font-xs-13, 13px/20px inherit);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease;
+}
+.wb-switch:hover { background: var(--dsw-alias-interactive-bg-hover, #2631480f); }
+.wb-switch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 var(--dsw-focus-ring-width, 2px) var(--dsw-alias-state-business-primary, #4176e6);
+}
+.wb-switch .knob {
+  width: 26px; height: 16px;
+  border-radius: 999px;
+  background: var(--dsw-alias-interactive-bg-active, #2631481a);
+  position: relative;
+  flex: none;
+  transition: background 120ms ease;
+}
+.wb-switch .knob::after {
+  content: "";
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--dsw-specific-input-major, #fff);
+  box-shadow: 0 1px 2px rgba(0,0,0,.18);
+  transition: transform 120ms ease;
+}
+.wb-switch[aria-checked="true"] { color: var(--dsw-alias-label-primary, #0f1115); }
+.wb-switch[aria-checked="true"] .knob {
+  background: var(--dsw-alias-state-business-primary, #4176e6);
+}
+.wb-switch[aria-checked="true"] .knob::after { transform: translateX(10px); }
+
+/* ── 生成按钮：主操作，行尾 ── */
+.wb-btn {
+  flex: none;
+  height: var(--wb-ctrl-height, 28px);
+  min-width: var(--wb-btn-width, 72px);
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--wb-ctrl-radius, 8px);
+  /* 主按钮用实测 token（浅色下近黑，暗色下近白 —— 这正是 DSH 的品牌色语义） */
+  background: var(--dsw-alias-button-primary-fill, #0f1115);
+  /* ★ 文字色必须跟着底色翻转 —— 浅色下底近黑用白字，暗色下底近白必须用黑字。
+     硬编码 #fff 会在暗色下变成白字白底（对比度 1.05:1，完全看不见）。 */
+  color: var(--dsw-alias-button-primary-fg, #fff);
+  font: var(--dsw-font-xs-13, 13px/20px inherit);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, opacity 120ms ease;
+}
+.wb-btn:hover:not(:disabled) { background: var(--dsw-alias-button-primary-hover, #43454a); }
+.wb-btn:disabled {
+  background: var(--dsw-alias-interactive-bg-active, #2631481a);
+  color: var(--dsw-alias-label-tertiary, #81858c);
+  cursor: not-allowed;
+}
+.wb-btn.cancel {
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #61666b);
+  box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l2, #0000001a);
+  min-width: auto;
+  font-weight: 400;
+}
+.wb-btn.cancel:hover { background: var(--dsw-alias-interactive-bg-hover, #2631480f); }
+
+/* ── 提示词 ── */
+.wb-prompt-wrap {
+  flex: none;
+  padding: 12px var(--wb-pad-x, 16px) 0;
+}
+.wb-prompt {
+  display: block;
+  width: 100%;
+  min-height: calc(var(--wb-prompt-min-rows, 5) * 21px + 16px);
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--dsw-radius-md, 12px);
+  background: var(--dsw-alias-bg-module-platform, #f5f6f7);
+  color: var(--dsw-alias-label-primary, #0f1115);
+  font: var(--dsw-font-xxs-12, 12px/18px inherit);
+  resize: vertical;                 /* 方案书 §四：可拖高 */
+  outline: none;
+  transition: box-shadow 120ms ease;
+}
+.wb-prompt::placeholder { color: var(--dsw-alias-label-tertiary, #81858c); }
+.wb-prompt:focus-visible {
+  box-shadow: 0 0 0 var(--dsw-focus-ring-width, 2px) var(--dsw-alias-state-business-primary, #4176e6);
+}
+
+/* ── 错误条 ── */
+.wb-error {
+  flex: none;
+  margin: 10px var(--wb-pad-x, 16px) 0;
+  padding: 8px 10px;
+  border-radius: var(--dsw-radius-sm, 8px);
+  background: rgba(248, 81, 73, .10);
+  color: rgb(207, 34, 46);
+  font-size: 11px;
+  line-height: 17px;
+  white-space: pre-wrap;
+}
+
+/* ══ ⑥ 成果区：占满剩余高度，无结果时【完全留空】（方案书 §四） ══ */
+.wb-result {
+  flex: 1 1 auto;
+  min-height: 0;                    /* ★ 必须，否则 flex 子元素不收缩 */
+  overflow: auto;
+  padding: 12px var(--wb-pad-x, 16px) var(--wb-pad-x, 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wb-result-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-tertiary, #81858c);
+}
+.wb-result-head .ok { color: rgb(46, 160, 67); font-weight: 600; }
+.wb-media {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+.wb-media img,
+.wb-media video {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--dsw-radius-sm, 8px);
+  box-shadow: 0 0 0 0.5px var(--dsw-alias-border-l2, #0000001a);
+}
+/* 图片按最大宽度自适应；两张并排时各占一半 */
+.wb-media img { max-width: min(100%, 320px); height: auto; }
+.wb-media video { max-width: min(100%, 420px); }
+
+/* 生成中的进度（只在有 job 时出现） */
+.wb-progress {
+  flex: none;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--dsw-alias-interactive-bg-active, #2631481a);
+  overflow: hidden;
+}
+.wb-progress > i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--dsw-alias-state-business-primary, #4176e6);
+  transition: width 220ms ease;
+}
+
+/* 说明文字（预览专用，不在实装里） */
+.note {
+  width: min(920px, 100%);
+  font-size: 11px;
+  line-height: 17px;
+  color: var(--dsw-alias-label-tertiary, #81858c);
+}
+.note code {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--dsw-alias-interactive-bg-hover, #2631480f);
+  color: var(--dsw-alias-label-secondary, #61666b);
+}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ══ 预览控制条（非工作台部件） ══ -->
+  <div class="preview-bar">
+    <b>预览控制</b>
+    <span>状态</span>
+    <div class="seg" id="segState">
+      <button data-state="done" aria-pressed="true">有成果</button>
+      <button data-state="none" aria-pressed="false">无成果</button>
+    </div>
+    <div class="spacer"></div>
+    <span>窗口宽度 <b id="vpw">—</b>（拖动窗口看三档收缩）</span>
+  </div>
+
+  <!-- ══ 工作台本体 ══ -->
+  <div class="wb" id="wb">
+
+    <!-- 顶部状态行 -->
+    <div class="wb-health">
+      <span class="wb-dot" data-state="ok" id="dot"></span>
+      <span id="healthText">ComfyUI 已连接</span>
+      <span class="sep">·</span>
+      <span>v0.40.0</span>
+      <span class="sep">·</span>
+      <span class="vram" id="vramText">14884 MiB free</span>
+    </div>
+
+    <!-- ★ 参数条：四个下拉一行 -->
+    <div class="wb-bar" id="bar">
+
+      <div class="wb-field">
+        <select class="wb-select" id="selMode" aria-label="工作流">
+        </select>
+        <span class="wb-arrow" aria-hidden="true">▾</span>
+      </div>
+
+      <div class="wb-field" id="slotAspect">
+        <select class="wb-select" id="selAspect" aria-label="画幅"></select>
+            <span class="wb-hl" aria-hidden="true"><span class="wb-arrow">▾</span><span class="wb-hl-text"></span></span>
+        <span class="wb-arrow" aria-hidden="true">&#9662;</span>
+      </div>
+
+      <div class="wb-field" id="slotDyn">
+        <select class="wb-select" id="selDuration" aria-label="时长/张数"></select>
+        <span class="wb-arrow" aria-hidden="true">&#9662;</span>
+      </div>
+
+      <div class="wb-field" id="slotSteps">
+        <select class="wb-select" id="selSteps" aria-label="步数"></select>
+        <span class="wb-arrow" aria-hidden="true">&#9662;</span>
+      </div>
+
+      <div class="wb-field" id="slotSteps2" hidden>
+        <select class="wb-select" id="selSteps2" aria-label="二采步数"></select>
+        <span class="wb-arrow" aria-hidden="true">&#9662;</span>
+      </div>
+
+      <div class="wb-field">
+        <input class="wb-input" id="inpSeed" type="number" step="1" placeholder="留空随机" aria-label="种子">
+      </div>
+
+      <!-- 第 6 列：行内开关（跟随工作流出现/消失）+ 生成 + 取消 -->
+      <div class="wb-actions">
+        <button class="wb-switch" id="swToggle" type="button" role="switch" aria-checked="false" hidden>
+          <span class="knob" aria-hidden="true"></span>
+          <span id="swLabel">武打模式</span>
+        </button>
+
+        <button class="wb-btn" id="btnGen" type="button">生成</button>
+        <button class="wb-btn cancel" id="btnCancel" type="button" hidden>取消</button>
+      </div>
+    </div>
+
+    <!-- 提示词 -->
+    <div class="wb-prompt-wrap">
+      <textarea class="wb-prompt" id="taPrompt" placeholder="描述你想生成的画面…"></textarea>
+    </div>
+
+    <!-- 错误条（默认不显示） -->
+    <div class="wb-error" id="errBox" hidden></div>
+
+    <!-- 成果区：占满剩余；无成果时完全留空 -->
+    <div class="wb-result" id="result"></div>
+
+  </div>
+
+  <div class="note">
+    样式取自 19499 实机测量：控件高 <code>28px</code>、边框 <code>0px</code>（官方无边框）、
+    圆角 <code>8px</code>、字体 <code>13px/20px</code>、hover <code>rgba(38,49,72,.06)</code>、
+    焦点环 <code>box-shadow 0 0 0 2px #4176e6</code>。
+    参数条用 <code>grid</code> 六列，每个 <code>minmax(0,…)</code> 的 0 保证窄容器下能收缩。
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   预览逻辑 —— 纯本地模拟，不发任何网络请求。
+   数据取自 19499 实例 /comfy-bridge/modes 的真实返回（4 个工作流）。
+   ══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  "use strict";
+
+  /* ── 真实工作流数据（实机 /comfy-bridge/modes 抓取，2026-10-18 增量后） ──
+     caps 不是手写的：它由后端从 bind 的 vars 推导（workflows.mjs 的 resolveMode），
+     这里照抄实机 /modes 返回值，保证「预览所见 = 实装所得」。
+     判据：duration 看 vars.durationSec，batch 看 vars.batch，steps2 看 vars.steps2，
+     secondPassToggle 看 toggles 里有没有 secondPass。 */
+  var MODES = [
+    {
+      id: "yz", label: "多参 H3", primary: true, order: 0,
+      defaults: {
+        prompt: "subject_definitions:\n<Subject 1> is the character in <Picture 1>.\n\n文戏：角色在室内自然交谈，镜头缓慢推进，表情细微变化。",
+        aspect: "16:9", durationSec: 5, steps: 10
+      },
+      durations: [5, 10, 15],
+      steps: [4, 6, 8, 10, 15, 20],
+      batches: [1, 2, 4],
+      toggles: { wudA: { label: "武打模式", default: false } },
+      /* 视频：有 durationSec；bind 里没声明 batch/steps2 */
+      caps: { duration: true, batch: false, steps: true, steps2: false, secondPassToggle: null },
+      outKind: "video"
+    },
+    {
+      id: "krea2", label: "Krea2 生图", primary: false, order: 1,
+      defaults: {
+        prompt: "a young woman in a sunlit cafe, cinematic lighting, shallow depth of field, film grain",
+        aspect: "16:9", steps: 8, steps2: 5, batch: 1
+      },
+      durations: [5, 10, 15],
+      steps: [4, 6, 8, 10, 15, 20],
+      steps2Options: [3, 5, 8, 10, 15],
+      batches: [1, 2, 4, 8],
+      toggles: {
+        secondPass: { label: "二采精修", default: true },
+        redraw: { label: "高清重绘", default: false },
+        loraChain: { label: "挂 LoRA", default: false }
+      },
+      /* 唯一有第二采样的生图流：203 一采 / 221 二采，两个独立 KSampler，
+         所以一采步数、二采步数各自可调 */
+      caps: { duration: false, batch: true, steps: true, steps2: true, secondPassToggle: "secondPass" },
+      outKind: "image"
+    },
+    {
+      id: "qwen21", label: "Qwen 生图", primary: false, order: 2,
+      defaults: {
+        prompt: "Retro Cartoon Graffiti EDM Party Poster, neon colors, bold outlines, energetic composition",
+        aspect: "16:9", steps: 40, batch: 1
+      },
+      durations: [5, 10, 15],
+      steps: [10, 20, 30, 40, 50],
+      batches: [1, 2, 4],
+      toggles: {},
+      /* 无二采节点（只有 442 一个 KSampler）→ steps2=false、secondPassToggle=null，
+         UI 因此不会长出二采控件。不是「开关打不开」，是「工作流里没有这个东西」。 */
+      caps: { duration: false, batch: true, steps: true, steps2: false, secondPassToggle: null },
+      outKind: "image"
+    },
+    {
+      id: "qwen21-edit", label: "Qwen 改图", primary: false, order: 3,
+      defaults: { prompt: "Replace costumes for the character", steps: 25, batch: 1 },
+      durations: [5, 10, 15],
+      steps: [10, 15, 20, 25, 30],
+      batches: [1, 2, 4],
+      toggles: {},
+      /* 无 aspect（用 width/height）、无 duration、无二采 */
+      caps: { duration: false, batch: true, steps: true, steps2: false, secondPassToggle: null },
+      outKind: "image"
+    }
+  ];
+
+  var ASPECTS = ["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9", "21:9"];
+
+  /* ── 状态 ── */
+  var state = {
+    modeId: "yz",
+    aspect: "16:9",
+    durationSec: 5,
+    steps: 10,
+    steps2: 5,
+    batch: 1,
+    seed: "",
+    toggles: {},
+    job: null,        // { progress, completed, cancelled }
+    error: null,
+    preview: "done"   // 预览控制：done / none
+  };
+
+  /* ── DOM ── */
+  var $ = function (id) { return document.getElementById(id); };
+  var elMode = $("selMode"), elSlotAspect = $("slotAspect"), elSlotDyn = $("slotDyn"),
+      elSlotSteps = $("slotSteps"), elSeed = $("inpSeed"), elPrompt = $("taPrompt"),
+      elBar = $("bar"), elSw = $("swToggle"), elSwLabel = $("swLabel"),
+      elGen = $("btnGen"), elCancel = $("btnCancel"), elResult = $("result"),
+      elErr = $("errBox"), elDot = $("dot");
+
+  /* 动态槽里的 select 是每次重建的，不缓存引用 */
+  var elDyn = null, elStepsStep = null, elSteps2 = null;
+
+  function mode() {
+    for (var i = 0; i < MODES.length; i++) if (MODES[i].id === state.modeId) return MODES[i];
+    return MODES[0];
+  }
+
+  /* ── 下拉填充 ── */
+  function fillSelect(el, items, value) {
+    el.textContent = "";
+    items.forEach(function (it) {
+      var o = document.createElement("option");
+      o.value = String(it.value);
+      o.textContent = it.text;
+      if (String(it.value) === String(value)) o.selected = true;
+      el.appendChild(o);
+    });
+  }
+
+  /* 造一个「自绘箭头的下拉」放进指定槽 */
+  function makeSelect(slot, id, options, value, ariaLabel) {
+    slot.textContent = "";
+    var sel = document.createElement("select");
+    sel.className = "wb-select";
+    sel.id = id;
+    sel.setAttribute("aria-label", ariaLabel);
+    // ★ 高亮层：宽度只包住「三角 + 当前选项文字」，hover 底色跟它走
+    //   这样切选项时底色宽度会变，但 select 本身的占位由 grid 列决定 → 不位移
+    var hl = document.createElement("span");
+    hl.className = "wb-hl";
+    var arrow = document.createElement("span");
+    arrow.className = "wb-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "▾";
+    var txt = document.createElement("span");
+    txt.className = "wb-hl-text";
+    hl.appendChild(arrow);
+    hl.appendChild(txt);
+    slot.appendChild(sel);
+    slot.appendChild(hl);
+    fillSelect(sel, options, value);
+    syncHlText(sel, txt);
+    sel.addEventListener("change", function () { syncHlText(sel, txt); });
+    // 尺寸变化的回调（工作流切换后选项变了，文字也要跟着变）
+    sel.__syncHl = function () { syncHlText(sel, txt); };
+    return sel;
+  }
+
+  /* ★ 把当前选中项的可见文字同步到高亮层 —— 保证 hover 底色 = 文字宽度 */
+  function syncHlText(sel, span) {
+    var o = sel.options[sel.selectedIndex];
+    span.textContent = o ? o.textContent : "";
+  }
+
+  /* ★ 2026-10-18 增量：参数区按 caps 动态生成
+     —— 生图流把「时长」换成「张数」（第 4 槽位），视频流保持「时长」
+     —— 有二采的流（krea2）在第 5 槽前多长一个「二采步数」
+     —— 没有二采的流根本不会出现这个控件（不给假开关） */
+  function renderSelects() {
+    var m = mode();
+    var caps = m.caps || {};
+    var compact = window.innerWidth < 700;   // 窄容器去掉单位后缀
+
+    fillSelect(elMode, MODES.map(function (x) {
+      return { value: x.id, text: x.label + (x.primary ? " ★" : "") };
+    }), state.modeId);
+
+    // ★ 每次重渲染后统一同步高亮层文字（否则切工作流后底色宽度不对）
+    setTimeout(function () {
+      document.querySelectorAll(".wb-select").forEach(function (s) {
+        var hl = s.parentElement && s.parentElement.querySelector(".wb-hl-text");
+        if (!hl) return;
+        var o = s.options[s.selectedIndex];
+        hl.textContent = o ? o.textContent : "";
+      });
+    }, 0);
+
+    /* 第 2 槽：画幅（qwen21-edit 没有 aspect 变量 → 置灰） */
+    fillSelect(elSlotAspect.firstElementChild, ASPECTS.map(function (a) {
+      return { value: a, text: a };
+    }), state.aspect);
+    setApplicable(elSlotAspect.firstElementChild, m.aspectApplicable !== false,
+      "该工作流不接画幅参数（用 width/height）");
+
+    /* 第 3 槽：动态 —— 视频=时长 / 生图=张数 */
+    if (caps.duration) {
+      elDyn = makeSelect(elSlotDyn, "selDuration",
+        m.durations.map(function (d) { return { value: d, text: compact ? String(d) : d + " 秒" }; }),
+        state.durationSec, "时长");
+      elDyn.title = "时长 · " + state.durationSec + " 秒";
+      elDyn.addEventListener("change", function () { state.durationSec = Number(elDyn.value); });
+      elSlotDyn.dataset.kind = "duration";
+    } else {
+      elDyn = makeSelect(elSlotDyn, "selBatch",
+        (m.batches || [1]).map(function (b) {
+          return { value: b, text: compact ? String(b) : b + " 张" };
+        }),
+        state.batch, "张数");
+      elDyn.title = "一次抽 " + state.batch + " 张";
+      elDyn.addEventListener("change", function () {
+        state.batch = Number(elDyn.value);
+        elDyn.title = "一次抽 " + state.batch + " 张";
+      });
+      elSlotDyn.dataset.kind = "batch";
+    }
+
+    /* 第 4 槽：一采步数；若该流有二采，标签改成「一采 N 步」以示区分 */
+    var elSteps = makeSelect(elSlotSteps, "selSteps",
+      m.steps.map(function (s) {
+        var n = compact ? String(s) : s + " 步";
+        return { value: s, text: caps.steps2 ? "一采 " + n : n };
+      }), state.steps, caps.steps2 ? "一采步数" : "步数");
+    elSteps.title = (caps.steps2 ? "一采步数 · " : "步数 · ") + state.steps;
+    elSteps.addEventListener("change", function () { state.steps = Number(elSteps.value); });
+
+    /* 第 4.5 槽：二采步数 —— 只有 caps.steps2 的流才有这个元素。
+       二采关掉时隐藏（节点会被剪掉，调它没意义），但保留 DOM 不重建以免丢焦点。 */
+    if (caps.steps2) {
+      var slot2 = document.getElementById("slotSteps2");
+      slot2.hidden = false;
+      elSteps2 = makeSelect(slot2, "selSteps2",
+        (m.steps2Options || [3, 5, 8, 10, 15]).map(function (s) {
+          var n = compact ? String(s) : s + " 步";
+          return { value: s, text: "二采 " + n };
+        }), state.steps2, "二采步数");
+      elSteps2.title = "二采步数 · " + state.steps2;
+      elSteps2.addEventListener("change", function () { state.steps2 = Number(elSteps2.value); });
+      elSlotSteps.dataset.has2 = "1";
+      applySecondPassVisibility();
+    } else {
+      var s2 = document.getElementById("slotSteps2");
+      if (s2) { s2.hidden = true; s2.textContent = ""; }
+      elSteps2 = null;
+      delete elSlotSteps.dataset.has2;
+    }
+
+    /* 窄容器下文字可能被省略号截断 → 用 title 兜住完整值 */
+    elMode.title = "工作流 · " + m.label;
+    elSlotAspect.firstElementChild.title = "画幅 · " + state.aspect;
+  }
+
+  /* 二采开关关掉时，二采步数没有意义（221 节点会被剪掉）→ 隐藏 */
+  function applySecondPassVisibility() {
+    var m = mode();
+    var slot2 = document.getElementById("slotSteps2");
+    if (!slot2) return;
+    if (!m.caps || !m.caps.steps2) { slot2.hidden = true; return; }
+    // 二采关掉 → 221 节点被开关剪掉，调它的步数没意义 → 隐藏
+    var toggleName = m.caps.secondPassToggle;
+    var on = toggleName ? state.toggles[toggleName] !== false : true;
+    slot2.hidden = !on;
+    if (elSteps2) elSteps2.disabled = !on;
+  }
+
+  /* 置灰一个槽（含它的箭头）：保留布局，禁用交互，给出原因 */
+  function setApplicable(el, on, why) {
+    if (!el) return;
+    el.disabled = !on;
+    el.style.opacity = on ? "" : ".45";
+    el.style.cursor = on ? "" : "not-allowed";
+    var arrow = el.parentElement.querySelector(".wb-arrow");
+    if (arrow) arrow.style.opacity = on ? ".9" : ".3";
+    if (on) {
+      el.removeAttribute("data-na");
+    } else {
+      el.setAttribute("data-na", "1");
+      el.title = why;
+    }
+  }
+
+  /* ── 开关：按当前工作流重建（只展示第一个，保持"一行"的约束） ── */
+  function renderToggles() {
+    var m = mode();
+    var keys = Object.keys(m.toggles);
+    if (!keys.length) { elSw.hidden = true; return; }
+    var k = keys[0];               // 预览只放一个开关，验证行内形态
+    elSw.hidden = false;
+    elSw.dataset.key = k;
+    elSwLabel.textContent = m.toggles[k].label;
+    elSw.setAttribute("aria-checked", state.toggles[k] ? "true" : "false");
+    elSw.title = keys.length > 1
+      ? "该工作流共 " + keys.length + " 个开关，预览只演示第一个"
+      : m.toggles[k].label;
+    // 开关变了 → 二采步数的显隐要跟着变（二采关掉 = 221 节点被剪掉）
+    applySecondPassVisibility();
+  }
+
+  /* ── 按钮态 ── */
+  function renderButtons() {
+    var busy = state.job && !state.job.completed && !state.job.cancelled;
+    elGen.disabled = !!busy;
+    elGen.textContent = busy ? "生成中…" : "生成";
+    elCancel.hidden = !busy;
+  }
+
+  function renderError() {
+    if (!state.error) { elErr.hidden = true; elErr.textContent = ""; return; }
+    elErr.hidden = false;
+    elErr.textContent = state.error;
+  }
+
+  /* ── 成果区 ──
+     方案书 §四：没有结果时不要"暂无结果"占位文案 —— 直接空着。 */
+  function renderResult() {
+    var m = mode();
+    elResult.textContent = "";
+
+    // 「无成果」预览态：连 job 都不渲染
+    if (state.preview === "none") return;
+
+    if (!state.job) return;        // 真·空态：什么都不放
+
+    if (state.job.cancelled) {
+      var c = document.createElement("div");
+      c.className = "wb-result-head";
+      c.innerHTML = '<span>已取消</span><span>·</span><span>' + state.job.jobId + "</span>";
+      elResult.appendChild(c);
+      return;
+    }
+
+    if (!state.job.completed) {
+      var head = document.createElement("div");
+      head.className = "wb-result-head";
+      head.innerHTML = '<span>已提交，等待产出…</span><span>·</span><span>' + state.job.jobId + "</span>";
+      elResult.appendChild(head);
+
+      var bar = document.createElement("div");
+      bar.className = "wb-progress";
+      var i = document.createElement("i");
+      i.style.width = state.job.progress + "%";
+      bar.appendChild(i);
+      elResult.appendChild(bar);
+      return;
+    }
+
+    // 完成态
+    var h = document.createElement("div");
+    h.className = "wb-result-head";
+    h.innerHTML = '<span class="ok">完成</span><span>·</span><span>'
+      + (state.job.elapsedMs / 1000).toFixed(1) + "s</span><span>·</span><span>"
+      + state.job.outputs.length + " 个产物</span>";
+    elResult.appendChild(h);
+
+    var media = document.createElement("div");
+    media.className = "wb-media";
+    state.job.outputs.forEach(function (o) {
+      if (m.outKind === "video") {
+        var v = document.createElement("video");
+        v.controls = true;
+        v.muted = true;
+        v.playsInline = true;
+        v.poster = o.poster;
+        v.src = o.src;
+        media.appendChild(v);
+      } else {
+        var img = document.createElement("img");
+        img.src = o.src;
+        img.alt = o.name;
+        media.appendChild(img);
+      }
+    });
+    elResult.appendChild(media);
+  }
+
+  function render() {
+    renderSelects();
+    renderToggles();
+    renderButtons();
+    renderError();
+    renderResult();
+  }
+
+  /* ══ 交互 ══ */
+
+  /* 切换工作流：重置参数到该工作流的默认值；成果区清空（方案书 §四）
+     ★ 实测坑：qwen21 / qwen21-edit 的 defaults 里【没有】durationSec，也没有 aspect。
+       直接用 d.durationSec 会拿到 undefined → 下拉落到第一项。这里显式回落，
+       并把「该工作流不接时长/画幅」标出来（durationApplicable），不假装它支持。 */
+  elMode.addEventListener("change", function () {
+    state.modeId = elMode.value;
+    var m = mode(), d = m.defaults || {};
+    state.aspect = d.aspect || "16:9";
+    state.durationSec = d.durationSec != null ? d.durationSec : m.durations[0];
+    state.steps = d.steps != null ? d.steps : m.steps[0];
+    state.steps2 = d.steps2 != null ? d.steps2 : (m.steps2Options ? m.steps2Options[0] : 5);
+    state.batch = d.batch != null ? d.batch : (m.batches ? m.batches[0] : 1);
+    state.seed = d.seed != null ? String(d.seed) : "";
+    elSeed.value = state.seed;
+    elPrompt.value = d.prompt || "";
+    state.toggles = {};
+    Object.keys(m.toggles).forEach(function (k) { state.toggles[k] = m.toggles[k].default === true; });
+    state.job = null;          // 成果区清空
+    state.error = null;
+    render();
+  });
+
+  /* 切换参数：只改值，不触发生成。
+     ★ 第 3/4/5 槽的 select 是每次 render 重建的，监听器在 makeSelect 里挂，
+       这里只处理「结构固定」的那几个。 */
+  elSeed.addEventListener("input", function () { state.seed = elSeed.value; });
+
+  /* 行内开关 */
+  elSw.addEventListener("click", function () {
+    var k = elSw.dataset.key;
+    if (!k) return;
+    state.toggles[k] = !state.toggles[k];
+    renderToggles();
+  });
+
+  /* 生成：模拟进度（约 2.4s 走完） */
+  var timer = null;
+  function onGenerate() {
+    if (state.job && !state.job.completed && !state.job.cancelled) return;
+    var id = "job-" + Math.random().toString(36).slice(2, 8);
+    state.error = null;
+    state.preview = "done";        // 生成后自动切到"有成果"态
+    syncSeg();
+    state.job = { jobId: id, progress: 0, completed: false, cancelled: false };
+    render();
+
+    var started = Date.now();
+    clearInterval(timer);
+    timer = setInterval(function () {
+      if (!state.job || state.job.cancelled) { clearInterval(timer); return; }
+      var p = Math.min(100, state.job.progress + 4 + Math.random() * 7);
+      state.job.progress = p;
+      if (p >= 100) {
+        clearInterval(timer);
+        state.job.completed = true;
+        state.job.elapsedMs = Date.now() - started;
+        state.job.outputs = buildOutputs();
+      }
+      render();
+    }, 120);
+  }
+
+  /* 造产物：视频用内联 SVG 当 poster，图片用内联 SVG data-uri（零外部请求） */
+  function svgUri(w, h, hue, label) {
+    var s = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">'
+      + '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">'
+      + '<stop offset="0" stop-color="hsl(' + hue + ',52%,72%)"/>'
+      + '<stop offset="1" stop-color="hsl(' + (hue + 48) + ',58%,52%)"/>'
+      + '</linearGradient></defs>'
+      + '<rect width="100%" height="100%" fill="url(#g)"/>'
+      + '<text x="50%" y="50%" font-family="-apple-system,Segoe UI,sans-serif" font-size="' + Math.round(w / 14)
+      + '" fill="rgba(255,255,255,.92)" text-anchor="middle" dominant-baseline="middle">' + label + '</text>'
+      + '</svg>';
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(s);
+  }
+
+  function buildOutputs() {
+    var m = mode();
+    if (m.outKind === "video") {
+      return [
+        { name: "yz_00001.mp4", src: svgUri(640, 360, 210, "预览占位 · 视频"), poster: svgUri(640, 360, 210, "视频首帧") }
+      ];
+    }
+    // 生图 / 改图：按「张数」出几张 —— 这是本次增量要证明的核心行为
+    var n = Math.max(1, Number(state.batch) || 1);
+    var outs = [];
+    for (var i = 0; i < n; i++) {
+      outs.push({
+        name: m.id + "_0000" + (i + 1) + "_.png",
+        src: svgUri(480, 270, (150 + i * 47) % 360, "产物 " + (i + 1))
+      });
+    }
+    return outs;
+  }
+
+  /* 取消 */
+  function onCancel() {
+    if (!state.job) return;
+    clearInterval(timer);
+    state.job.cancelled = true;
+    render();
+  }
+
+  elGen.addEventListener("click", onGenerate);
+  elCancel.addEventListener("click", onCancel);
+
+  /* 提示词框 Ctrl/Cmd+Enter 触发生成（方案书 §四） */
+  elPrompt.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      onGenerate();
+    }
+  });
+
+  /* ── 预览控制：有成果 / 无成果 ── */
+  var seg = $("segState");
+  function syncSeg() {
+    Array.prototype.forEach.call(seg.querySelectorAll("button"), function (b) {
+      b.setAttribute("aria-pressed", b.dataset.state === state.preview ? "true" : "false");
+    });
+  }
+  seg.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-state]");
+    if (!b) return;
+    state.preview = b.dataset.state;
+    if (state.preview === "done" && !state.job) {
+      // 切到"有成果"但还没有 job：直接给一份成品，方便对照
+      state.job = { jobId: "job-preview", completed: true, elapsedMs: 24000, cancelled: false, outputs: buildOutputs() };
+    }
+    syncSeg();
+    render();
+  });
+
+  /* 窗口宽度变化 → 重排文案（紧凑/常规）并刷新指示器 */
+  function syncVpw() { $("vpw").textContent = window.innerWidth + "px"; }
+  var resizeTimer = null;
+  window.addEventListener("resize", function () {
+    syncVpw();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { renderSelects(); }, 80);
+  });
+  syncVpw();
+
+  /* ── 初始化 ── */
+  (function init() {
+    var m = mode(), d = m.defaults;
+    state.aspect = d.aspect || "16:9";
+    state.durationSec = d.durationSec != null ? d.durationSec : m.durations[0];
+    state.steps = d.steps != null ? d.steps : m.steps[0];
+    state.steps2 = d.steps2 != null ? d.steps2 : (m.steps2Options ? m.steps2Options[0] : 5);
+    state.batch = d.batch != null ? d.batch : (m.batches ? m.batches[0] : 1);
+    elPrompt.value = d.prompt || "";
+    Object.keys(m.toggles).forEach(function (k) { state.toggles[k] = m.toggles[k].default === true; });
+    // 默认展示"有成果"态
+    state.job = { jobId: "job-preview", completed: true, elapsedMs: 24000, cancelled: false, outputs: buildOutputs() };
+    syncSeg();
+    render();
+  })();
+})();
+</script>
+</body>
+</html>
