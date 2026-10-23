@@ -1,32 +1,79 @@
 {
   "_说明": [
-    "模型下载来源表（可选）。放在这个位置之一：",
-    "  · 仓库根：这是示例位置",
+    "模型下载来源表。放在这个位置之一：",
+    "  · 仓库根（本文件）",
     "  · 你在设置里填的「模型放置目录」旁边",
     "",
     "插件在模型清单里显示下载入口：",
-    "  · 这张表里有 → 显示「→ 下载链接」，直接跳到你填的 URL",
+    "  · 这张表里有 url → 显示「→ 下载链接」，直接跳过去",
     "  · 表里没有 → 显示「→ 去搜索这个模型」，跳 HuggingFace 搜索页",
     "",
     "为什么需要这张表：工作流 JSON 里只有文件名，没有任何下载地址",
     "（实测：krea2-full.json 的节点 _meta 里只有「K采样器」这类中文标题）。",
     "所以精确 URL 只能由人来记 —— 你下载完顺手填一行，下次换机就能直接点。",
     "",
-    "键可以用完整名（含子目录）或只用文件名。文件名优先匹配精确键。"
+    "键可以用完整名（含子目录）或只用文件名。完整名优先。",
+    "",
+    "★ 下面这些 url 是 2026-10-23 实际核对过的，不是猜的。"
   ],
 
   "Krea2-功能\\Krea2-亚洲hina_krea2Turbo_lora_tqd_v4.0.safetensors": {
-    "url": "",
-    "note": "Krea2 亚洲人像 LoRA（turbo v4.0）—— 把 url 填成你实际下载的地址"
+    "url": "https://huggingface.co/hinablue/Krea2-AsianMix-v3",
+    "note": "⚠ 同一作者的亚洲人像 LoRA，但 HF 上只有 v3（hina_krea2_lora_v3-0000xx.safetensors，234.7MB）。工作流要的是 v4.0（tqd 版），v3 不能替代 —— 版本不同效果不同。v4.0 请从原下载渠道找。"
+  },
+
+  "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors": {
+    "url": "https://huggingface.co/Comfy-Org/MiniMax-H3",
+    "note": "Comfy-Org 官方 MiniMax-H3 仓库（文本编码器，v2 新增）"
+  },
+
+  "minimax_h3_latent_upscaler_3d_fp16_V2.safetensors": {
+    "url": "https://huggingface.co/KENIC-1/minimax_h3_latent_upscaler_3d_fp16_V2",
+    "note": "★ 实测与 LBH-123-AI 仓库的 _3d_conv_v1_fp16 字节完全相同（sha256 043e5a48…eb55c2）。只是文件名带版本号，不是新模型。"
+  },
+
+  "minimax_h3_hybrid_fl2va_ref2va_b25-49-int8.safetensors": {
+    "url": "https://huggingface.co/smhfacct/Minimax-H3-fl2va-ref2va-hybrid-models",
+    "note": "H3 混合主模型（fl2va + ref2va）"
+  },
+
+  "minimax_h3_video_vae_int8_convrot.safetensors": {
+    "url": "https://huggingface.co/Comfy-Org/MiniMax-H3",
+    "note": "Comfy-Org 官方 MiniMax-H3 仓库（视频 VAE）"
+  },
+
+  "minimax_h3_audio_vae_fp32.safetensors": {
+    "url": "https://huggingface.co/Comfy-Org/MiniMax-H3",
+    "note": "Comfy-Org 官方 MiniMax-H3 仓库（音频 VAE）"
   },
 
   "H3_Combat_V2.safetensors": {
     "url": "",
-    "note": "H3 武打 LoRA（战斗动作）"
+    "note": "H3 武打 LoRA（战斗动作）— 中文社群发布，HF 上未找到，请填你实际的下载地址"
+  },
+
+  "H3_Fight_Flow_V1.safetensors": {
+    "url": "",
+    "note": "H3 打斗流畅度 LoRA — 同上"
+  },
+
+  "Motion_Repair_V2.safetensors": {
+    "url": "",
+    "note": "H3 动作修复 LoRA — 同上"
+  },
+
+  "H3_speed_slider_1.1.safetensors": {
+    "url": "",
+    "note": "H3 速度滑条 LoRA — 同上"
   },
 
   "Krea2-moodyKrea2Mix_v8_int8_convrot.safetensors": {
     "url": "",
-    "note": "Krea2 主模型（int8 量化）"
+    "note": "Krea2 主模型（int8 量化）— 请填你实际的下载地址"
+  },
+
+  "qwen_image_2.1_int8_convrot.safetensors": {
+    "url": "",
+    "note": "Qwen-Image 2.1 主模型 — 请填你实际的下载地址"
   }
 }

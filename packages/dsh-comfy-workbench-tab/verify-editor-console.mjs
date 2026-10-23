@@ -1222,6 +1222,63 @@ check("日志用追加而不是覆盖",
   />>/.test(launcherC),
   "覆盖的话只能看到最后一次启动");
 
+/* ══ ㉑ 模型下载入口（E2 的「下载链接」部分，2026-10-23）═════════ */
+/**
+ * 主人原话：「模型需求清单列出来让用户去下载」
+ * 目标原文：「生成清单 + 下载链接」。
+ *
+ * ★ 现实约束：工作流 JSON 里只有文件名，没有任何下载地址。
+ *   实测 krea2-full.json 的节点 _meta 里只有「K采样器」这类中文标题。
+ *   ⇒ 精确 URL 只能由人在 models-sources.json 里记。
+ *   ⇒ 没记的给搜索入口，而不是编一个会 404 的 URL。
+ */
+const mmC2 = code(fs.readFileSync(path.join(HERE, "..", "dsh-comfy-bridge", "src", "model-manifest.mjs"), "utf8"));
+
+check("后端解析模型来源（精确 URL 或搜索页）",
+  /resolveSource/.test(mmC2) && /loadSources/.test(mmC2),
+  "只给名字不给入口，用户不知道去哪下");
+
+check("来源表读不到时不崩（返回空对象）",
+  /**
+   * ★ 判据：loadSources 必须用 try/catch 包住 JSON.parse，失败时 return {}。
+   *   坏 JSON 是用户手写文件的常态 —— 不能让它把整个模型清单搞崩。
+   *
+   * ★★ 收紧两次（变异测试两次都发现假绿）：
+   *   ① 第一版只测「文件里有 catch」+「有 return {}」——
+   *      把 catch 换成 finally 时两者都还在，照样通过。
+   *   ② 第二版测 /try{...JSON.parse...}catch{/ ——
+   *      仍然假绿，因为【文件别处也有 try/catch】，正则匹配到别的去了。
+   *
+   *   ⇒ 必须先把 loadSources 的函数体【切出来】，在切片内判断。
+   *     AGENTS §7.5：判「某处有没有 X」必须限定在那一处，不能全文搜。
+   */
+  (() => {
+    const i = mmC2.indexOf("function loadSources");
+    if (i < 0) return false;
+    /* 取到下一个顶层 function 之前 */
+    const rest = mmC2.slice(i);
+    const end = rest.indexOf("\nfunction ", 10);
+    const body = end > 0 ? rest.slice(0, end) : rest;
+    return /try\s*\{[\s\S]{0,400}JSON\.parse[\s\S]{0,200}\}\s*catch\s*\{/.test(body)
+      && /return \{\};/.test(body);
+  })(),
+  "catch→finally 后坏 JSON 会让整个模型清单崩");
+
+check("没有映射时给 HuggingFace 搜索页而不是编 URL",
+  /huggingface\.co\/models\?search=/.test(mmC2),
+  "编一个 URL 会 404 或下错文件");
+
+check("前端只在缺失时显示下载入口",
+  /source && source\.url && found !== true/.test(comfySettingsC),
+  "已经有文件的模型不需要下载入口");
+
+check("前端区分「精确链接」与「去搜索」",
+  /source\.kind === "exact"/.test(comfySettingsC));
+
+check("仓库根有 models-sources.json 示例",
+  fs.existsSync(path.join(HERE, "..", "..", "models-sources.json")),
+  "没有示例的话用户不知道有这么个机制");
+
 /* ── 汇总 ── */
 console.log("");
 console.log("═".repeat(60));
