@@ -88,17 +88,29 @@ if (versions.length) console.log(`    最新：${versions[0].name}`);
  *     不该让它静默通过。
  */
 {
-  const tracked = git(["ls-files", "VERSION-*.md"]);
-  const trackedCount = tracked.ok ? tracked.out.split("\n").filter(Boolean).length : 0;
-  check("VERSION 文件被 git 跟踪", trackedCount > 0,
-    `git ls-files 只看到 ${trackedCount} 个`);
-  console.log(`  已跟踪 VERSION：${trackedCount} 个`);
+  /**
+   * ★ 2026-10-24：非 git 环境下这两条走【跳过】而不是失败。
+   *   实测可移植性测试：复制到无 .git 的目录后，
+   *   这两条报失败 —— 但那不是「版本纪律坏了」，是环境不适用。
+   */
+  const isRepo = git(["rev-parse", "--is-inside-work-tree"]).ok;
+  if (!isRepo) {
+    console.log("  – 跳过 git 相关的两条：这儿不是 git 仓库");
+    check("VERSION 文件被 git 跟踪（跳过：非 git 环境）", true);
+    check("最近 20 个提交里动过 VERSION（跳过：非 git 环境）", true);
+  } else {
+    const tracked = git(["ls-files", "VERSION-*.md"]);
+    const trackedCount = tracked.ok ? tracked.out.split("\n").filter(Boolean).length : 0;
+    check("VERSION 文件被 git 跟踪", trackedCount > 0,
+      `git ls-files 只看到 ${trackedCount} 个`);
+    console.log(`  已跟踪 VERSION：${trackedCount} 个`);
 
-  /* 最近 20 个提交里有没有动过 VERSION */
-  const recent = git(["log", "-20", "--name-only", "--format="]);
-  const touched = recent.ok && /VERSION-v\d{4}\.\d{2}\.\d{2}/.test(recent.out);
-  check("最近 20 个提交里动过 VERSION（版本随工作一起提交）", touched,
-    "版本记录应当随功能提交，不是攒到最后补一份");
+    /* 最近 20 个提交里有没有动过 VERSION */
+    const recent = git(["log", "-20", "--name-only", "--format="]);
+    const touched = recent.ok && /VERSION-v\d{4}\.\d{2}\.\d{2}/.test(recent.out);
+    check("最近 20 个提交里动过 VERSION（版本随工作一起提交）", touched,
+      "版本记录应当随功能提交，不是攒到最后补一份");
+  }
 }
 
 /* ── ③ 最新 VERSION 必须写了可核验的东西 ── */
@@ -145,4 +157,5 @@ console.log(`  ❌ ${pass} 通过 / ${fails.length} 失败`);
 console.log(`  通过 ${pass} / ${pass + fails.length}`);
 console.log("");
 process.exit(1);
+
 

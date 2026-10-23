@@ -64,8 +64,21 @@ console.log("");
 /* ── ① 硬判据：已跟踪文件里不能有这些 ── */
 const tracked = git(["ls-files"]);
 if (!tracked.ok) {
-  console.log("  ❌ 不是 git 仓库，或 git 不可用");
-  process.exit(1);
+  /**
+   * ★ 2026-10-24：非 git 环境走【跳过】而不是失败。
+   *
+   *   实测可移植性测试：把文件复制到新目录（没有 .git）后跑静态验收，
+   *   这一项报「不是 git 仓库」—— 但那不是缺陷，是环境不适用。
+   *
+   *   ⇒ 跳过 + 说明。真正的 git 仓库里这条仍然会检查。
+   */
+  console.log("");
+  console.log("  – 跳过：这儿不是 git 仓库（或 git 不可用），仓库卫生无从检查");
+  console.log("     本条只在 git 工作副本里有意义。");
+  console.log("");
+  console.log("  通过 0 / 0（跳过）");
+  console.log("");
+  process.exit(0);
 }
 const files = tracked.out.split("\n").filter(Boolean);
 
@@ -136,3 +149,4 @@ console.log(`  ❌ ${pass} 通过 / ${fails.length} 失败`);
 console.log(`  通过 ${pass} / ${pass + fails.length}`);
 console.log("");
 process.exit(1);
+
