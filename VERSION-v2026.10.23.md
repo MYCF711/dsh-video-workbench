@@ -1,8 +1,8 @@
 # v2026.10.23 · DSH 视频工作台
 
 > 打包时间：2026-10-23 00:56（本机时间）
-> 归档：`D:\主工作区\_branch-archive\DSH视频工作台-v2026.10.23-b-20261023-010836.zip`（82.8MB）
-> 源码备份：`D:\主工作区\_branch-archive\merge-backup-20261023-010836`
+> 归档：`<WORKSPACE>\_branch-archive\DSH视频工作台-v2026.10.23-b-20261023-010836.zip`（82.8MB）
+> 源码备份：`<WORKSPACE>\_branch-archive\merge-backup-20261023-010836`
 > ★ 初版归档（-005620）已作废，保留只为追溯：它缺剪辑台的纯 CSS 宽度跟随
 > 上一版：`VERSION-v2026.10.22.md`
 
@@ -173,8 +173,8 @@ CSS 模板检查            6/6
 | M1 HTTP 端到端 10/14 | **失败** —— ComfyUI 8188 未运行，与本次改动无关 |
 | M1 异常输入 21/23 | 同上 |
 | 实时进度真机数据 | **未验证** —— ComfyUI 离线，只验了消息解析 |
-| `dsh-editor` 是外部包 | 来自 `D:\主工作区\DSH视频工作站`，新 PC 上没有 → **可移植性未做** |
-| `verify-m4.mjs` 硬编码 | `C:/Users/Administrator/dsh-tok.txt` |
+| `dsh-editor` 是外部包 | 来自 `<OLD_REPO>`，新 PC 上没有 → **可移植性未做** |
+| `verify-m4.mjs` 硬编码 | `<HOME>/dsh-tok.txt` |
 | `.models/` 3.9GB | whisper 模型，未纳入归档 |
 | `dsh-artcraft-tab` 目录 | 已退役但保留（`build-payload.mjs` 仍在用） |
 
@@ -203,18 +203,18 @@ CSS 模板检查            6/6
 
 ```powershell
 # 起测试实例（不动主人的 19387）
-pwsh -NoProfile -File C:\Users\Administrator\restart-test.ps1
+pwsh -NoProfile -File <HOME>\restart-test.ps1
 
 # 改代码后构建
-cd D:\主工作区\DSH视频工作台\packages\dsh-comfy-workbench-tab
+cd <REPO>\packages\dsh-comfy-workbench-tab
 node build.mjs
 
 # 改了 ArtCraft 上游才需要（两步）
-cd D:\主工作区\_upstream\artcraft-demo && node build-dsh-proof.mjs
-cd D:\主工作区\DSH视频工作台\packages\dsh-artcraft-tab && node build-payload.mjs
+cd <UPSTREAM>\artcraft-demo && node build-dsh-proof.mjs
+cd <REPO>\packages\dsh-artcraft-tab && node build-payload.mjs
 
 # 验收
-cd D:\主工作区\DSH视频工作台\packages
+cd <REPO>\packages
 node verify-all.mjs --static
 ```
 

@@ -111,16 +111,16 @@ YUH 的 video 节点有 `chain_from`：「上一镜来源」。
 
 ③ 抽出的帧不能写 ComfyUI 的 input 目录
    DSH 文件沙箱只允许写工作区（实测三种路径）：
-     C:\Users\Administrator\*.png              → I/O error
+     <HOME>\*.png              → I/O error
      D:\Comfy-Desktop\ComfyUI-Shared\input\*.png → I/O error
-     D:\主工作区\DSH视频工作台\.frames\*.png     → ✓
+     <REPO>\.frames\*.png     → ✓
    ⇒ 落盘在工作区，之后走 comfy.uploadImage() 传给 ComfyUI
 ```
 
 ### ffmpeg 位置
 
 ```
-D:\主工作区\DSH视频工作站\packages\dsh-editor\bin\ffmpeg.exe   v7.1  83.6MB
+<OLD_REPO>\packages\dsh-editor\bin\ffmpeg.exe   v7.1  83.6MB
 PATH 里没有 ffmpeg（实测 Get-Command ffmpeg 失败），必须用绝对路径。
 ```
 

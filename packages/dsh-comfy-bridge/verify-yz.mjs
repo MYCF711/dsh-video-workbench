@@ -16,7 +16,7 @@
  * 用法：node verify-yz.mjs [--dur 2] [--aspect 16:9] [--no-audio-check]
  */
 /**
- * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 <WORKSPACE>/... 绝对路径。
  *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
  */
 import path from "node:path";

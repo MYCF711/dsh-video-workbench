@@ -32,11 +32,10 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-no-english-src.mjs");
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-const UPSTREAM = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
-
 /**
  * ★ 2026-10-21 修：这个脚本缺了 findings 的定义 —— 它一直跑不起来。
  *
@@ -333,3 +332,4 @@ console.log("");
 
 const strict = process.argv.includes("--strict");
 process.exit(strict ? 1 : 0);
+

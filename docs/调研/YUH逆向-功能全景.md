@@ -227,5 +227,5 @@ schedule_targets / schedule_run / schedule_history
 ## 附 · 证据文件
 
 ```
-C:\Users\Administrator\yuh-zh.txt    3920 条中文 UI 文案（提取自 renderer bundle）
+<HOME>\yuh-zh.txt    3920 条中文 UI 文案（提取自 renderer bundle）
 ```

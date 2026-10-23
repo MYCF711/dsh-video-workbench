@@ -31,7 +31,7 @@
  */
 
 /**
- * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 <WORKSPACE>/... 绝对路径。
  *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
  */
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -46,7 +46,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT_WB = path.resolve(HERE, "..");
-const ROOT_WS = "D:/主工作区/DSH视频工作站/packages";
+/**
+ * ★ 2026-10-24：原来指向【另一个仓库】（DSH视频工作站）。
+ *   D1 已把 dsh-editor 并进本仓库 ⇒ 改成扫本仓库 packages/。
+ *   这样也顺带修掉一个可移植性问题：别的机器没有那个旧仓库。
+ */
+const ROOT_WS = path.resolve(HERE, "..");
 
 const { REF_ROLES, defaultRoleFor, migrateLegacyRole } = await import(
   pathToFileURL(path.resolve(HERE, "src", "h3-labels.js")).href
@@ -122,17 +127,23 @@ console.log("\n① 源码里不许再产旧 role（appearance / motion / sound /
     return hits;
   };
 
-  const wbHits = scan(ROOT_WB, "DSH视频工作台/packages").filter((h) => {
-    /**
-     * ★ 白名单：verify-h3-labels.mjs 里那一条是【故意】用旧值的 ——
-     *   它的用例名是「旧 role='appearance' 仍能生成 <Subject>」，
-     *   验的正是兼容层能不能兜住历史数据。
-     *   把测试「兼容旧值」的用例当成违规，是把好事当坏事。
-     */
+  /**
+   * ★ 白名单：verify-h3-labels.mjs 里那一条是【故意】用旧值的 ——
+   *   它的用例名是「旧 role='appearance' 仍能生成 <Subject>」，
+   *   验的正是兼容层能不能兜住历史数据。
+   *   把测试「兼容旧值」的用例当成违规，是把好事当坏事。
+   *
+   * ★★ 2026-10-24：白名单原来只作用于工作台侧，
+   *   把扫描范围扩到整个 packages/ 后，工作站侧也扫到同一条 ⇒ 报假红。
+   *   ⇒ 提取成函数，两边共用。
+   */
+  const allow = (h) => {
     if (h.includes("verify-h3-labels.mjs") && h.includes('role: "appearance"')) return false;
     return true;
-  });
-  const wsHits = scan(ROOT_WS, "DSH视频工作站/packages");
+  };
+
+  const wbHits = scan(ROOT_WB, "DSH视频工作台/packages").filter(allow);
+  const wsHits = scan(ROOT_WS, "本仓库 packages（原工作站侧已并入）").filter(allow);
 
   t("工作台侧旧 id 零残留", wbHits.length === 0, wbHits.slice(0, 5));
   t("工作站侧旧 id 零残留", wsHits.length === 0, wsHits.slice(0, 5));
@@ -216,5 +227,7 @@ if (fail) {
   process.exit(1);
 }
 console.log("  跨模块契约一致");
+
+
 
 

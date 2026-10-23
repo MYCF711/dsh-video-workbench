@@ -1,7 +1,7 @@
 # v2026.10.23-i · D2/D3 去敏补全
 
 > 打包：2026-10-23 13:38
-> 归档：`D:\主工作区\_branch-archive\DSH视频工作台-v2026.10.23-i-20261023-133855.zip`（51.6MB）
+> 归档：`<WORKSPACE>\_branch-archive\DSH视频工作台-v2026.10.23-i-20261023-133855.zip`（51.6MB）
 > 上一版：`VERSION-v2026.10.23-h.md`
 
 ---
@@ -13,14 +13,14 @@
 
 | 文件 | 位置 | 原先的值 |
 |---|---|---|
-| `lib/asset-scan.js` | `DEFAULT_WS_ASSETS` | `D:/主工作区/outputs/assets.json` |
-| `lib/asset-scan.js` | `DEFAULT_STATE` | `D:/主工作区/DSH视频工作台/.state/asset-library.json` |
-| `lib/index.js` | `DEFAULT_WORKFLOWS_DIR` | `D:/主工作区/.../dsh-comfy-bridge/workflows` |
+| `lib/asset-scan.js` | `DEFAULT_WS_ASSETS` | `<WORKSPACE>/outputs/assets.json` |
+| `lib/asset-scan.js` | `DEFAULT_STATE` | `<REPO>/.state/asset-library.json` |
+| `lib/index.js` | `DEFAULT_WORKFLOWS_DIR` | `<WORKSPACE>/.../dsh-comfy-bridge/workflows` |
 | `lib/index.js` | 字幕路径白名单 | `"D:\\主工作区"` |
-| `lib/index.js` | `TMP_ROOT` | `D:\主工作区\DSH视频工作台\.frames` |
-| `lib/index.js` | `FFMPEG` | `D:\主工作区\DSH视频工作站\...\ffmpeg.exe` |
+| `lib/index.js` | `TMP_ROOT` | `<REPO>\.frames` |
+| `lib/index.js` | `FFMPEG` | `<OLD_REPO>\...\ffmpeg.exe` |
 | `lib/index.js` | `PYTHON` | `D:\Comfy-Desktop\...\.venv\Scripts\python.exe` |
-| `lib/index.js` | `MODEL_DIR` | `D:\主工作区\DSH视频工作台\.models\whisper` |
+| `lib/index.js` | `MODEL_DIR` | `<REPO>\.models\whisper` |
 
 **为什么上一版漏了**：我只扫了 `dsh-comfy-bridge/src/`，没扫
 `dsh-comfy-workbench-tab/lib/`（那是 host 侧手写代码，不是构建产物）。
@@ -51,7 +51,7 @@ const REPO = path.resolve(PKG, "..", "..");
 | `MODEL_DIR` | `config` → `COMFY_WHISPER_DIR` → `<repo>/.models/whisper` |
 
 ★ 所有 `import.meta.url` 都用 `fileURLToPath()` ——
-  `.pathname` 不解码中文路径，包放在 `D:\主工作区\...` 下会变成
+  `.pathname` 不解码中文路径，包放在 `<WORKSPACE>\...` 下会变成
   `%E4%B8%BB%E5%B7%A5%E4%BD%9C%E5%8C%BA`（dsh-editor 已踩过这个坑）。
 
 ---
@@ -61,11 +61,11 @@ const REPO = path.resolve(PKG, "..", "..");
 ```
 check("生产代码里没有硬编码的本机绝对路径")
   扫描：lib/ 与 src/
-  正则：C:\Users | C:/Users | D:\主工作区 | D:/主工作区 | D:\Comfy-Desktop | D:/Comfy-Desktop
+  正则：C:\Users | C:/Users | <WORKSPACE> | <WORKSPACE> | D:\Comfy-Desktop | D:/Comfy-Desktop
   剥注释：整块 /* */ 与行 // —— 注释里记录「原先是写死的」是有价值的历史
 ```
 
-变异测试：注入 `const HARDCODED_TEST = "D:/主工作区/测试";`
+变异测试：注入 `const HARDCODED_TEST = "<WORKSPACE>/测试";`
 → **✅ 变红**，正确报出 `\lib\index.js:25`。
 
 ### 写这条断言时踩的两个坑

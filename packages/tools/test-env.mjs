@@ -6,7 +6,7 @@
  *
  *   2026-10-23 去敏检查（D3）发现：8 个验收脚本里硬编码了
  *
- *     const COOKIE_FILE = 'C:/Users/Administrator/dsh-tok.txt';
+ *     const COOKIE_FILE = '<HOME>/dsh-tok.txt';
  *
  *   这条路径是本机专属的。
  *   ⇒ 别人 clone 下来跑验收，全部会失败（找不到文件），

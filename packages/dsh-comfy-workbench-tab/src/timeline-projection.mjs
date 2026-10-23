@@ -224,7 +224,7 @@ export function clipToElement(clip, opts = {}) {
    * ★★ 2026-10-20 修：mediaId 必须用【资产库里的真实 id】，不能靠猜前缀
    *
    *   实测 bug（音频轨）：
-   *     音频资产在库里的 id 是 "editor:D:\主工作区\资产库\音频\test-mix.m4a"
+   *     音频资产在库里的 id 是 "editor:<WORKSPACE>\资产库\音频\test-mix.m4a"
    *     （src="editor"，rel 是绝对路径）
    *     但投影猜出 "output:test-mix.m4a" —— 这个 id 在资产表里不存在
    *     ⇒ 音频条带渲染不出来、也不会被注册进 media manager

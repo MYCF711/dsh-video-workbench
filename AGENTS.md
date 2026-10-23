@@ -46,7 +46,7 @@
 ❌ 手动 ping / 手动 ssh 灌记忆
    → MCP 工具直接可用，不需要探物理连通性
 
-❌ 翻磁盘目录找知识库（D:\主工作区\DSH源码知识库 是空目录）
+❌ 翻磁盘目录找知识库（<WORKSPACE>\DSH源码知识库 是空目录）
    → 知识库是逻辑资源，走 MCP，不是 Test-Path
 ```
 
@@ -320,7 +320,7 @@ H3 主模型 19.5 GB，RTX 5070 Ti 只有 16 GB。
 ## 四 · 目录
 
 ```
-D:\主工作区\DSH视频工作台\
+<REPO>\
 ├── AGENTS.md                          ← 本文件
 ├── docs\
 │   ├── 草稿\草稿-DSH视频工作台.md      ★ 否决留痕，永不删
@@ -346,14 +346,14 @@ D:\主工作区\DSH视频工作台\
 
 ```powershell
 # 总验收（含真生成，约 5 分钟）
-cd D:\主工作区\DSH视频工作台\packages
+cd <REPO>\packages
 node verify-all.mjs
 
 # 只跑离线检查
 node verify-all.mjs --static
 
 # 起测试实例（不动主人的 19387）
-pwsh -NoProfile -File C:\Users\Administrator\restart-test.ps1
+pwsh -NoProfile -File <HOME>\restart-test.ps1
 
 # 静态验证某个工作流（不提交，只查节点/连线/值类型）
 cd packages\dsh-comfy-bridge

@@ -3,7 +3,7 @@
  *
  * ══════════════════════════════════════════════════════════════════════
  * 被验收的对象：src/h3-labels.js
- * 唯一权威：C:\Users\Administrator\.agents\skills\h3-prompt-writing\references\ref-en.txt
+ * 唯一权威：<HOME>\.agents\skills\h3-prompt-writing\references\ref-en.txt
  *           （H3 官方 Full-Reference Mode 指南，341 行）
  * 推导记录：docs\H3-参考标签体系-20261020.md
  *

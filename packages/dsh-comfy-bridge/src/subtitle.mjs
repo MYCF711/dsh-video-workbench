@@ -41,7 +41,7 @@ const execFileAsync = promisify(execFile);
 /**
  * ★★ 2026-10-23 去敏：不再写死本机 ffmpeg 路径
  *
- *   原来默认值是 "D:\主工作区\DSH视频工作站\packages\dsh-editor\bin\ffmpeg.exe"
+ *   原来默认值是 "<OLD_REPO>\packages\dsh-editor\bin\ffmpeg.exe"
  *   —— 那是开发机位置，新 PC 上必然不存在。
  *
  *   现在顺序：

@@ -24,12 +24,14 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-regression.mjs");
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WF = path.join(HERE, "..", "dsh-comfy-workbench-tab", "src", "timeline-projection.mjs");
-const ART = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/dsh-projection.ts";
+const ART = upstreamFile("lib/timeline/dsh-projection.ts");
 // ★ 2026-10-22 合包：剪辑台源码移到 src/editor/
 const AC_TAB = path.join(HERE, "src", "editor");
 // ★ 2026-10-22 合包：payload 生成逻辑从 build.mjs 抽到 dsh-artcraft-tab/build-payload.mjs

@@ -2,7 +2,7 @@
  * H3 帧数网格吸附 —— H3 的 length 必须落在 17k+5 网格上，没有 24 这一档。
  *
  * 来源（本机实测，非推断）：
- *   D:\主工作区\ComfyUI知识库\视频生成参数表.md §三①
+ *   <WORKSPACE>\ComfyUI知识库\视频生成参数表.md §三①
  *   MiniMaxH3ImageToVideo 的 length tooltip 逐字：
  *     "Frame count at 24 fps, snapped up to the model's 17k+5 grid
  *      (124 = ~5s; trained range is ~124-362, longer is untested)"

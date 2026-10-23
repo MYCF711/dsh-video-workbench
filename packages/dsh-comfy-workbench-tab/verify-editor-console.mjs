@@ -58,6 +58,8 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-editor-console.mjs");
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -385,10 +387,10 @@ check("高亮尊重 prefers-reduced-motion",
   /prefers-reduced-motion/.test(syncC));
 
 const elTsx = fs.existsSync(
-  "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/components/timeline-element.tsx"
+  upstreamFile("lib/timeline/components/timeline-element.tsx")
 )
   ? fs.readFileSync(
-      "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/components/timeline-element.tsx",
+      upstreamFile("lib/timeline/components/timeline-element.tsx"),
       "utf8")
   : "";
 check("上游元素宿主确实挂了 data-element-id",
@@ -429,10 +431,10 @@ check("Agent：用 updateSceneTracks 而不是重建 project",
 
 /* ══ 已知设计边界（写下来防误判为 bug）════════════════════════ */
 const proj = fs.existsSync(
-  "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/dsh-projection.ts"
+  upstreamFile("lib/timeline/dsh-projection.ts")
 )
   ? fs.readFileSync(
-      "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/dsh-projection.ts",
+      upstreamFile("lib/timeline/dsh-projection.ts"),
       "utf8")
   : "";
 check("投影层有意跳过「待生成」镜头（不是 bug）",

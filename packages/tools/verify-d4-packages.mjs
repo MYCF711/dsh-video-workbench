@@ -10,14 +10,14 @@
  *
  *   ① 「3 个 link: 绝对路径依赖」实际是【4 个】，而且不在仓库里 ——
  *      在 profile 的 package.json：
- *        dsh-comfy-bridge         = link:D:/主工作区/DSH视频工作台/packages/xxx
+ *        dsh-comfy-bridge         = link:<REPO>/packages/xxx
  *        dsh-comfy-workbench-tab  = link:...
  *        dsh-editor               = link:...
  *        dsh-video-knowledge      = link:...
  *
  *   ★ 这些【不可能】改成 workspace 相对引用：
  *       profile 在 D:\DeepSeek Harness\home\profiles\comfy-test
- *       仓库  在 D:\主工作区\DSH视频工作台
+ *       仓库  在 <REPO>
  *     两者不在同一个 workspace。硬改成 `link:../../../主工作区/...`
  *     只会更脆（任一边移动就断）。
  *

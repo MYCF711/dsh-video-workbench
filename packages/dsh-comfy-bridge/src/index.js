@@ -12,7 +12,7 @@
  *         "浏览器经由 dsh-host-webserver 通过 HTTP 访问 web GUI"
  *         "register(route) 添加具名的 exact/prefix HTTP route"
  *
- * 硬约束（继承自 D:\主工作区\本地H3视频工作站\AGENTS.md）：
+ * 硬约束（继承自 <WORKSPACE>\本地H3视频工作站\AGENTS.md）：
  *   ① 不许重启 ComfyUI（主人在用）
  *   ② 改任何磁盘工作流前先备份 .bak
  *   ③ 代码里不许出现具体模型名或节点 id（工作流是运行时输入）

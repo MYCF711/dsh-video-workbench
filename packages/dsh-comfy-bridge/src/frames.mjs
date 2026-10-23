@@ -7,7 +7,7 @@
  *   我原来只有「整段替换」，没有这种原子操作。
  *
  * ★ ffmpeg 用 dsh-editor 自带的那一份（实测 v7.1，83.6MB）：
- *   D:\主工作区\DSH视频工作站\packages\dsh-editor\bin\ffmpeg.exe
+ *   <OLD_REPO>\packages\dsh-editor\bin\ffmpeg.exe
  *   不依赖 PATH —— 本机 PATH 里没有 ffmpeg（实测 Get-Command ffmpeg 失败）。
  *
  * ★ 安全：
@@ -34,7 +34,7 @@ const FFMPEG =
  *
  * ★ 实测（2026-10-18）：不能放 ComfyUI 的 input 目录。
  *   DSH 的文件沙箱只允许写工作区，写到
- *     C:\Users\Administrator\*.png   → Could not open file（I/O error）
+ *     <HOME>\*.png   → Could not open file（I/O error）
  *     D:\Comfy-Desktop\ComfyUI-Shared\input\*.png → 同样失败
  *   写到工作区内的目录 → 成功。
  *

@@ -63,7 +63,7 @@ const path_sep = () => nodePath.sep;
 /**
  * 工作流目录的默认落点。
  *
- * ★★ 2026-10-23 去敏：不再写死 "D:/主工作区/.../dsh-comfy-bridge/workflows"
+ * ★★ 2026-10-23 去敏：不再写死 "<WORKSPACE>/.../dsh-comfy-bridge/workflows"
  *
  *   原来写死绝对路径 ⇒ 包换位置就找不到工作流（modes 为空、生成全失败）。
  *
@@ -1422,7 +1422,7 @@ export async function apply(ctx, config = {}) {
        * faster-whisper（最终选它）：
        *   · 已装 faster-whisper 1.2.1 + ctranslate2 4.8.3（腾讯云 pip 镜像可达）
        *   · 模型 Systran/faster-whisper-small 463.7MB
-       *     落在 D:\主工作区\DSH视频工作台\.models\whisper
+       *     落在 <REPO>\.models\whisper
        *   · 准确率：16 字 100% / 40 字 100%（TTS 已知文本闭环测试）
        *   · 带 segment 级时间戳（start/end 秒）—— 这是排字幕的必要条件
        *   · 纯音效/无声 → 0 段（不乱凑）
@@ -1476,7 +1476,7 @@ export async function apply(ctx, config = {}) {
                 不做这一步的话，任何本地文件都会被读出来转写。 */
           const roots = comfyRoots();
           /**
-           * ★★ 2026-10-23 去敏：白名单里不再写死 "D:\主工作区"
+           * ★★ 2026-10-23 去敏：白名单里不再写死 "<WORKSPACE>"
            *
            *   原来那一项是「开发机的工作区根」，目的是允许读 docs/evidence 下的
            *   实测素材。换机器后这个目录不存在 ⇒ 白名单少了这一棵，
@@ -1509,7 +1509,7 @@ export async function apply(ctx, config = {}) {
           /**
            * ★★ 2026-10-23 去敏：ffmpeg 路径四级回落
            *
-           *   原来写死 "D:\主工作区\DSH视频工作站\packages\dsh-editor\bin\ffmpeg.exe"
+           *   原来写死 "<OLD_REPO>\packages\dsh-editor\bin\ffmpeg.exe"
            *   ⇒ 换机器直接 500「找不到 ffmpeg」。
            *
            *   顺序：config.ffmpegPath → FFMPEG_PATH 环境变量
@@ -1549,7 +1549,7 @@ export async function apply(ctx, config = {}) {
            *     用完照旧删掉，不留垃圾（§6.46 的纪律）。
            */
           /**
-           * ★★ 2026-10-23 去敏：临时目录不再写死 "D:\主工作区\DSH视频工作台\.frames"
+           * ★★ 2026-10-23 去敏：临时目录不再写死 "<REPO>\.frames"
            *
            *   原来那个绝对路径在新机器上不存在 ⇒ mkdir 会尝试创建整条链，
            *   在无权限的盘符上直接失败。

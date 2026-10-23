@@ -14,7 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
  * ★★ 2026-10-23 D2 去敏：esbuild 不再写死另一个仓库的绝对 URL。
  *
  *   原来：
- *     import { build } from "file:///D:/主工作区/DSH视频工作站/packages/
+ *     import { build } from "file:///<OLD_REPO>/packages/
  *                            dsh-editor/node_modules/esbuild/lib/main.js";
  *   ⇒ 别人 clone 下来构建直接失败，错误信息只是「找不到模块」，
  *     看不出是「esbuild 没装」。

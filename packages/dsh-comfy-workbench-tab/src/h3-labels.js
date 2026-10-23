@@ -4,7 +4,7 @@
  * ══════════════════════════════════════════════════════════════════════
  * 数据来源（唯一权威）
  *
- *   C:\Users\Administrator\.agents\skills\h3-prompt-writing\references\ref-en.txt
+ *   <HOME>\.agents\skills\h3-prompt-writing\references\ref-en.txt
  *   23.3KB / 341 行 · H3 官方 Full-Reference Mode 改写格式指南
  *
  *   完整推导见 docs\H3-参考标签体系-20261020.md

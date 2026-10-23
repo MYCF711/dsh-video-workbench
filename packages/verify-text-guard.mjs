@@ -18,7 +18,7 @@
  *
  * 用法：
  *   node verify-text-guard.mjs
- *   node verify-text-guard.mjs --root D:\主工作区     # 改扫描根
+ *   node verify-text-guard.mjs --root <WORKSPACE>     # 改扫描根
  *
  * 退出码：有失败 → 1
  */

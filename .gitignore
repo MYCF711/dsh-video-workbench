@@ -25,7 +25,7 @@ outputs/
 
 # ── 实测证据（体积大，需要时单独归档）───────────────────
 # ⚠ 这些是「真机实测」的证据，有价值但不该占仓库体积。
-#   完整现场见 D:\主工作区\_branch-archive\ 的带 docs 版本。
+#   完整现场见 <WORKSPACE>\_branch-archive\ 的带 docs 版本。
 docs/evidence/
 docs/预览/_shots/
 *.png
