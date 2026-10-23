@@ -14,7 +14,17 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BRIDGE = process.env.BRIDGE_URL ?? 'http://127.0.0.1:19499/comfy-bridge';
-const COOKIE_FILE = 'C:/Users/Administrator/dsh-tok.txt';
+/**
+ * ★ 2026-10-23 D3 去敏：token 从环境变量/约定位置读，不写死本机路径。
+ *
+ *   原来写的是 const COOKIE_FILE = 'C:/Users/<本机用户>/dsh-tok.txt';
+ *   ⇒ 别人 clone 下来跑，全部失败且看不出是「路径没配」。
+ *
+ *   现在：DSH_TEST_TOKEN > DSH_TEST_TOKEN_FILE > $DSH_HOME/.test-token > 家目录约定
+ *   拿不到就【跳过】而不是失败 —— 跳过=今天不适用，失败=功能坏了。
+ */
+import { TOKEN, skipWithoutToken } from "../tools/test-env.mjs";
+if (!TOKEN) skipWithoutToken("verify-m4.mjs");
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -71,8 +81,8 @@ check('技能含三个 mode', ['krea2', 'qwen21-edit', 'yz'].every((m) => skill.
 console.log('\n═══ ④ preset 的 mode 表 vs M1 实际报告 ═══');
 try {
   let cookie = '';
-  if (fs.existsSync(COOKIE_FILE)) {
-    const tok = fs.readFileSync(COOKIE_FILE, 'utf8').trim();
+  if (TOKEN) {
+    const tok = TOKEN;
     cookie = `dsh-auth-CK36o8O6fn6VWHrnbEp0bsjzKPKRmilHp-TBfPBH65k=${tok}`;
   }
   const res = await fetch(BRIDGE + '/modes', { headers: { Cookie: cookie } });

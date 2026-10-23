@@ -654,6 +654,25 @@ steps.push(run('安装配置自检（install.ps1 / package.json / README）', 't
 steps.push(run('A5 导入失败提示 · B1/B3/B4 状态点开关', 'tools', 'verify-ab-features.mjs', [], 180000));
 
 /**
+ * ★★ 2026-10-23 新增：D3 去敏验收
+ *
+ *   起因：做 D3 时发现 12 个验收脚本硬编码了
+ *     const COOKIE_FILE = 'C:/Users/<本机用户>/dsh-tok.txt';
+ *   ⇒ 别人 clone 下来跑验收全部失败，报错只说「读不到 token」，
+ *     看不出是「路径没配」。这直接违背「可移植」这个目标。
+ *
+ *   ★ 修复走了两遍，教训（记下来）：
+ *     第一遍只处理了「直接 readFileSync」一种写法，
+ *     漏了 existsSync 三元、if 分支、try 块三种形态 ⇒ 11 个文件仍崩。
+ *     ⇒ 做批量替换前先 grep 出这个常量的【全部】使用点，
+ *       按「每处怎么用」分类，而不是按「我以为怎么用」。
+ *
+ *   本检查：代码文件里不得有 C:/Users/<某用户>/ 与 dsh-tok.txt。
+ *   ★ 文档（docs/*.md）允许提及 —— 那是证据，删掉反而丢信息。
+ */
+steps.push(run('D3 去敏（代码里不得有本机专属路径）', 'tools', 'verify-no-local-paths.mjs', [], 240000));
+
+/**
  * ★★ 2026-10-23 新增：元验收的元测试
  *
  *   踩过两次同类坑：
