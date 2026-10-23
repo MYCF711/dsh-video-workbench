@@ -22,6 +22,24 @@ function rootOf(dir) {
 const STATIC = process.argv.includes('--static');
 const steps = [];
 
+/**
+ * ══ 跑之前的 output 快照（供出口统一清理用）══════════════════════════
+ *
+ * ★ 2026-10-23：实测「单独跑各脚本零残留，放进 verify-all 就漏 1 张」，
+ *   试了 6 个假设都不成立，采纳 §6.46 的「出口统一清」。
+ *   这里拍基线，文件末尾按差集删。
+ *
+ * ★ 只拍 output —— input 已由 verify-bad-input 自己清干净（实测 115 → 115）。
+ */
+const OUT_BASELINE = (() => {
+  try {
+    return new Set(fs.readdirSync('D:/Comfy-Desktop/ComfyUI-Shared/output'));
+  } catch {
+    return null;   // 读不到就不清（不能因为读不到就把整个目录当新增）
+  }
+})();
+
+
 // ★ 2026-10-19 加：跑之前先看 ComfyUI 队列是不是空闲。
 //
 //   实测踩到：我前面发了 5 个 32MB 生成任务占满队列，
@@ -750,6 +768,72 @@ for (const s of steps) {
   if (!s.ok) okAll = false;
 }
 console.log('─'.repeat(64));
+
+/**
+ * ══ 出口统一清理 output/（2026-10-23）════════════════════════════════
+ *
+ * ★ 为什么要在这里做，而不是继续修各个脚本：
+ *
+ *   实测：单独跑 verify-krea2 → 零残留；
+ *        放进 verify-all 里跑 → 每轮必多 1 张 Krea2-2ST-*.png（编号递增）。
+ *
+ *   我试过 6 个假设，全部不成立：
+ *     ❌ 落盘延迟（completed 时文件已在磁盘，实测确认）
+ *     ❌ 并发（verify-all 用 spawnSync，是串行的）
+ *     ❌ verify-bad-input 不清理（补了 output 清理，仍然漏）
+ *     ❌ 固定 sleep 太短（改成等目录稳定，仍然漏）
+ *     ❌ completed 后保存节点排队（补等 2 秒，仍然漏）
+ *     ❌ 多脚本同名覆盖（核对过，是各自独立的文件）
+ *
+ *   ⇒ 采纳 AGENTS §6.46 的第三条路：**在出口统一清，不管谁漏都兜住。**
+ *     这是当时验证过的做法（「实测：跑前 output 760/input 129 → 跑后 760/129」）。
+ *
+ * ★ 纪律：
+ *   · 只删「跑之前不存在的」——绝不碰已有文件
+ *   · 删之前等落盘稳定（连续 3 次采样数量不变，最多 8 秒）
+ *   · 失败不阻断退出码（清理失败不该让验收变红）
+ *   · 打印删了什么，便于事后核对
+ *
+ * ★ 为什么不放进各个脚本：
+ *   各脚本自己清 = 各自可能漏（这次的实际情况）。
+ *   统一在出口清，等于「最后一道闸」，谁漏都被挡住。
+ */
+const OUT_DIRS = [
+  'D:/Comfy-Desktop/ComfyUI-Shared/output',
+];
+
+/** 跑之前拍的快照（在 steps 执行前就拍）—— 见文件开头的 OUT_BASELINE */
+for (const dir of OUT_DIRS) {
+  try {
+    if (!OUT_BASELINE) continue;
+    // 等落盘稳定
+    let last = -1;
+    let stable = 0;
+    const t0 = Date.now();
+    while (Date.now() - t0 < 8000) {
+      const n = fs.readdirSync(dir).length;
+      if (n === last) {
+        if (++stable >= 3) break;
+      } else {
+        stable = 0;
+        last = n;
+      }
+      await new Promise((r) => setTimeout(r, 400));
+    }
+
+    const now = fs.readdirSync(dir);
+    const made = now.filter((n) => !OUT_BASELINE.has(n));
+    let gone = 0;
+    for (const n of made) {
+      try { fs.unlinkSync(`${dir}/${n}`); gone += 1; } catch { /* 占用中，跳过 */ }
+    }
+    if (made.length) {
+      console.log(`  清理 output：${gone}/${made.length} 个本次生成的产物`);
+      for (const n of made) console.log(`      - ${n}`);
+    }
+  } catch { /* 目录读不到就跳过 */ }
+}
+
 console.log(`  ${okAll ? '全部通过' : '有失败项'}`);
 console.log('═'.repeat(64));
 process.exit(okAll ? 0 : 1);

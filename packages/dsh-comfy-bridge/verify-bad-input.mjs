@@ -372,6 +372,63 @@ try {
   }
 } catch { /* input 目录读不到就算了 */ }
 
+/**
+ * ★★ 2026-10-23 补：清理 output 目录（原来只清 input）
+ *
+ *   实测污染：每跑一次完整验收，output 里多 1 张 Krea2-2ST-*.png。
+ *
+ *   根因：本脚本第 ⑤ 组「正常输入不被误拒」必须发【真实 krea2 生成请求】，
+ *        而真实生成会往 output 写文件。原来只做 input 清理，
+ *        output 从来没清。
+ *
+ *     AGENTS §6.37「验收的第三个维度：副作用」我当年只覆盖了 input 那一半。
+ *     §6.44b「写两边就清两边」的又一次现身。
+ *
+ *   ⇒ 补 output 快照 + 稳定等待 + 清理，与 input 对称。
+ *
+ *   ★ 「等落盘」不能用固定 sleep：双采工作流有两个保存节点，
+ *     固定 1.2 秒不够（verify-krea2 实测漏过）。改成观察目录数量稳定。
+ */
+const OUTPUT_DIR = "D:\\Comfy-Desktop\\ComfyUI-Shared\\output";
+const OUT_SNAPSHOT = (() => {
+  try { return new Set(fs.readdirSync(OUTPUT_DIR)); } catch { return new Set(); }
+})();
+
+/** 等 output 目录落盘稳定（连续 3 次采样数量不变），最多 8 秒。 */
+async function waitOutStable(ms = 8000, interval = 400, needStable = 3) {
+  const t0 = Date.now();
+  let last = -1;
+  let stable = 0;
+  while (Date.now() - t0 < ms) {
+    let n = -1;
+    try { n = fs.readdirSync(OUTPUT_DIR).length; } catch { /* 继续等 */ }
+    if (n === last) {
+      stable += 1;
+      if (stable >= needStable) return true;
+    } else {
+      stable = 0;
+      last = n;
+    }
+    await new Promise((r) => setTimeout(r, interval));
+  }
+  return false;
+}
+
+try {
+  await waitOutStable();
+  const nowOut = new Set(fs.readdirSync(OUTPUT_DIR));
+  const madeOut = [...nowOut].filter((n) => !OUT_SNAPSHOT.has(n));
+  if (madeOut.length) {
+    let gone = 0;
+    for (const n of madeOut) {
+      try { fs.unlinkSync(path.join(OUTPUT_DIR, n)); gone++; } catch { /* 删不掉就算了 */ }
+    }
+    console.log(`  清理了 ${gone} / ${madeOut.length} 个本次生成的产物`);
+  } else {
+    console.log("  （本次没有往 output 写文件）");
+  }
+} catch { /* output 目录读不到就算了 */ }
+
 console.log("\n" + "═".repeat(62));
 console.log(`  通过 ${pass} / ${pass + fail}`);
 if (fail) {
