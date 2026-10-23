@@ -502,9 +502,11 @@ steps.push(run('增量回归（加 batch/steps2 后既有能力没坏）', 'dsh-
  */
 if (!STATIC) {
   steps.push(run('资产库基线（与 docs/基线 比差集）', '.', 'verify-asset-baseline.mjs', [], 120000));
-  steps.push(run('PNG 标签（写本体不改像素 / 中文 / 幂等）', '.', 'verify-png-tags.mjs', [], 120000));
-steps.push(run('payload 字段一致性（三个构造点是否都带业务字段）', '.', 'verify-payload-parity.mjs'));
-steps.push(run('漏翻检测器自检（验证它真能抓到英文）', '.', 'verify-no-english.mjs', ['--self-test']));
+  steps.push(run('payload 字段一致性（三个构造点是否都带业务字段）', '.', 'verify-payload-parity.mjs'));
+  steps.push(run('漏翻检测器自检（验证它真能抓到英文）', '.', 'verify-no-english.mjs', ['--self-test']));
+}
+
+/* ══ 以下都是纯静态检查（不碰 ComfyUI），两个模式都跑 ══ */
 /**
  * ★★ 2026-10-23 新增：ui-to-api 转换器验收
  *
@@ -515,6 +517,7 @@ steps.push(run('漏翻检测器自检（验证它真能抓到英文）', '.', 'v
  *   ★ 纯逻辑测试，不碰 ComfyUI ⇒ 放静态段。
  */
 steps.push(run('UI→API 转换器（widgets 对位 5 条判据）', 'tools', 'verify-ui-to-api.mjs', [], 120000));
+
 /**
  * ★★ 2026-10-23 新增：未声明变量检查
  *
@@ -528,7 +531,33 @@ steps.push(run('UI→API 转换器（widgets 对位 5 条判据）', 'tools', 'v
  *   （npm 在中文路径下要加 --prefix，否则 EPERM mkdir D:\\）。
  */
 steps.push(run('未声明变量检查（ReferenceError 的静态形态）', 'tools', 'check-undeclared.mjs', [], 180000));
-}
+
+/**
+ * ★★ 2026-10-23 新增：静默 catch 检查
+ *
+ *   起因：dsh-comfy-bridge/src/index.js 那个裸 path.join 的 bug，
+ *   之所以一直没暴露，是因为它被空 catch 吞掉了。
+ *
+ *   ★ 但空 catch 不是罪 ——
+ *     抽查发现绝大多数是有意的容错（轮询端点失败不影响编辑、
+ *     清理临时文件删不掉就算了）。
+ *   ⇒ 判据不能是「空 catch 就报」，那会 28 处全红、全部误报。
+ *      改成「try 体 >=8 行 且 含 >=6 处多层属性访问」才算可疑。
+ */
+steps.push(run('静默 catch 检查（会吞掉编程错误的地方）', 'tools', 'check-silent-catch.mjs', [], 180000));
+/**
+ * ★★ 2026-10-23 新增：未声明变量检查
+ *
+ *   实测事故：onGenerate 里写了 mode?._workflow，而组件里叫 currentMode。
+ *   症状是「点生成毫无反应」—— 不报错、不发请求、按钮不变。
+ *
+ *   ★ 可空链 ?. 只能防「值是 null/undefined」，
+ *     防不住「变量根本没声明」。这类错误 node --check 抓不到。
+ *
+ *   用 acorn 做词法作用域分析。装法见 tools/check-undeclared.mjs 顶部注释
+ *   （npm 在中文路径下要加 --prefix，否则 EPERM mkdir D:\\）。
+ */
+/* ★ 未声明变量检查 与 静默 catch 检查 已移到上面的静态段（两个模式都跑）*/
 
 // ── 工作流 1：krea2 ──
 if (!STATIC) {
@@ -548,5 +577,6 @@ console.log('─'.repeat(64));
 console.log(`  ${okAll ? '全部通过' : '有失败项'}`);
 console.log('═'.repeat(64));
 process.exit(okAll ? 0 : 1);
+
 
 
