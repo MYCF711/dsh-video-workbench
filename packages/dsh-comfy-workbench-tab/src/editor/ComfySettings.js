@@ -106,7 +106,7 @@ function Btn({ children, onClick, primary, disabled, title }) {
 }
 
 /** 一行「已找到 / 缺失 / 判断不了」。 */
-function ModelRow({ name, note, found, size }) {
+function ModelRow({ name, note, found, size, source }) {
   /**
    * ★ 三态：true 绿 / false 红 / null 灰（判断不了）。
    *   把 null 当 false 会在 ComfyUI 没开时报「全缺失」，误导用户。
@@ -148,6 +148,33 @@ function ModelRow({ name, note, found, size }) {
               color: "var(--dsw-alias-label-tertiary, #81858c)",
             },
           }, note)
+        : null,
+      /**
+       * ★★ 2026-10-23 补 E2 缺项：下载链接
+       *
+       *   目标写的是「生成清单 + 下载链接」。
+       *   ★ 只在【缺失或判断不了】时显示 —— 已经有文件的模型不需要下载入口，
+       *     给出来只是噪音。
+       *   ★ 区分两种链接（kind）：
+       *       exact  = 用户配置的精确 URL（models-sources.json）
+       *       search = HuggingFace 搜索页（找不到时给个能自己确认的入口，
+       *                而不是编一个会 404 的 URL）
+       */
+      source && source.url && found !== true
+        ? h("a", {
+            href: source.url,
+            target: "_blank",
+            rel: "noreferrer noopener",
+            title: source.note ?? "",
+            style: {
+              display: "inline-block",
+              marginTop: 2,
+              fontSize: 11, lineHeight: "15px",
+              color: "var(--dsw-alias-state-business-primary, #4176e6)",
+              textDecoration: "none",
+              wordBreak: "break-all",
+            },
+          }, source.kind === "exact" ? "→ 下载链接" : "→ 去搜索这个模型")
         : null
     ),
     size
@@ -576,6 +603,7 @@ export function ComfySettingsSection() {
                             note: m.note,
                             found: m.found,
                             size: m.sizeText,
+                            source: m.source,
                           })));
                     }
                     return h("div", null,
@@ -624,6 +652,7 @@ export function ComfySettingsSection() {
                                 note: (m.byField ? `[${m.byField}] ` : "") + (m.note ?? ""),
                                 found: m.found,
                                 size: m.sizeText,
+                                source: m.source,
                               })))
                         );
                       }));
@@ -634,6 +663,7 @@ export function ComfySettingsSection() {
       : null
   );
 }
+
 
 
 

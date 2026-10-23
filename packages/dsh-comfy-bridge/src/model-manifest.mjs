@@ -31,6 +31,8 @@
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+/* ★ 2026-10-23：URL → 本地路径必须用它（.pathname 不解码中文路径） */
+import { fileURLToPath } from "node:url";
 
 /** 模型文件扩展名。 */
 const MODEL_EXT = /\.(safetensors|ckpt|pt|pth|bin|gguf|onnx|sft)$/i;
@@ -309,6 +311,76 @@ export function classifyModel(filename, fields = []) {
   return { role: "other", label: ROLE_META.other.label, dir: ROLE_META.other.dir, byField: null };
 }
 
+/**
+ * 模型来源（下载链接）
+ *
+ * ★★ 2026-10-23 补 E2 缺项
+ *
+ *   目标写的是「生成清单 + 下载链接」，而我只做了清单。
+ *   但这里有个现实约束：**模型 URL 无法从工作流反推**。
+ *   工作流里只有文件名，没有任何来源元数据（实测确认：
+ *   krea2-full.json 的节点 _meta 里只有「K采样器」这类中文标题）。
+ *
+ * ── 所以分两级
+ *   ① 用户可维护的来源表（<repo>/models-sources.json）—— 精确 URL
+ *   ② 没有映射时给【搜索入口】—— HuggingFace 的文件名搜索页
+ *      ★ 搜索结果页比瞎猜 URL 诚实：用户点进去能自己确认是不是这个模型。
+ *        直接编一个 URL 反而会 404 或下错文件。
+ */
+const SOURCES_FILE = "models-sources.json";
+
+/** 读用户维护的来源表。读不到就返回空对象（不是错误）。 */
+function loadSources(modelsDir) {
+  /**
+   * 查找顺序：模型目录旁 → 仓库根。
+   * ★ 放在模型目录旁最方便：用户下载完顺手把 URL 记在同一个地方。
+   */
+  const cands = [
+    modelsDir ? path.join(modelsDir, SOURCES_FILE) : null,
+    /* 仓库根：从本模块向上两级 */
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", SOURCES_FILE),
+  ].filter(Boolean);
+
+  for (const f of cands) {
+    try {
+      if (!existsSync(f)) continue;
+      const j = JSON.parse(readFileSync(f, "utf8"));
+      if (j && typeof j === "object") return j;
+    } catch { /* 坏文件忽略，不崩 */ }
+  }
+  return {};
+}
+
+/**
+ * 给一个模型名找下载入口。
+ *
+ * @returns {{url:string|null, kind:"exact"|"search"|null, note:string}}
+ *   exact  = 用户配置的精确链接
+ *   search = 搜索入口（页面上还能自己找）
+ */
+function resolveSource(filename, sources) {
+  const base = String(filename).split(/[\\/]/).pop();
+
+  /* ① 精确映射：先按完整名，再按 basename */
+  const hit = sources[filename] ?? sources[base];
+  if (typeof hit === "string" && /^https?:\/\//i.test(hit)) {
+    return { url: hit, kind: "exact", note: "已配置来源" };
+  }
+  if (hit && typeof hit === "object" && typeof hit.url === "string" && /^https?:\/\//i.test(hit.url)) {
+    return { url: hit.url, kind: "exact", note: hit.note ?? "已配置来源" };
+  }
+
+  /* ② 搜索入口 —— 不编 URL，只给一个能自己确认的查询页 */
+  if (base) {
+    return {
+      url: `https://huggingface.co/models?search=${encodeURIComponent(base.replace(/\.[^.]+$/, ""))}`,
+      kind: "search",
+      note: "在 HuggingFace 搜同名模型（找到后建议把链接记进 models-sources.json）",
+    };
+  }
+  return { url: null, kind: null, note: "" };
+}
+
 /** 按扩展名给「应该放哪个 models 子目录」的提示。 */
 function subdirHint(filename) {
   const low = filename.toLowerCase();
@@ -343,6 +415,8 @@ export async function buildModelManifest({ workflowsDir, base, modelsDir = null 
    *     （不标「缺失」，因为自定义目录可能不在 modelsDir 下）
    */
   const localFiles = known === null ? scanModelsDir(modelsDir) : null;
+  /* ★ 2026-10-23：加载用户维护的模型来源表（下载链接） */
+  const sources = loadSources(modelsDir);
 
   /**
    * ★ 比对时用 basename —— 工作流里的引用可能带子目录
@@ -399,6 +473,8 @@ export async function buildModelManifest({ workflowsDir, base, modelsDir = null 
             : ""
       }`,
       sizeText: null,
+      /* ★ 2026-10-23：下载入口（精确 URL 或搜索页） */
+      source: resolveSource(name, sources),
     });
   }
 
@@ -462,3 +538,4 @@ export async function buildModelManifest({ workflowsDir, base, modelsDir = null 
     missingTotal: items.filter((x) => x.found === false).length,
   };
 }
+

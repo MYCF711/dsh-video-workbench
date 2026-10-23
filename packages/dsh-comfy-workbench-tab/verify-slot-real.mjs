@@ -79,15 +79,25 @@ console.log(`\n② 真实数据：${modes.length} 个工作流`);
 {
   const byId = Object.fromEntries(modes.map((m) => [m.id, m]));
   t("有 yz（多参 H3）", !!byId.yz);
-  t("yz 有 10 个 media 槽",
-    Object.keys(byId.yz?.media ?? {}).length === 10,
-    Object.keys(byId.yz?.media ?? {}).length);
-  t("yz 的槽 kind 分布正确（6 image / 1 video / 3 audio", (() => {
-    const v = Object.values(byId.yz?.media ?? {});
-    return v.filter((x) => x.kind === "image").length === 6
-      && v.filter((x) => x.kind === "video").length === 1
-      && v.filter((x) => x.kind === "audio").length === 3;
-  })());
+  /**
+   * ★★ 2026-10-23 改：不再写死槽数
+   *
+   *   v1 是 10 个（6 图 / 1 视频 / 3 音频），v2 是 15 个（9 / 3 / 3）。
+   *   写死数字会让「工作流正常升级」变成「验收变红」（AGENTS §3.7）。
+   *
+   *   ⇒ 锁结构约束，不锁快照：
+   *     · 每类至少有一个槽（否则分栏会空）
+   *     · 槽总数 ≥ 10（v1 的底线）
+   */
+  const yzMedia = Object.values(byId.yz?.media ?? {});
+  const nImg = yzMedia.filter((x) => x.kind === "image").length;
+  const nVid = yzMedia.filter((x) => x.kind === "video").length;
+  const nAud = yzMedia.filter((x) => x.kind === "audio").length;
+  t("yz 至少 10 个 media 槽", yzMedia.length >= 10, yzMedia.length);
+  t("yz 三类槽都有（图 / 视频 / 音频）",
+    nImg > 0 && nVid > 0 && nAud > 0,
+    `${nImg} image / ${nVid} video / ${nAud} audio`);
+  t("yz 的图片槽最多（分栏主位）", nImg >= nVid && nImg >= nAud, `${nImg} 个图片槽`);
   t("qwen21-edit 只有 image 槽", Object.values(byId["qwen21-edit"]?.media ?? {})
     .every((x) => x.kind === "image"));
   t("qwen21-edit 的 ref_image_0 是必填",
@@ -107,15 +117,21 @@ console.log("\n③ 用 yz 的真实槽跑分配");
   t("第二次 @ 图片 → ref_image_1",
     img2?.slot === "ref_image_1", img2?.slot);
 
-  // 填满全部 6 个图片槽
-  const full6 = {};
-  for (let i = 0; i < 6; i++) full6[`ref_image_${i}`] = "x";
-  t("6 个图片槽占满后 → null（不再越界塞进视频/音频槽）",
-    firstFreeSlotFor(media, full6, "image") === null,
-    firstFreeSlotFor(media, full6, "image"));
+  /**
+   * ★★ 2026-10-23 改：不再写死「6 个图片槽」
+   *
+   *   判据是【占满后返回 null，不越界塞进别的 kind】，
+   *   而不是「恰好有 6 个」。v2 有 9 个图槽，写死 6 会漏测 3 个。
+   */
+  const imgSlots = Object.keys(media).filter((k) => media[k].kind === "image");
+  const fullImg = {};
+  for (const k of imgSlots) fullImg[k] = "x";
+  t(`全部 ${imgSlots.length} 个图片槽占满后 → null（不越界塞进视频/音频槽）`,
+    firstFreeSlotFor(media, fullImg, "image") === null,
+    firstFreeSlotFor(media, fullImg, "image"));
 
   t("此时再 @ 视频仍能绑到 ref_video_0",
-    firstFreeSlotFor(media, full6, "video")?.slot === "ref_video_0");
+    firstFreeSlotFor(media, fullImg, "video")?.slot === "ref_video_0");
 
   t("@ 音频 → ref_audio_0（不会错绑到图片槽）",
     firstFreeSlotFor(media, {}, "audio")?.slot === "ref_audio_0");
@@ -126,7 +142,7 @@ console.log("\n③ 用 yz 的真实槽跑分配");
    *   提交时前端把图片当视频素材传，后端类型不匹配。
    */
   t("@ 图片时绝不会返回 video 槽",
-    firstFreeSlotFor(media, full6, "image")?.slot !== "ref_video_0");
+    firstFreeSlotFor(media, fullImg, "image")?.slot !== "ref_video_0");
 
   t("@ 视频时绝不会返回 image 槽",
     firstFreeSlotFor(media, {}, "video")?.slot?.startsWith("ref_video"),
