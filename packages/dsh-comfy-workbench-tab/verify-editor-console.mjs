@@ -1279,6 +1279,61 @@ check("仓库根有 models-sources.json 示例",
   fs.existsSync(path.join(HERE, "..", "..", "models-sources.json")),
   "没有示例的话用户不知道有这么个机制");
 
+/* ══ ㉒ 部署自动化：ffmpeg 安装脚本（2026-10-23）═══════════════════ */
+/**
+ * 为什么需要这条
+ *   ffmpeg 有 83.58MB，被 .gitignore 排除了（不进仓库）。
+ *   而它是【运行时必需】的：剪辑台导出、字幕烧制、抽帧、音轨处理全要它。
+ *   ⇒ clone 下来的人没有它，导出功能直接报「找不到 ffmpeg」。
+ *
+ * ★ 这条断言是我发现 README 承诺了一个不存在的脚本后补的 ——
+ *   README 里写「或用 scripts/install-ffmpeg.mjs」，但那个文件当时根本没写。
+ *   文档承诺了功能就必须有对应实现，否则用户按文档走会撞墙。
+ */
+const REPO_ROOT = path.join(HERE, "..", "..");
+const ffInstaller = path.join(REPO_ROOT, "scripts", "install-ffmpeg.mjs");
+
+check("ffmpeg 安装脚本存在", fs.existsSync(ffInstaller),
+  "README 承诺了它，缺了用户按文档走会撞墙");
+
+check("安装脚本支持 --check（只检查不下载）",
+  fs.existsSync(ffInstaller)
+  && /--check/.test(fs.readFileSync(ffInstaller, "utf8")),
+  "装之前先能判断要不要装");
+
+check("安装脚本会真的验证装完能不能跑",
+  (() => {
+    if (!fs.existsSync(ffInstaller)) return false;
+    const s = fs.readFileSync(ffInstaller, "utf8");
+    /**
+     * ★ 只判 exists 不够 —— 下载不完整时文件也在，但跑不起来。
+     *   判据：必须有跑 `-version` 看退出码的动作。
+     */
+    /**
+     * ★ 收紧（变异测试发现假绿）：
+     *   第一版只测 /-version/ —— 但注释里也有 "-version" 字样，
+     *   把实际参数改成 --help 后注释还在，断言照样通过。
+     *   必须匹配【调用形式】：execFileSync(file, ["-version"]
+     */
+    return /execFileSync\([^,]+,\s*\[\s*"-version"\s*\]/.test(s);
+  })(),
+  "exists 通过 ≠ 能跑");
+
+check("安装脚本指向包内 bin 目录（与运行时回落顺序一致）",
+  (() => {
+    if (!fs.existsSync(ffInstaller)) return false;
+    const s = fs.readFileSync(ffInstaller, "utf8");
+    return /dsh-editor["\x27,\s]+["\x27]bin/.test(s) || /packages["\x27,\s]+["\x27]dsh-editor/.test(s);
+  })(),
+  "装到别处运行时找不到");
+
+check("README 的 ffmpeg 说明与实际脚本一致",
+  (() => {
+    const readme = fs.readFileSync(path.join(REPO_ROOT, "README.md"), "utf8");
+    return /scripts\/install-ffmpeg\.mjs/.test(readme) && fs.existsSync(ffInstaller);
+  })(),
+  "文档提到的东西必须真的存在");
+
 /* ── 汇总 ── */
 console.log("");
 console.log("═".repeat(60));
@@ -1297,6 +1352,7 @@ console.log("─".repeat(60));
 console.log(`  通过 ${pass} / ${pass + fails.length}`);
 console.log("═".repeat(60));
 process.exit(1);
+
 
 
 
