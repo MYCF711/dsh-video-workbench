@@ -11336,7 +11336,7 @@ function ComfySettingsSection() {
   const [health, setHealth] = import_react11.default.useState(null);
   const [busy, setBusy] = import_react11.default.useState("");
   const [msg, setMsg] = import_react11.default.useState(null);
-  const [draft, setDraft] = import_react11.default.useState({ comfyPath: "", outputDir: "", inputDir: "" });
+  const [draft, setDraft] = import_react11.default.useState({ comfyPath: "", modelsDir: "", outputDir: "", inputDir: "" });
   const j = async (path, init) => {
     const res = await fetch(BRIDGE + path, init);
     const text = await res.text();
@@ -11356,6 +11356,7 @@ function ComfySettingsSection() {
       setInfo(r?._info ?? null);
       setDraft({
         comfyPath: r?.comfyPath ?? "",
+        modelsDir: r?.modelsDir ?? "",
         outputDir: r?.outputDir ?? "",
         inputDir: r?.inputDir ?? ""
       });
@@ -11443,9 +11444,9 @@ function ComfySettingsSection() {
           color: "var(--dsw-alias-label-secondary, #61666b)"
         }
       },
-      "\u63D2\u4EF6\u4E0D\u5185\u7F6E\u4EFB\u4F55\u672C\u673A\u8DEF\u5F84\u3002\u586B\u597D\u4E0B\u9762\u4E09\u9879\uFF0C\u72B6\u6001\u680F\u90A3\u4E2A ComfyUI \u5706\u70B9\u5C31\u80FD\u4E00\u952E\u542F\u505C\u3002"
+      "\u63D2\u4EF6\u4E0D\u5185\u7F6E\u4EFB\u4F55\u672C\u673A\u8DEF\u5F84\u3002\u586B\u597D\u4E0B\u9762\u56DB\u9879\uFF0C\u72B6\u6001\u680F\u90A3\u4E2A ComfyUI \u5706\u70B9\u5C31\u80FD\u4E00\u952E\u542F\u505C\u3002"
     ),
-    /* ── 三个路径 ── */
+    /* ── 四个路径 ── */
     h11(Field, {
       label: "ComfyUI \u5B89\u88C5\u76EE\u5F55",
       value: draft.comfyPath,
@@ -11453,6 +11454,29 @@ function ComfySettingsSection() {
       status: statusOf(draft.comfyPath),
       placeholder: "\u4F8B\u5982 D:\\ComfyUI  \u6216  D:\\Comfy-Desktop\\ComfyUI-Installs\\My_Comfy_UI",
       hint: "\u8BE5\u76EE\u5F55\u4E0B\u5E94\u6709 ComfyUI\\main.py \u4E0E ComfyUI\\.venv\\Scripts\\python.exe"
+    }),
+    /**
+     * ★★ 2026-10-23 补 E1 缺项：模型放置目录
+     *
+     *   主人原话：「需要增加一个模型配置页面，填模型放置目录，comfy ui目录，
+     *             然后模型需求清单列出来让用户去下载」
+     *
+     *   前两版我只做了 comfyPath / outputDir / inputDir —— 把「模型放置目录」漏了。
+     *   而模型恰恰是换机器时最大的门槛（H3 主模型 19.5GB）。
+     *
+     * ── 这一项影响什么
+     *   ① 模型清单的「已找到」判定：优先用 ComfyUI 的 /object_info（权威），
+     *      但它读不到时（ComfyUI 未启动 / 自定义目录没写进 extra_model_paths.yaml），
+     *      可以退回本地目录扫描。
+     *   ② 缺失模型时能告诉用户「放到这个目录的哪个子目录」。
+     */
+    h11(Field, {
+      label: "\u6A21\u578B\u653E\u7F6E\u76EE\u5F55\uFF08models \u6839\u76EE\u5F55\uFF09",
+      value: draft.modelsDir,
+      onChange: (v) => setDraft((d) => ({ ...d, modelsDir: v })),
+      status: statusOf(draft.modelsDir),
+      placeholder: "\u4F8B\u5982 D:\\Comfy-Desktop\\ComfyUI-Shared\\models  \u6216  <ComfyUI>\\ComfyUI\\models",
+      hint: "\u7559\u7A7A\u5219\u7528 <ComfyUI>\\models\u3002\u6A21\u578B\u6E05\u5355\u7684\u300C\u7F3A\u5931\u300D\u9879\u4F1A\u63D0\u793A\u5E94\u653E\u5230\u8FD9\u4E2A\u76EE\u5F55\u4E0B\u7684\u54EA\u4E2A\u5B50\u76EE\u5F55\u3002"
     }),
     h11(Field, {
       label: "\u8F93\u51FA\u76EE\u5F55\uFF08\u4EA7\u7269\u5199\u5230\u54EA\uFF09",

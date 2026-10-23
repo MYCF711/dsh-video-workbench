@@ -121,6 +121,17 @@ export async function apply(ctx, config = {}) {
   /** 合并后的路径配置（后续所有地方都读这个，不再读 config.xxx） */
   const paths = {
     comfyPath: userConfig.comfyPath ?? config.comfyPath,
+    /**
+     * ★★ 2026-10-23 补：模型放置目录
+     *
+     *   主人原话：「填模型放置目录，comfy ui目录，然后模型需求清单列出来」
+     *   前两版只做了 comfyPath / outputDir / inputDir，把模型目录漏了。
+     *
+     *   它的用途：
+     *     ① 模型清单的本地兜底 —— ComfyUI 没开时也能判断文件在不在
+     *     ② 缺失时告诉用户「放到这个目录的哪个子目录」
+     */
+    modelsDir: userConfig.modelsDir ?? config.modelsDir,
     outputDir: userConfig.outputDir ?? config.outputDir,
     inputDir: userConfig.inputDir ?? config.inputDir,
   };
@@ -768,7 +779,20 @@ export async function apply(ctx, config = {}) {
           handler: async (_req, res) => {
             try {
               const { buildModelManifest } = await import("./model-manifest.mjs");
-              const r = await buildModelManifest({ workflowsDir: WORKFLOWS_DIR, base });
+              /**
+               * ★ 2026-10-23：把模型目录传下去。
+               *   优先级：用户填的 modelsDir > <ComfyUI>/models
+               *   ComfyUI 没开时用它做本地兜底（否则 unknown=true 无从判断）。
+               */
+              let modelsDir = paths.modelsDir ?? null;
+              if (!modelsDir) {
+                try {
+                  const { resolveComfyPaths } = await import("./comfy-launcher.mjs");
+                  const rp = resolveComfyPaths({ comfyPath: paths.comfyPath });
+                  if (rp) modelsDir = path.join(path.dirname(rp.mainPy), "models");
+                } catch { /* 解析不到就不兜底，走 unknown 分支 */ }
+              }
+              const r = await buildModelManifest({ workflowsDir: WORKFLOWS_DIR, base, modelsDir });
               json(res, 200, { ok: true, ...r });
             } catch (err) {
               json(res, 200, { ok: false, items: [], unknown: true, error: String(err?.message ?? err) });

@@ -40,7 +40,21 @@ const miss = (name, why) => { skip++; console.log(`  – ${name}  （跳过：${
 /** 找一条真实产物（从 ComfyUI history 里捞最近的 best-effort）。 */
 async function pickRealOutput() {
   try {
-    const r = await fetch(`${COMFY}/history?max_items=10`, { signal: AbortSignal.timeout(8000) });
+    /**
+     * ★★ 2026-10-23 修：超时 8s → 30s
+     *
+     *   现象：单独跑 verify-canvas 恒 20/20，但在 verify-all 里偶发 18/19。
+     *   实测复跑多次，只在「前面刚跑完大量生成任务」时出现，
+     *   说明是 ComfyUI 的 /history 变慢，不是代码问题。
+     *
+     *   根因：/history?max_items=10 要序列化最近的任务记录。
+     *   如果队列里刚跑过几十个任务（verify-all 会真生成），
+     *   或者某个任务产物很多（大图/多帧），这个接口可能超过 8 秒。
+     *
+     *   ⇒ 30 秒。★ 这是「取证超时」不是「功能超时」——
+     *     拿不到就 return null，后面的检查会走「跳过」分支，不会假红。
+     */
+    const r = await fetch(`${COMFY}/history?max_items=10`, { signal: AbortSignal.timeout(30000) });
     if (!r.ok) return null;
     const h = await r.json();
     for (const [, e] of Object.entries(h)) {

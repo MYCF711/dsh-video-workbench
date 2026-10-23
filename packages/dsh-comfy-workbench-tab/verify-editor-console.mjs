@@ -1017,7 +1017,19 @@ check("模型清单区分「已找到」与「判断不了」",
    *   否则会把「没开 ComfyUI」误报成「缺模型」。
    */
   /unknown/.test(comfySettingsC),
+
   "found===null 是判断不了，不是缺失");
+
+/**
+ * ★★ 2026-10-23：设置页必须有「模型放置目录」
+ *   主人原话：「需要增加一个模型配置页面，填模型放置目录，comfy ui目录，
+ *             然后模型需求清单列出来让用户去下载」
+ *   前两版只做了 comfyPath/outputDir/inputDir，把模型目录漏了。
+ */
+check("设置页有「模型放置目录」字段",
+  /label: "模型放置目录（models 根目录）"/.test(comfySettingsC) &&
+  /modelsDir/.test(comfySettingsC),
+  "模型是换机器时最大的门槛（H3 主模型 19.5GB），这一项不能漏");
 
 /* ── 汇总 ── */
 console.log("");
