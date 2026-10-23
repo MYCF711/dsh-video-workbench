@@ -1708,15 +1708,29 @@ export function WorkbenchView(props) {
      *
      *   ⇒ 前端在提交前拦住，并说清原因与可选值。
      *
-     *   ★ 判据来自工作流本身（mode._workflow 里的 transition_step），
+     *   ★ 判据来自后端 /modes 返回的 transitionStep（由工作流现取），
      *     不是写死 6 —— 换工作流时自动跟着变。
+     *
+     * ★★ 2026-10-23 修两次
+     *
+     *   ① 第一版写成 `mode?._workflow` —— **那个变量不存在**
+     *      实测症状：点「生成」毫无反应，不报错、不发请求、按钮不变。
+     *      页面上抓到的异常是：ReferenceError: mode is not defined
+     *      本组件里工作流对象叫 `currentMode`（L1396 定义），没有 `mode`。
+     *      ★ 可空链 `?.` 只能防「值是 null/undefined」，
+     *        **防不住「变量根本没声明」** —— 未声明会直接抛 ReferenceError。
+     *        这与 AGENTS §6.26 的 TDZ 是同一类。
+     *
+     *   ② 第二版改成 `currentMode?._workflow` —— 值仍是 undefined，
+     *      因为 /modes 的序列化【剔掉了 _workflow】（它 40+ 节点、15KB+，
+     *      没必要每次进页面都传）。
+     *      ⇒ 改由后端提供一个标量 transitionStep。
      */
     {
-      const wf = mode?._workflow;
-      if (wf && wf["397"]?.inputs?.transition_step != null) {
-        const ts = Number(wf["397"].inputs.transition_step);
+      const ts = currentMode?.transitionStep;
+      if (typeof ts === "number" && Number.isFinite(ts)) {
         const s = Number(steps);
-        if (Number.isFinite(ts) && Number.isFinite(s) && s <= ts) {
+        if (Number.isFinite(s) && s <= ts) {
           setError(
             `步数 ${s} 太小：这个工作流的低分辨率求解次数（transition_step）是 ${ts}，`
             + `总步数必须大于它。请选 ${ts + 1} 步或更多。`,

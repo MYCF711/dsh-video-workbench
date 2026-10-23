@@ -57,14 +57,48 @@ async function pickRealOutput() {
     const r = await fetch(`${COMFY}/history?max_items=10`, { signal: AbortSignal.timeout(30000) });
     if (!r.ok) return null;
     const h = await r.json();
+
+    /**
+     * ★★ 2026-10-23 再修：history 里的记录可能指向【已被删除】的文件
+     *
+     *   实测症状：稳定报
+     *     ✗ download=1 返回 attachment  status=404 cd=""
+     *   连跑 5 次全红（不是偶发）。
+     *
+     *   根因：验收脚本会清理自己生成的产物（§6.46 的纪律），
+     *   但 ComfyUI 的 /history 记录【不会】因此消失 ——
+     *   于是 history 里第一条可能指向一个已经不存在的文件。
+     *   拿它去测代理接口，必然 404。
+     *
+     *   ⇒ 候选要【逐个验证文件存在】，用第一条真的能取到的。
+     *     一条都取不到才 return null（走「跳过」分支，不假红）。
+     */
+    const candidates = [];
     for (const [, e] of Object.entries(h)) {
       if (e.status?.status_str !== "success") continue;
       for (const [nodeId, out] of Object.entries(e.outputs ?? {})) {
         for (const it of out.images ?? []) {
-          return { nodeId, filename: it.filename, subfolder: it.subfolder ?? "", type: it.type ?? "output" };
+          candidates.push({
+            nodeId,
+            filename: it.filename,
+            subfolder: it.subfolder ?? "",
+            type: it.type ?? "output",
+          });
         }
       }
     }
+
+    /* 逐个试 ComfyUI 直连，取第一个真能读到的 */
+    for (const c of candidates.slice(0, 6)) {
+      try {
+        const u = `${COMFY}/api/view?${new URLSearchParams({
+          filename: c.filename, subfolder: c.subfolder, type: c.type,
+        })}`;
+        const probe = await fetch(u, { method: "HEAD", signal: AbortSignal.timeout(8000) });
+        if (probe.ok) return c;
+      } catch { /* 换下一个 */ }
+    }
+    return null;
   } catch { /* 落到 null */ }
   return null;
 }
