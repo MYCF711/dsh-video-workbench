@@ -32,7 +32,17 @@ const getArg = (k, d) => {
   return i >= 0 ? args[i + 1] : d;
 };
 const BASE = getArg('--base', 'http://127.0.0.1:19499');
-const COOKIE_FILE = 'C:/Users/Administrator/dsh-tok.txt';
+/**
+ * ★ 2026-10-23 D3 去敏：token 从环境变量/约定位置读，不写死本机路径。
+ *
+ *   原来写的是 const COOKIE_FILE = 'C:/Users/<本机用户>/dsh-tok.txt';
+ *   ⇒ 别人 clone 下来跑，全部失败且看不出是「路径没配」。
+ *
+ *   现在：DSH_TEST_TOKEN > DSH_TEST_TOKEN_FILE > $DSH_HOME/.test-token > 家目录约定
+ *   拿不到就【跳过】而不是失败 —— 跳过=今天不适用，失败=功能坏了。
+ */
+import { TOKEN, skipWithoutToken } from "../tools/test-env.mjs";
+if (!TOKEN) skipWithoutToken("verify-subtitle.mjs");
 const FFMPEG = process.env.FFMPEG_PATH ?? 'D:\\主工作区\\DSH视频工作站\\packages\\dsh-editor\\bin\\ffmpeg.exe';
 const WORK = 'D:\\主工作区\\DSH视频工作台\\.frames\\subtest';
 
@@ -159,8 +169,8 @@ if (fs.existsSync(WITH_AUDIO)) {
 // ─── G · HTTP ─────────────────────────────────────────────
 console.log('\n⑧ HTTP 路由');
 let cookie = '';
-if (fs.existsSync(COOKIE_FILE)) {
-  cookie = `dsh-auth-CK36o8O6fn6VWHrnbEp0bsjzKPKRmilHp-TBfPBH65k=${fs.readFileSync(COOKIE_FILE, 'utf8').trim()}`;
+if (TOKEN) {
+  cookie = `dsh-auth-CK36o8O6fn6VWHrnbEp0bsjzKPKRmilHp-TBfPBH65k=${TOKEN}`;
 }
 try {
   const res = await fetch(BASE + '/comfy-bridge/subtitle/status', { headers: { Cookie: cookie } });

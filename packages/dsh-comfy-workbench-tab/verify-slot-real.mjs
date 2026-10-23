@@ -17,6 +17,7 @@
  */
 
 import fs from "node:fs";
+import { TOKEN, authCookie } from "../tools/test-env.mjs";
 import path from "node:path";
 
 const BASE = "http://127.0.0.1:19499";
@@ -61,17 +62,23 @@ console.log("\n① 复刻逻辑必须与生产代码等价");
 }
 
 /* ─── 拉真实数据 ──────────────────────────────── */
+/**
+ * ★ 2026-10-23 D3 去敏：token 与 cookie 名都从 tools/test-env.mjs 取。
+ *
+ *   原来写死 C:/Users/<本机用户>/dsh-tok.txt 和固定的 cookie 名 ——
+ *   别人 clone 下来这一节永远走「跳过」分支，等于这段从没被验过。
+ */
 let modes = [];
 try {
-  const token = fs.readFileSync("C:/Users/Administrator/dsh-tok.txt", "utf8").trim();
+  if (!TOKEN) throw new Error("没有测试实例的 token（设 DSH_TEST_TOKEN 或 DSH_TEST_TOKEN_FILE）");
   const res = await fetch(`${BASE}/comfy-bridge/modes`, {
-    headers: { Cookie: `dsh-auth-CK36o8O6fn6VWHrnbEp0bsjzKPKRmilHp-TBfPBH65k=${token}` },
+    headers: { Cookie: authCookie(TOKEN) },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   modes = await res.json();
 } catch (e) {
   console.log(`\n  ⏭ 拿不到 /comfy-bridge/modes（${e.message}）—— 跳过真实数据部分`);
-  console.log("     起测试实例后重跑：pwsh -File C:\\Users\\Administrator\\restart-test2.ps1");
+  console.log("     起测试实例后重跑，或设 DSH_TEST_TOKEN=<token>");
   process.exit(fail ? 1 : 0);
 }
 
@@ -172,3 +179,5 @@ if (fail) {
   process.exit(1);
 }
 console.log("  槽位分配在真实数据上正确（含跨 kind 不越界）");
+
+

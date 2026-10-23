@@ -23,8 +23,16 @@
 
 import fs from "node:fs";
 
-const BASE = process.env.COMFY_WB_BASE ?? "http://127.0.0.1:19499";
-const TOKEN_FILE = "C:/Users/Administrator/dsh-tok.txt";
+import { BASE as TEST_BASE, TOKEN, authCookie } from "./tools/test-env.mjs";
+
+/**
+ * ★ 2026-10-23 D3 去敏：原来这里有一行
+ *     const TOKEN_FILE = "C:/Users/<本机用户>/dsh-tok.txt";
+ *   但它【从未被使用】—— 死代码，且把本机路径留在了仓库里。
+ *   ⇒ 删掉，改用 test-env.mjs 的统一取值（BASE / TOKEN / authCookie）。
+ */
+const BASE = process.env.COMFY_WB_BASE ?? TEST_BASE;
+void TOKEN; void authCookie;
 
 const WHITELIST = new Set([
   // 品牌与格式
@@ -134,3 +142,4 @@ if (r.uniq.length > 60) console.log(`      ……还有 ${r.uniq.length - 60} �
 console.log("\n  ★ 如果这些是有意保留的（品牌名/格式），加进 WHITELIST；");
 console.log("    如果是漏翻的，去改 .tsx 文案。");
 process.exit(1);
+

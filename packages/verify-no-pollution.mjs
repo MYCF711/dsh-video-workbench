@@ -37,7 +37,11 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BASE = process.env.COMFY_WB_BASE ?? "http://127.0.0.1:19499";
-const TOKEN_FILE = "C:\\Users\\Administrator\\dsh-tok.txt";
+/**
+ * ★ 2026-10-23 D3 去敏：token 从 tools/test-env.mjs 取，不写死本机路径。
+ *   原来写 C:\Users\<本机用户>\dsh-tok.txt ⇒ 别人 clone 下来这个元验收永远跑不了。
+ */
+import { TOKEN as TEST_TOKEN } from "./tools/test-env.mjs";
 
 const argv = process.argv.slice(2);
 const snapshotOnly = argv.includes("--snapshot");
@@ -45,7 +49,7 @@ const staticOnly = argv.includes("--static");
 
 function getToken() {
   if (process.env.DSH_TOKEN) return process.env.DSH_TOKEN.trim();
-  try { return fs.readFileSync(TOKEN_FILE, "utf8").trim(); } catch { return ""; }
+  return TEST_TOKEN ?? "";
 }
 
 /** 取资产库快照，返回 Map<id, signature> */
@@ -266,3 +270,4 @@ console.log("  ✅ 验收没有改动任何已有资产的字段");
 console.log("     （新增/减少单独报告，不算污染）");
 // 验收本身失败时，仍然以验收结果为准退出非 0
 process.exit(verifyOk ? 0 : 1);
+

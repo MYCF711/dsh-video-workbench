@@ -23,6 +23,7 @@
  */
 
 import fs from "node:fs";
+import { TOKEN as TEST_TOKEN } from "./tools/test-env.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -44,18 +45,14 @@ function getBase() {
   return process.env.COMFY_WB_BASE ?? "http://127.0.0.1:19499";
 }
 
+/**
+ * ★ 2026-10-23 D3 去敏：改用 tools/test-env.mjs 的统一读取。
+ *
+ *   原来候选列表里写死了 C:\Users\<本机用户>\dsh-tok.txt ——
+ *   它虽然也支持 DSH_TOKEN 环境变量，但默认值仍然是本机专属路径。
+ */
 function getToken() {
-  if (process.env.DSH_TOKEN) return process.env.DSH_TOKEN.trim();
-  for (const p of [
-    "C:\\Users\\Administrator\\dsh-tok.txt",
-    path.join(HERE, "..", "..", "..", ".dsh-token"),
-  ]) {
-    try {
-      const t = fs.readFileSync(p, "utf8").trim();
-      if (t) return t;
-    } catch { /* 下一个 */ }
-  }
-  return "";
+  return TEST_TOKEN ?? "";
 }
 
 async function fetchLibrary() {
@@ -188,3 +185,4 @@ console.log(``);
 console.log(`  ✅ 没有减少项（新增 ${added.length} 项属正常增长）`);
 console.log(`     确认这些新增没问题后，可跑 --save 更新基线`);
 process.exit(0);
+
