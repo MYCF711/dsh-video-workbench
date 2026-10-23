@@ -85,7 +85,7 @@ export function configPath(ctx) {
 
 /**
  * 读配置。
- * @returns {{comfyPath?:string, outputDir?:string, inputDir?:string}}
+ * @returns {{comfyPath?:string, modelsDir?:string, outputDir?:string, inputDir?:string}}
  */
 export function loadConfig(ctx, log = console) {
   const p = configPath(ctx);
@@ -96,7 +96,7 @@ export function loadConfig(ctx, log = console) {
     if (!j || typeof j !== "object") return {};
     /* 只取认识的字段，且必须是 string */
     const out = {};
-    for (const k of ["comfyPath", "outputDir", "inputDir"]) {
+    for (const k of ["comfyPath", "modelsDir", "outputDir", "inputDir"]) {
       if (typeof j[k] === "string" && j[k].trim()) out[k] = j[k].trim();
     }
     return out;
@@ -125,7 +125,7 @@ export function saveConfig(ctx, patch, log = console) {
 
   const cur = loadConfig(ctx, log);
   const next = { ...cur, version: CONFIG_VERSION };
-  for (const k of ["comfyPath", "outputDir", "inputDir"]) {
+  for (const k of ["comfyPath", "modelsDir", "outputDir", "inputDir"]) {
     if (k in patch) {
       const v = patch[k];
       if (v === null || v === "") delete next[k];
@@ -186,4 +186,5 @@ export function configInfo(ctx) {
     mayBeWrongProfile: source === "profile",
   };
 }
+
 

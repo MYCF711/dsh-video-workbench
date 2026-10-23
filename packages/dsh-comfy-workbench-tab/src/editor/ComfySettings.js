@@ -177,7 +177,7 @@ export function ComfySettingsSection() {
   const [msg, setMsg] = React.useState(null);          // { kind, text }
 
   /* 表单草稿（用户改动先存这里，点保存才提交） */
-  const [draft, setDraft] = React.useState({ comfyPath: "", outputDir: "", inputDir: "" });
+  const [draft, setDraft] = React.useState({ comfyPath: "", modelsDir: "", outputDir: "", inputDir: "" });
 
   const j = async (path, init) => {
     const res = await fetch(BRIDGE + path, init);
@@ -195,6 +195,7 @@ export function ComfySettingsSection() {
       setInfo(r?._info ?? null);
       setDraft({
         comfyPath: r?.comfyPath ?? "",
+        modelsDir: r?.modelsDir ?? "",
         outputDir: r?.outputDir ?? "",
         inputDir: r?.inputDir ?? "",
       });
@@ -283,9 +284,9 @@ export function ComfySettingsSection() {
         color: "var(--dsw-alias-label-secondary, #61666b)",
       },
     },
-      "插件不内置任何本机路径。填好下面三项，状态栏那个 ComfyUI 圆点就能一键启停。"),
+      "插件不内置任何本机路径。填好下面四项，状态栏那个 ComfyUI 圆点就能一键启停。"),
 
-    /* ── 三个路径 ── */
+    /* ── 四个路径 ── */
     h(Field, {
       label: "ComfyUI 安装目录",
       value: draft.comfyPath,
@@ -293,6 +294,30 @@ export function ComfySettingsSection() {
       status: statusOf(draft.comfyPath),
       placeholder: "例如 D:\\ComfyUI  或  D:\\Comfy-Desktop\\ComfyUI-Installs\\My_Comfy_UI",
       hint: "该目录下应有 ComfyUI\\main.py 与 ComfyUI\\.venv\\Scripts\\python.exe",
+    }),
+
+    /**
+     * ★★ 2026-10-23 补 E1 缺项：模型放置目录
+     *
+     *   主人原话：「需要增加一个模型配置页面，填模型放置目录，comfy ui目录，
+     *             然后模型需求清单列出来让用户去下载」
+     *
+     *   前两版我只做了 comfyPath / outputDir / inputDir —— 把「模型放置目录」漏了。
+     *   而模型恰恰是换机器时最大的门槛（H3 主模型 19.5GB）。
+     *
+     * ── 这一项影响什么
+     *   ① 模型清单的「已找到」判定：优先用 ComfyUI 的 /object_info（权威），
+     *      但它读不到时（ComfyUI 未启动 / 自定义目录没写进 extra_model_paths.yaml），
+     *      可以退回本地目录扫描。
+     *   ② 缺失模型时能告诉用户「放到这个目录的哪个子目录」。
+     */
+    h(Field, {
+      label: "模型放置目录（models 根目录）",
+      value: draft.modelsDir,
+      onChange: (v) => setDraft((d) => ({ ...d, modelsDir: v })),
+      status: statusOf(draft.modelsDir),
+      placeholder: "例如 D:\\Comfy-Desktop\\ComfyUI-Shared\\models  或  <ComfyUI>\\ComfyUI\\models",
+      hint: "留空则用 <ComfyUI>\\models。模型清单的「缺失」项会提示应放到这个目录下的哪个子目录。",
     }),
 
     h(Field, {
@@ -445,3 +470,4 @@ export function ComfySettingsSection() {
       : null
   );
 }
+

@@ -144,6 +144,55 @@ export async function fetchKnownModels(base, timeoutMs = 6000) {
   }
 }
 
+/**
+ * 本地扫描 models 目录，收集所有模型文件名。
+ *
+ * ★★ 2026-10-23 新增：ComfyUI 未启动时的兜底
+ *
+ *   /object_info 是权威的（它知道 extra_model_paths.yaml 展开后的完整列表），
+ *   但 ComfyUI 没开时拿不到 ⇒ 只能报 unknown。
+ *   而用户最常问的恰恰是「我装完模型了，齐了吗」——
+ *   这时 ComfyUI 可能还没启动。
+ *
+ *   ⇒ 用用户填的「模型放置目录」做一次本地扫描。
+ *     扫到的算「已找到」，扫不到的仍标 unknown（不是「缺失」）——
+ *     因为自定义目录可能不在 modelsDir 下，扫不到不代表没有。
+ *
+ * @returns {Set<string>|null} null = 目录不可读（无法判断）
+ */
+export function scanModelsDir(modelsDir, { maxDepth = 4, maxFiles = 20000 } = {}) {
+  if (!modelsDir || !existsSync(modelsDir)) return null;
+  const found = new Set();
+  let count = 0;
+
+  const walk = (dir, depth) => {
+    if (depth > maxDepth || count >= maxFiles) return;
+    let ents;
+    try { ents = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of ents) {
+      if (count >= maxFiles) return;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        walk(full, depth + 1);
+      } else if (e.isFile()) {
+        count += 1;
+        if (MODEL_EXT.test(e.name)) {
+          /**
+           * ★ 只存 basename，不存相对路径。
+           *   因为工作流里引用的是 "Krea2\Krea2-xxx.safetensors"，
+           *   而 /object_info 返回的也可能是带子目录的相对路径。
+           *   用 basename 比对能同时匹配两种，代价是不同子目录的同名文件会混淆
+           *   —— 那种情况极少，且用户自己也知道放重了。
+           */
+          found.add(e.name);
+        }
+      }
+    }
+  };
+  walk(modelsDir, 0);
+  return found;
+}
+
 /** 按扩展名给「应该放哪个 models 子目录」的提示。 */
 function subdirHint(filename) {
   const low = filename.toLowerCase();
@@ -168,13 +217,50 @@ function subdirHint(filename) {
  * @returns {Promise<{items:Array, unknown:boolean}>}
  *   unknown = true 表示 ComfyUI 不可用，无法判断存在性（此时 found 全为 null，不误报）
  */
-export async function buildModelManifest({ workflowsDir, base }) {
+export async function buildModelManifest({ workflowsDir, base, modelsDir = null }) {
   const refs = collectFromDir(workflowsDir);
   const known = base ? await fetchKnownModels(base) : null;
+  /**
+   * ★ 本地兜底（2026-10-23）：ComfyUI 给不出答案时，扫用户填的模型目录。
+   *   - known 有值 ⇒ 以它为准（权威）
+   *   - known 为 null 但本地扫到了 ⇒ 用本地结果判「已找到」，扫不到的标 unknown
+   *     （不标「缺失」，因为自定义目录可能不在 modelsDir 下）
+   */
+  const localFiles = known === null ? scanModelsDir(modelsDir) : null;
+
+  /**
+   * ★ 比对时用 basename —— 工作流里的引用可能带子目录
+   *   （如 "Krea2\Krea2-moodyKrea2Mix_v8_int8_convrot.safetensors"），
+   *   而 known 里两种形式都可能有。用 basename 比对覆盖面最广。
+   */
+  const baseName = (s) => String(s).split(/[\\/]/).pop();
+
+  const knownBase = known
+    ? new Set([...known].map(baseName))
+    : null;
+  const localBase = localFiles
+    ? new Set([...localFiles].map(baseName))
+    : null;
 
   const items = [];
   for (const [name, usedBy] of refs) {
-    const found = known ? known.has(name) : null;
+    const bn = baseName(name);
+    let found;
+    let sourceOfTruth = null;
+    if (knownBase) {
+      found = knownBase.has(bn);
+      sourceOfTruth = "comfyui";
+    } else if (localBase) {
+      /**
+       * 本地扫描只能证明「在」，不能证明「不在」——
+       * 所以只在命中时判 true，未命中保持 null（unknown）。
+       */
+      found = localBase.has(bn) ? true : null;
+      sourceOfTruth = "local";
+    } else {
+      found = null;
+    }
+
     items.push({
       name,
       found,
@@ -183,7 +269,14 @@ export async function buildModelManifest({ workflowsDir, base }) {
        *   前端必须区分这两种，否则会把「ComfyUI 没开」误报成「缺模型」。
        */
       unknown: found === null,
-      note: `用于：${[...usedBy].join("、")}${found === false ? ` · 应放到 ${subdirHint(name)}` : ""}`,
+      sourceOfTruth,
+      note: `用于：${[...usedBy].join("、")}${
+        found === false
+          ? ` · 应放到 ${subdirHint(name)}`
+          : found === null && localBase
+            ? ` · 本地目录里没扫到（可能放在别处），应放到 ${subdirHint(name)}`
+            : ""
+      }`,
       sizeText: null,
     });
   }
