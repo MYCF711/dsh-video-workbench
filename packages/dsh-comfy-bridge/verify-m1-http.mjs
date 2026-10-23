@@ -12,6 +12,11 @@
  *   ⑤ GET  /comfy-bridge/job/:id   → 轮询到 completed 且有产物
  */
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** 本脚本所在目录（= 包根）—— 用来读本地 bind/工作流做静态结构检查。 */
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
 const getArg = (k, d) => {
@@ -117,10 +122,50 @@ try {
   const lacking = modes.filter((m) => !m.label || !m.defaults);
   check('每个模式有 label 与 defaults', lacking.length === 0, `缺: ${lacking.map((m) => m.id)}`);
   const yz = modes.find((m) => m.id === 'yz');
-  // yz.bind.json 声明了 10 个 media 槽：
-  //   ref_image_0..5 (6) + ref_video_0 (1) + ref_audio_0..2 (3) = 10
-  check('yz 有 10 个素材槽', yz && Object.keys(yz.media ?? {}).length === 10,
-    `实际 ${yz ? Object.keys(yz.media ?? {}).length : 'n/a'}`);
+  /**
+   * yz.bind.json 的 media 槽数量。
+   *
+   * ★★ 2026-10-23 改：10 → 15（接 v2 工作流）
+   *   v1：ref_image_0..5 (6) + ref_video_0 (1) + ref_audio_0..2 (3) = 10
+   *   v2：ref_image_0..8 (9) + ref_video_0..2 (3) + ref_audio_0..2 (3) = 15
+   *
+   * ★ 为什么不写死一个数字：
+   *   工作流升级会改变槽位数量（v1→v2 就加了 5 个）。
+   *   断言该锁的是【结构约束】，不是某一版的快照：
+   *     · 至少 10 个
+   *     · 图片/视频/音频三类都得有
+   *     · 每个槽都指向工作流里真实存在的节点
+   *   写死数字会让「工作流正常升级」变成「验收变红」（AGENTS §3.7）。
+   */
+  const yzMedia = Object.keys(yz?.media ?? {});
+  check('yz 至少 10 个素材槽', yzMedia.length >= 10, `实际 ${yzMedia.length}`);
+  check('yz 三类槽齐全（图/视频/音频）',
+    yzMedia.some((k) => yz.media[k].kind === 'image')
+    && yzMedia.some((k) => yz.media[k].kind === 'video')
+    && yzMedia.some((k) => yz.media[k].kind === 'audio'),
+    `image=${yzMedia.filter((k) => yz.media[k].kind === 'image').length} `
+    + `video=${yzMedia.filter((k) => yz.media[k].kind === 'video').length} `
+    + `audio=${yzMedia.filter((k) => yz.media[k].kind === 'audio').length}`);
+  check('yz 每个素材槽都指向工作流里存在的节点',
+    (() => {
+      /**
+       * ★ 2026-10-23 修：/modes 的 HTTP 返回【不含 _workflow】——
+       *   _workflow 是 bind 层的内部字段（buildPrompt 用），
+       *   对外序列化时被剔掉了。所以不能在 HTTP 响应上验这一条。
+       *
+       *   ⇒ 读本地 bind + 工作流文件来验。这是静态结构约束，
+       *     本来就不需要经过 HTTP。
+       */
+      const dir = path.join(HERE, 'workflows');
+      const bind = JSON.parse(fs.readFileSync(path.join(dir, 'yz.bind.json'), 'utf8'));
+      const wf = JSON.parse(fs.readFileSync(path.join(dir, bind.workflow), 'utf8'));
+      const badSlots = Object.entries(bind.media ?? {})
+        .filter(([, s]) => !wf[String(s.node)])
+        .map(([k, s]) => `${k}→${s.node}`);
+      if (badSlots.length) console.log('     悬空槽: ' + badSlots.join(', '));
+      return badSlots.length === 0;
+    })(),
+    'bind 里的 media.node 必须能在工作流里找到');
   check('yz 有武打开关', yz && yz.toggles && yz.toggles.wudA !== undefined);
   const krea2 = modes.find((m) => m.id === 'krea2');
   // ★ 不写死总数（AGENTS.md §3.7）—— 加开关注册不该让断言变红。

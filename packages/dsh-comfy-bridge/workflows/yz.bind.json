@@ -1,8 +1,8 @@
 {
   "id": "yz",
   "label": "多参 H3",
-  "tabSub": "YZ金鱼 终极篇 · 主力",
-  "description": "全力模式：文戏武戏一个工作流，可上传参考图/参考视频/参考音频，武打链可开关。接入自 YZ金鱼-MiniMax H3 终极篇-文武双全（作者原件，由 ComfyUI 自己的 graphToPrompt 转换）。",
+  "tabSub": "YZ金鱼 终极篇 v2 · 文武双全",
+  "description": "v2：参考尺寸按输入分辨率（不再用 max）、去掉高分块（速度约快一倍）、支持直出 1080p。参考图 6→9 槽，参考视频 1→3 槽。",
   "workflow": "yz-ultimate-full.json",
   "order": 0,
   "primary": true,
@@ -133,10 +133,45 @@
       "accept": "image/*",
       "kind": "image"
     },
+    "ref_image_6": {
+      "node": "199",
+      "input": "image",
+      "label": "参考图7",
+      "accept": "image/*",
+      "kind": "image"
+    },
+    "ref_image_7": {
+      "node": "200",
+      "input": "image",
+      "label": "参考图8",
+      "accept": "image/*",
+      "kind": "image"
+    },
+    "ref_image_8": {
+      "node": "201",
+      "input": "image",
+      "label": "参考图9",
+      "accept": "image/*",
+      "kind": "image"
+    },
     "ref_video_0": {
       "node": "27",
       "input": "video",
       "label": "参考视频1",
+      "accept": "video/*",
+      "kind": "video"
+    },
+    "ref_video_1": {
+      "node": "25",
+      "input": "video",
+      "label": "参考视频2",
+      "accept": "video/*",
+      "kind": "video"
+    },
+    "ref_video_2": {
+      "node": "26",
+      "input": "video",
+      "label": "参考视频3",
       "accept": "video/*",
       "kind": "video"
     },
@@ -162,7 +197,9 @@
       "kind": "audio"
     }
   },
-  "capabilities": {"h3Labels": true},
+  "capabilities": {
+    "h3Labels": true
+  },
   "outputs": {
     "video": "364"
   }

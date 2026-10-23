@@ -11274,7 +11274,7 @@ function Btn({ children, onClick, primary, disabled, title }) {
     }
   }, children);
 }
-function ModelRow({ name: name3, note, found, size }) {
+function ModelRow({ name: name3, note, found, size, source }) {
   const dotColor = found === true ? "var(--dsw-alias-state-success-primary, #3fb950)" : found === false ? "var(--dsw-alias-state-error-primary, #f85149)" : "var(--dsw-alias-label-tertiary, #81858c)";
   return h11(
     "div",
@@ -11317,7 +11317,33 @@ function ModelRow({ name: name3, note, found, size }) {
           marginTop: 1,
           color: "var(--dsw-alias-label-tertiary, #81858c)"
         }
-      }, note) : null
+      }, note) : null,
+      /**
+       * ★★ 2026-10-23 补 E2 缺项：下载链接
+       *
+       *   目标写的是「生成清单 + 下载链接」。
+       *   ★ 只在【缺失或判断不了】时显示 —— 已经有文件的模型不需要下载入口，
+       *     给出来只是噪音。
+       *   ★ 区分两种链接（kind）：
+       *       exact  = 用户配置的精确 URL（models-sources.json）
+       *       search = HuggingFace 搜索页（找不到时给个能自己确认的入口，
+       *                而不是编一个会 404 的 URL）
+       */
+      source && source.url && found !== true ? h11("a", {
+        href: source.url,
+        target: "_blank",
+        rel: "noreferrer noopener",
+        title: source.note ?? "",
+        style: {
+          display: "inline-block",
+          marginTop: 2,
+          fontSize: 11,
+          lineHeight: "15px",
+          color: "var(--dsw-alias-state-business-primary, #4176e6)",
+          textDecoration: "none",
+          wordBreak: "break-all"
+        }
+      }, source.kind === "exact" ? "\u2192 \u4E0B\u8F7D\u94FE\u63A5" : "\u2192 \u53BB\u641C\u7D22\u8FD9\u4E2A\u6A21\u578B") : null
     ),
     size ? h11("span", {
       style: {
@@ -11707,7 +11733,8 @@ function ComfySettingsSection() {
                   name: m.name,
                   note: m.note,
                   found: m.found,
-                  size: m.sizeText
+                  size: m.sizeText,
+                  source: m.source
                 }))
               );
             }
@@ -11767,7 +11794,8 @@ function ComfySettingsSection() {
                       /* ★ 显示来源字段名，方便对着工作流核对 */
                       note: (m.byField ? `[${m.byField}] ` : "") + (m.note ?? ""),
                       found: m.found,
-                      size: m.sizeText
+                      size: m.sizeText,
+                      source: m.source
                     }))
                   )
                 );

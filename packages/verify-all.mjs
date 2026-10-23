@@ -505,6 +505,16 @@ if (!STATIC) {
   steps.push(run('PNG 标签（写本体不改像素 / 中文 / 幂等）', '.', 'verify-png-tags.mjs', [], 120000));
 steps.push(run('payload 字段一致性（三个构造点是否都带业务字段）', '.', 'verify-payload-parity.mjs'));
 steps.push(run('漏翻检测器自检（验证它真能抓到英文）', '.', 'verify-no-english.mjs', ['--self-test']));
+/**
+ * ★★ 2026-10-23 新增：ui-to-api 转换器验收
+ *
+ *   UI 格式 → API 格式的转换是「接新工作流」的唯一入口，
+ *   而它的错误全是静默的（参数悄悄错位，报错在很远处）。
+ *   本项目为此错了五次才对位。
+ *
+ *   ★ 纯逻辑测试，不碰 ComfyUI ⇒ 放静态段。
+ */
+steps.push(run('UI→API 转换器（widgets 对位 5 条判据）', 'tools', 'verify-ui-to-api.mjs', [], 120000));
 }
 
 // ── 工作流 1：krea2 ──
@@ -525,3 +535,4 @@ console.log('─'.repeat(64));
 console.log(`  ${okAll ? '全部通过' : '有失败项'}`);
 console.log('═'.repeat(64));
 process.exit(okAll ? 0 : 1);
+
