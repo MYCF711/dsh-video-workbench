@@ -257,6 +257,30 @@ export async function apply(ctx, config = {}) {
         // 2026-10-18 增量：能力声明，前端据此决定「时长 / 张数 / 二采步数」渲染哪些。
         // 纯新增字段 —— 老前端不读它，行为完全不变。
         caps: m.caps,
+        /**
+         * ★★ 2026-10-23 新增：SelfLift 的 transition_step
+         *
+         *   前端要在提交前拦住「步数 ≤ transition_step」的组合。
+         *   实测：选 4 步会让 SelfLift 报
+         *     transition_step 6 out of range for 4 steps
+         *   而 ComfyUI 的 schema 不校验这个关系，跑几十秒才炸。
+         *
+         *   ★ 为什么不把整个 _workflow 传给前端：
+         *     一个工作流 40+ 节点、15KB+，前端只需要这一个数字。
+         *     传全量会让 /modes 每次多传几十 KB。
+         *
+         *   ★ 为什么不写死 6：换工作流时自动跟着变（判据在数据里，不在代码里）。
+         */
+        transitionStep: (() => {
+          const wf = m._workflow;
+          if (!wf) return null;
+          /* 找第一个带 transition_step 数值输入的节点 —— 不写死节点 id */
+          for (const node of Object.values(wf)) {
+            const v = node?.inputs?.transition_step;
+            if (typeof v === "number" && Number.isFinite(v)) return v;
+          }
+          return null;
+        })(),
       }));
     },
 

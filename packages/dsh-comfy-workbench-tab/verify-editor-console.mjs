@@ -1203,7 +1203,18 @@ check("提交前校验 transition_step 与步数冲突",
   "不拦的话跑几十秒才崩，用户以为卡住了");
 
 check("校验判据取自工作流而不是写死数字",
-  /wf\["397"\]\?\.inputs\?\.transition_step/.test(wbC2),
+  /**
+   * ★ 2026-10-23 改判据。
+   *
+   *   第一版查前端源码里的 `wf["397"]?.inputs?.transition_step` ——
+   *   但那个写法是错的（`mode` 未声明，且 /modes 不返回 _workflow），
+   *   已改成由后端提供标量 currentMode.transitionStep。
+   *   ⇒ 判据跟着挪到后端：必须从工作流里遍历取出，不能写死。
+   */
+  (() => {
+    const s = code(fs.readFileSync(path.join(HERE, "..", "dsh-comfy-bridge", "src", "index.js"), "utf8"));
+    return /node\?\.inputs\?\.transition_step/.test(s);
+  })(),
   "写死 6 换个工作流就失效");
 
 /* ══ ⑳ ComfyUI 启动必须留日志（2026-10-23，实测无日志查不了崩溃）══ */
@@ -1333,6 +1344,52 @@ check("README 的 ffmpeg 说明与实际脚本一致",
     return /scripts\/install-ffmpeg\.mjs/.test(readme) && fs.existsSync(ffInstaller);
   })(),
   "文档提到的东西必须真的存在");
+
+/* ══ ㉓ 前端不许引用未声明的变量（2026-10-23，实测踩到）═══════════ */
+/**
+ * 实测事故：我给 onGenerate 加「步数太小」校验时写了 `mode?._workflow`，
+ *   而本组件里工作流对象叫 `currentMode` —— `mode` 根本没声明。
+ *
+ *   表现：点「生成」毫无反应。不报错、不发请求、按钮不变。
+ *   页面上抓到的异常是：ReferenceError: mode is not defined
+ *   onGenerate 在第一个 await 之前就抛了，被外层 try/catch 吞成 setError。
+ *
+ * ★ 为什么难发现：可空链 `?.` 只防「值是 null/undefined」，
+ *   **防不住「变量根本没声明」** —— 未声明会直接抛 ReferenceError。
+ *   这类错误 IDE 能查，但写的时候很容易以为「有 ?. 就安全」。
+ *
+ * ★ 判据：扫 WorkbenchView 里所有 `xxx?._workflow` / `xxx.transitionStep`，
+ *   左边的名字必须是组件里真实声明过的。
+ */
+const wbSrc = fs.readFileSync(path.join(HERE, "src", "WorkbenchView.js"), "utf8");
+const wbCode = code(wbSrc);
+
+check("步数校验用 currentMode.transitionStep（不是未声明的 mode）",
+  /currentMode\?\.transitionStep/.test(wbCode),
+  "第一版写成 mode?._workflow，直接 ReferenceError，点生成毫无反应");
+
+check("不许再出现裸 mode?._workflow 引用",
+  /**
+   * ★ 只查 `mode?._workflow` 这种精确形式 ——
+   *   组件里 applyDefaults(mode) 的形参 legitimately 叫 mode，不能误伤。
+   */
+  !/(?<![A-Za-z_$])mode\?\._workflow/.test(wbCode),
+  "可空链防不住「变量未声明」");
+
+check("后端 /modes 提供 transitionStep（前端不再依赖 _workflow）",
+  (() => {
+    const s = code(fs.readFileSync(path.join(HERE, "..", "dsh-comfy-bridge", "src", "index.js"), "utf8"));
+    return /transitionStep:/.test(s) && /transition_step/.test(s);
+  })(),
+  "_workflow 有 15KB+，没必要每次进页面都传");
+
+check("transitionStep 是从工作流现取而不是写死数字",
+  (() => {
+    const s = code(fs.readFileSync(path.join(HERE, "..", "dsh-comfy-bridge", "src", "index.js"), "utf8"));
+    /* 必须是遍历 inputs.transition_step 取出来的 */
+    return /node\?\.inputs\?\.transition_step/.test(s);
+  })(),
+  "写死 6 换个工作流就失效");
 
 /* ── 汇总 ── */
 console.log("");
