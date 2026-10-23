@@ -11452,7 +11452,7 @@ function ComfySettingsSection() {
       value: draft.comfyPath,
       onChange: (v) => setDraft((d) => ({ ...d, comfyPath: v })),
       status: statusOf(draft.comfyPath),
-      placeholder: "\u4F8B\u5982 D:\\ComfyUI  \u6216  D:\\Comfy-Desktop\\ComfyUI-Installs\\My_Comfy_UI",
+      placeholder: "\u4F8B\u5982 D:\\ComfyUI   \u6216   C:\\ComfyUI_windows_portable\\ComfyUI",
       hint: "\u8BE5\u76EE\u5F55\u4E0B\u5E94\u6709 ComfyUI\\main.py \u4E0E ComfyUI\\.venv\\Scripts\\python.exe"
     }),
     /**
@@ -11475,7 +11475,7 @@ function ComfySettingsSection() {
       value: draft.modelsDir,
       onChange: (v) => setDraft((d) => ({ ...d, modelsDir: v })),
       status: statusOf(draft.modelsDir),
-      placeholder: "\u4F8B\u5982 D:\\Comfy-Desktop\\ComfyUI-Shared\\models  \u6216  <ComfyUI>\\ComfyUI\\models",
+      placeholder: "\u4F8B\u5982 D:\\ComfyUI\\models   \u6216   C:\\ComfyUI_windows_portable\\ComfyUI\\models",
       hint: "\u7559\u7A7A\u5219\u7528 <ComfyUI>\\models\u3002\u6A21\u578B\u6E05\u5355\u7684\u300C\u7F3A\u5931\u300D\u9879\u4F1A\u63D0\u793A\u5E94\u653E\u5230\u8FD9\u4E2A\u76EE\u5F55\u4E0B\u7684\u54EA\u4E2A\u5B50\u76EE\u5F55\u3002"
     }),
     h11(Field, {
