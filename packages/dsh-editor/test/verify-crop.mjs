@@ -12,12 +12,20 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { createTimeline, addClip, createTimeline as _c } from "../src/timeline.mjs";
 import { buildRenderCommand } from "../src/render.mjs";
 
 const FFMPEG = process.env.FFMPEG_PATH ?? "ffmpeg";
-const SRC = process.env.EVIDENCE_VIDEO ?? "";
+/**
+ * ★ 2026-10-23：原来是 ?? ""，没有环境变量就直接 exit(1) ——
+ *   导致这个脚本永远无法登记进 verify-all（登记了也必红）。
+ *   改成回退到仓库里的证据视频（相对本文件解析，不写死绝对路径）。
+ */
+const __HERE = path.dirname(fileURLToPath(import.meta.url));
+const SRC = process.env.EVIDENCE_VIDEO
+  ?? path.resolve(__HERE, "../../docs/evidence/yz-result.mp4");
 const OUT = process.env.EVIDENCE_OUT ?? "";
 
 let pass = 0, fail = 0;
@@ -56,7 +64,21 @@ async function probe(file) {
 }
 
 console.log("═══ 前置 ═══");
-if (!fs.existsSync(SRC)) { console.error(`  ✗ 素材不存在：${SRC}`); process.exit(1); }
+/**
+ * ★ 2026-10-23：没素材时【跳过】而不是失败。
+ *
+ *   跳过与失败必须分开 ——
+ *     跳过 = 这条验收今天不适用（没素材）
+ *     失败 = 功能坏了
+ *   混在一起会让「没素材」显示成「功能坏了」，把真问题淹掉。
+ */
+if (!fs.existsSync(SRC)) {
+  console.log(`  – 跳过：素材不存在（${SRC}）`);
+  console.log("     设 EVIDENCE_VIDEO 环境变量指向一个视频即可运行本验收");
+  console.log("");
+  console.log("  通过 0 / 0（跳过）");
+  process.exit(0);
+}
 if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
 const src = await probe(SRC);
 console.log(`     源 ${src.width}x${src.height}`);
@@ -143,4 +165,5 @@ if (fail) {
   process.exit(1);
 }
 console.log("  画面裁剪真机验收全过");
+
 
