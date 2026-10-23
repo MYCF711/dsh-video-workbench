@@ -1,3 +1,11 @@
+import { fileURLToPath, pathToFileURL } from "node:url";
+/**
+ * ★ 2026-10-23 D2 去敏：HERE 从本文件位置推导。
+ *   ★ pathToFileURL 也要 import —— 第一版漏了，运行时报
+ *     `ReferenceError: pathToFileURL is not defined`。
+ *     静态语法检查抓不到（Identifier 是合法的），只有真跑才暴露。
+ */
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 /**
  * 角色卡桥验收（2026-10-20 新增）。
  *
@@ -34,7 +42,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const MOD = "file:///D:/主工作区/DSH视频工作台/packages/dsh-comfy-workbench-tab/lib/asset-scan.js";
+/**
+ * ★ 2026-10-23 D2 去敏：原来写死 file:///D:/主工作区/... 绝对 URL。
+ *   改用 pathToFileURL 从本文件推导 —— 别的机器 clone 下来也能跑。
+ */
+const MOD = pathToFileURL(path.resolve(HERE, "lib", "asset-scan.js")).href;
 const { loadCharacterTags, mergeLibrary, filterItems } = await import(MOD);
 
 let pass = 0, fail = 0;

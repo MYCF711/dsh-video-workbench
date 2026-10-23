@@ -41,12 +41,33 @@ import { fileURLToPath } from "node:url";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
 
-/** 本机专属路径的特征 */
+/**
+ * 本机专属路径的特征。
+ *
+ * ★ 2026-10-23 扩了两类（D2 去敏时发现的）：
+ *   ① D:/主工作区/... —— 本仓库自己的绝对路径。
+ *      别人 clone 到别的盘，整个验收体系一条都跑不起来。
+ *   ② file:///D:/... —— 上面那种的三斜杠 URL 形式。
+ *      ★ 我第一版只处理了 ①，漏了 ②，因为替换规则是按
+ *        `const X = "D:/..."` 这一种写法写的。
+ */
 const PATTERNS = [
   { re: /C:[\\/]Users[\\/](?!<|x|\{|\$)[A-Za-z][A-Za-z0-9._-]*[\\/]/, name: "硬编码用户目录" },
   { re: /dsh-tok\.txt/, name: "本机 token 文件名" },
   { re: /restart-test2?\.ps1/, name: "本机重启脚本" },
+  { re: /D:[\\/]主工作区[\\/]DSH视频工作台/, name: "本仓库的绝对路径" },
+  { re: /file:\/\/\/[A-Za-z]:[\\/]/, name: "file:/// 形式的绝对路径" },
 ];
+
+/**
+ * 允许的例外（仓库外部的参考源）。
+ *
+ * ★ D:/主工作区/_upstream/artcraft-demo 是【上游参考源】，不在本仓库里。
+ *   引用它的脚本改成「找不到就跳过」是另一件事（adapter 层），
+ *   这些路径本身保留是有意为之 —— 它们是「本机把上游放在哪」的约定。
+ *   ⇒ 单独列出来，而不是笼统允许所有 D:/ 路径。
+ */
+const UPSTREAM_RE = /D:[\\/]主工作区[\\/]_upstream/;
 
 /** 要扫的代码扩展名（文档不在此列） */
 const CODE_EXT = /\.(mjs|js|cjs|ps1|json|yml|yaml)$/;
@@ -65,6 +86,8 @@ const ALLOW = [
   /tools[\\/]verify-no-local-paths\.mjs$/,
   /* check-dead-paths 里判断「dsh-tok.txt 是文件名不是包名」的那行逻辑说明 */
   /tools[\\/]check-dead-paths\.mjs$/,
+  /* 临时探针备份目录（不在 git 里，是调试期的快照） */
+  /\.probe-backup[\\/]/,
   /* 一次性修复脚本，它的标题就要说明它修什么 */
   /tools[\\/]fix-hardcoded-token(-2)?\.mjs$/,
 ];
@@ -141,4 +164,6 @@ console.log("    它从 DSH_TEST_TOKEN > DSH_TEST_TOKEN_FILE > $DSH_HOME/.test-t
 console.log(`  通过 ${files - hits.length} / ${files}`);
 console.log("");
 process.exit(1);
+
+
 

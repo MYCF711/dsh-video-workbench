@@ -57,7 +57,7 @@ const check = (name, ok, detail = "") => {
 
 /* ── ① 模型与依赖真实存在 ───────────────────────────────────── */
 
-const MODEL_DIR = "D:/主工作区/DSH视频工作台/.models/whisper";
+const MODEL_DIR = path.resolve(HERE, "..", "..", ".models", "whisper");
 const modelBin = path.join(
   MODEL_DIR,
   "models--Systran--faster-whisper-small",

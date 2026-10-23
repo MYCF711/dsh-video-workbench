@@ -9,6 +9,13 @@
  *   ⑤ 二采图比一采图大（×1.5 放大后再采样，尺寸应更大）
  *   ⑥ 关闭 secondPass 时只出 1 张（开关真的生效）
  */
+/**
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
+ */
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 import fs from 'node:fs';
 
 /**
@@ -58,7 +65,7 @@ const PREFIX = '/comfy-bridge';
  */
 import { TOKEN, skipWithoutToken } from "../tools/test-env.mjs";
 if (!TOKEN) skipWithoutToken("verify-krea2.mjs");
-const OUT_DIR = 'D:/主工作区/DSH视频工作台/docs/evidence';
+const OUT_DIR = path.resolve(HERE, '..', '..', 'docs', 'evidence');
 
 const tok = TOKEN ?? "";
 const cookie = `dsh-auth-CK36o8O6fn6VWHrnbEp0bsjzKPKRmilHp-TBfPBH65k=${tok}`;

@@ -1,9 +1,16 @@
 // 对 ui-to-api 五条判据做变异测试
+/**
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
+ */
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
 
-const SRC = "D:/主工作区/DSH视频工作台/packages/tools/ui-to-api.mjs";
-const VERIFY = "D:/主工作区/DSH视频工作台/packages/tools/verify-ui-to-api.mjs";
+const SRC = path.join(HERE, "ui-to-api.mjs");
+const VERIFY = path.join(HERE, "verify-ui-to-api.mjs");
 const orig = fs.readFileSync(SRC, "utf8");
 
 const mutations = [

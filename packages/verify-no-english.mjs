@@ -21,6 +21,13 @@
  *   登记方式见文件末尾。
  */
 
+/**
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
+ */
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 import fs from "node:fs";
 
 import { BASE as TEST_BASE, TOKEN, authCookie } from "./tools/test-env.mjs";
@@ -120,11 +127,36 @@ if (argv.includes("--self-test")) {
 }
 
 const dumpPath = argv.find((a) => !a.startsWith("--"))
-  ?? "D:/主工作区/DSH视频工作台/.state/timeline-text.txt";
+  ?? path.resolve(HERE, "..", ".state", "timeline-text.txt");
 
 console.log("\n  漏翻检测");
 const r = analyzeFile(dumpPath);
-if (!r) process.exit(2);
+/**
+ * ★ 2026-10-23：缺文件时走【跳过】而不是 exit(2)。
+ *
+ *   原来 exit(2) ⇒ verify-all 里永远显示这一项失败，
+ *   而真实原因只是「还没在浏览器里导出文本」。
+ *
+ *   ★ 跳过 ≠ 失败：
+ *     跳过 = 这条验收今天不适用（没有导出样本）
+ *     失败 = 真的检出漏翻
+ *   混在一起会让「没准备样本」显示成「功能坏了」，
+ *   把真问题淹掉（这个教训在 test-env.mjs 里也写过一次）。
+ *
+ *   ★ 但也不能静默跳过 —— 要明确说出「怎么让它跑起来」。
+ */
+if (!r) {
+  console.log("");
+  console.log("  – 跳过：没有导出样本，无法检测漏翻");
+  console.log("     让它真的跑起来：");
+  console.log("       ① 打开剪辑台，浏览器控制台执行");
+  console.log("          copy(document.querySelector('.ac-scope').innerText)");
+  console.log(`       ② 存成 ${dumpPath}`);
+  console.log("       ③ 重跑本脚本");
+  console.log("");
+  console.log("  通过 0 / 0（跳过）");
+  process.exit(0);
+}
 
 console.log(`  文本长度：${r.textLen}`);
 console.log(`  英文词总数：${r.total}`);
