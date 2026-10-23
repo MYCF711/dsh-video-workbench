@@ -283,8 +283,80 @@ console.log("\n⑤ 正常输入仍能通过（防止校验过头）");
  * ★ 2026-10-21 修：原来是异步 IIFE，脚本不等它就退出。
  *   实测：跑完 input/ 里还留 wb_ref_image_0_src_*.png。
  *   ⇒ 改成 await + 先等 1 秒（让最后的上传请求落地）。
+ *
+ * ★★ 2026-10-23 三修 —— 前两版都没修对，根因在别处
+ *
+ *   【错误的第一版】固定 sleep 1000ms
+ *     「赌上传写完了」。负载高、或放进 verify-all 里跑就赌输。
+ *
+ *   【错误的第二版】轮询「目录内容连续两次相同」
+ *     仍然漏。实测证据（决定性）：
+ *       报「清理了 1 / 1」，但跑完目录里还有一个，
+ *       而且文件名从 x0sku8 变成另一个，时间戳 17:03:53 → 17:06:22。
+ *     ⇒ 它删掉的是【上一轮遗留】的文件，本轮真正上传的那个
+ *       在删除动作【之后】才落地。
+ *
+ *   【真正的根因】桥的上传是「先回 HTTP 200，再写盘」——
+ *     本脚本收到 200 就继续往下跑，此时桥还没开始写。
+ *     「目录稳定」这个判据在这里没用：写盘之前目录本来就很稳定。
+ *
+ *   ⇒ 正确判据：必须【看到新文件出现】，然后等它稳定（mtime 不再变）。
+ *     只看到「目录没变化」不算数。
+ *
+ *   ★ 这是「等异步动作完成」的通用教训：
+ *     判据要盯【预期出现的那个变化】，不是盯【没有变化】。
  */
-await new Promise((r) => setTimeout(r, 1000));
+async function waitForUploadLanded(expectedNew, maxMs = 15000, intervalMs = 200) {
+  const t0 = Date.now();
+  let stableSince = null;
+  let lastSig = null;
+  while (Date.now() - t0 < maxMs) {
+    let names = [];
+    try { names = fs.readdirSync(INPUT_DIR); } catch { return; }
+    const fresh = names.filter((n) => !SNAPSHOT.has(n));
+
+    /* 还没看到任何新文件 —— 继续等（这就是上一版漏掉的那段） */
+    if (fresh.length === 0) {
+      stableSince = null;
+      lastSig = null;
+      await new Promise((r) => setTimeout(r, intervalMs));
+      continue;
+    }
+
+    /* 看到了：再看它稳不稳定（名字集合 + mtime 都不再变） */
+    const sig = fresh
+      .map((n) => {
+        try {
+          const st = fs.statSync(path.join(INPUT_DIR, n));
+          return `${n}:${st.size}:${st.mtimeMs}`;
+        } catch { return `${n}:?`; }
+      })
+      .sort()
+      .join("|");
+
+    if (sig === lastSig) {
+      if (stableSince === null) stableSince = Date.now();
+      /* ★ 新文件出现后还要再稳 1.2 秒，防「先建 0 字节再写内容」 */
+      if (Date.now() - stableSince >= 1200) return fresh.length;
+    } else {
+      lastSig = sig;
+      stableSince = null;
+    }
+
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  /* 超时：把看到的都算上，下面照样会尝试删 */
+  try {
+    const n = fs.readdirSync(INPUT_DIR).filter((x) => !SNAPSHOT.has(x)).length;
+    if (n > 0) console.log(`  ⚠ 等待上传落地超时（${maxMs}ms），但已看到 ${n} 个新文件`);
+    else console.log(`  ⚠ 等待上传落地超时（${maxMs}ms），没看到新文件`);
+    return n;
+  } catch { return 0; }
+}
+
+const landed = await waitForUploadLanded();
+void landed;
+
 try {
   const now = new Set(fs.readdirSync(INPUT_DIR));
   const created = [...now].filter((n) => !SNAPSHOT.has(n));
@@ -294,6 +366,9 @@ try {
       try { fs.unlinkSync(path.join(INPUT_DIR, n)); gone++; } catch { /* 删不掉就算了 */ }
     }
     console.log(`\n  清理了 ${gone} / ${created.length} 个本次上传的文件`);
+    if (gone < created.length) {
+      console.log(`  ⚠ 有 ${created.length - gone} 个没删掉（可能被占用）`);
+    }
   }
 } catch { /* input 目录读不到就算了 */ }
 
@@ -304,3 +379,4 @@ if (fail) {
   process.exit(1);
 }
 console.log("  异常输入验收全过");
+

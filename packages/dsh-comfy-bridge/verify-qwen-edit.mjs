@@ -27,6 +27,27 @@ const __OUT_SNAPSHOT__ = (() => {
   } catch { return null; }
 })();
 
+/**
+ * ★★ 2026-10-23 补：本脚本会【上传】一张图到 input/，之前没人清它
+ *
+ *   实测证据：完整验收跑完，input/ 里留下 wb_ref_image_0_src_*.png，
+ *   大小 1836544 字节、PNG 尺寸 768×1368 —— 不是任何 1×1 测试图，
+ *   而是本脚本 L133 读出来的「刚生成的那张图」。
+ *
+ *   根因：它上传时 filename 写 'src.png'，桥存成
+ *   wb_ref_image_0_src_<随机>.png 落在 input/，
+ *   而 __cleanupNow__ 只扫 output/ —— 上传的那份永远没人删。
+ *
+ *   ⇒ 给 input/ 也拍快照，在同一个 cleanup 里一起清。
+ *
+ *   ★ 只删「跑之前不存在」的，绝不碰用户已有素材（§6.45 的纪律）。
+ */
+const __IN_SNAPSHOT__ = (() => {
+  try {
+    return new Set(fs.readdirSync("D:/Comfy-Desktop/ComfyUI-Shared/input"));
+  } catch { return null; }
+})();
+
 function __cleanupNow__(label = "") {
   if (!__OUT_SNAPSHOT__) return 0;
   try {
@@ -35,6 +56,16 @@ function __cleanupNow__(label = "") {
     for (const n of now) {
       if (__OUT_SNAPSHOT__.has(n)) continue;      // 跑之前就有，不碰
       try { fs.unlinkSync(`D:/Comfy-Desktop/ComfyUI-Shared/output/${n}`); removed++; } catch { /* 占用中，跳过 */ }
+    }
+    /* ★ 2026-10-23：连 input/ 里本脚本上传的那份一起清 */
+    if (__IN_SNAPSHOT__) {
+      try {
+        const ins = fs.readdirSync("D:/Comfy-Desktop/ComfyUI-Shared/input");
+        for (const n of ins) {
+          if (__IN_SNAPSHOT__.has(n)) continue;
+          try { fs.unlinkSync(`D:/Comfy-Desktop/ComfyUI-Shared/input/${n}`); removed++; } catch { /* 占用中 */ }
+        }
+      } catch { /* input 读不到就算了 */ }
     }
     if (removed) {
       console.log(`  （${label}已清理本次生成的 ${removed} 个中间产物，证据副本保留在 docs/evidence）`);
