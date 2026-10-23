@@ -583,6 +583,14 @@ steps.push(run('未声明变量检查（ReferenceError 的静态形态）', 'too
  *      改成「try 体 >=8 行 且 含 >=6 处多层属性访问」才算可疑。
  */
 steps.push(run('静默 catch 检查（会吞掉编程错误的地方）', 'tools', 'check-silent-catch.mjs', [], 180000));
+
+/**
+ * ★★ 2026-10-23 补：verify-png-tags.mjs 一直在 packages/ 根目录，
+ *   从没登记进 verify-all —— 而 verify-registry-complete 早该报出来，
+ *   但它自己也漏扫了根目录（只扫 PACKAGES 子目录的第一层）。
+ *   两处都修好后这条才暴露。13 项断言。
+ */
+steps.push(run('PNG 标签（写本体不改像素 / 中文 / 幂等）', '.', 'verify-png-tags.mjs', [], 120000));
 /**
  * ★★ 2026-10-23 新增：未声明变量检查
  *
