@@ -486,6 +486,44 @@ steps.push(run('M7 重启数据存活（进程 A 写盘 / 进程 B 恢复 / 换 
 steps.push(run('M4 preset（yml / cordis / skill / 与 M1 一致）', 'dsh-comfy-preset', 'verify-m4.mjs'));
 steps.push(run('增量回归（加 batch/steps2 后既有能力没坏）', 'dsh-comfy-bridge', 'test/verify-batch.mjs'));
 
+
+/* ══ 补齐遗漏的验收脚本（2026-10-23）════════════════════════════════
+ *
+ * 背景：统计发现磁盘上有 99 个 verify-*.mjs，verify-all 只登记了 60 个。
+ * 未登记的 24 个（排除元验收）实际都能跑，合计约 480 项断言 ——
+ * 也就是说过去这些断言一次都没在总验收里跑过。
+ *
+ * AGENTS §6.44a 记过这条：
+ *   「未登记进总验收的脚本 = 心理安慰。」
+ *
+ * ★ 补登记前先逐个跑过一遍（tools/audit-missing-verify.mjs），
+ *   确认 24/24 都能过才挂上去 —— 不能把不跑的当通过。
+ */
+steps.push(run('dsh-editor · agent-progress', 'dsh-editor', 'test/verify-agent-progress.mjs'));
+steps.push(run('dsh-editor · asset-root', 'dsh-editor', 'test/verify-asset-root.mjs'));
+steps.push(run('dsh-editor · audio-split', 'dsh-editor', 'test/verify-audio-split.mjs'));
+steps.push(run('dsh-editor · commands', 'dsh-editor', 'test/verify-commands.mjs'));
+steps.push(run('dsh-editor · crop', 'dsh-editor', 'test/verify-crop.mjs'));
+steps.push(run('dsh-editor · handoff-tools', 'dsh-editor', 'test/verify-handoff-tools.mjs'));
+steps.push(run('dsh-editor · host-entry', 'dsh-editor', 'test/verify-host-entry.mjs'));
+steps.push(run('dsh-editor · host-store', 'dsh-editor', 'test/verify-host-store.mjs'));
+steps.push(run('dsh-editor · m5-assets', 'dsh-editor', 'test/verify-m5-assets.mjs'));
+steps.push(run('dsh-editor · m6-reverse', 'dsh-editor', 'test/verify-m6-reverse.mjs'));
+steps.push(run('dsh-editor · m6-tools', 'dsh-editor', 'test/verify-m6-tools.mjs'));
+steps.push(run('dsh-editor · m7-bundle', 'dsh-editor', 'test/verify-m7-bundle.mjs'));
+steps.push(run('dsh-editor · m7-render', 'dsh-editor', 'test/verify-m7-render.mjs'));
+steps.push(run('dsh-editor · m7-shot', 'dsh-editor', 'test/verify-m7-shot.mjs'));
+steps.push(run('dsh-editor · m7-timeline', 'dsh-editor', 'test/verify-m7-timeline.mjs'));
+steps.push(run('dsh-editor · m7-trim', 'dsh-editor', 'test/verify-m7-trim.mjs'));
+steps.push(run('dsh-editor · m8-audio-edit', 'dsh-editor', 'test/verify-m8-audio-edit.mjs'));
+steps.push(run('dsh-editor · m9-preview', 'dsh-editor', 'test/verify-m9-preview.mjs'));
+steps.push(run('dsh-editor · persist-host', 'dsh-editor', 'test/verify-persist-host.mjs'));
+steps.push(run('dsh-editor · prompt-gate', 'dsh-editor', 'test/verify-prompt-gate.mjs'));
+steps.push(run('dsh-editor · sse', 'dsh-editor', 'test/verify-sse.mjs'));
+steps.push(run('dsh-editor · tools-def', 'dsh-editor', 'test/verify-tools-def.mjs'));
+steps.push(run('dsh-video-knowledge · rules', 'dsh-video-knowledge', 'src/verify-rules.mjs'));
+steps.push(run('dsh-video-knowledge · m0', 'dsh-video-knowledge', 'test/verify-m0.mjs'));
+
 /**
  * ── 资产库基线（2026-10-21 新增）────────��───────────────────────────
  *
