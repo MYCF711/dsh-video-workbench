@@ -1183,6 +1183,45 @@ check("前端按 groups 分组渲染（含该放哪个目录）",
 check("分组显示每组缺几个",
   /g\.missing/.test(comfySettingsC));
 
+/* ══ ⑲ transition_step 与步数冲突（2026-10-23，实测踩到）═══════════ */
+/**
+ * 实测事故：前端 STEPS=[4,6,8,10,15,20]，选 4 步提交后
+ *   跑几十秒崩在节点 397：
+ *     SelfLift: transition_step 6 out of range for 4 steps
+ *     sigmas = [1.0, 0.973, 0.923, 0.8, 0.0]   ← 5 个 = 4 步
+ *
+ * 根因：ComfyUI 的 schema 只校验 transition_step 的 min/max（1~10000），
+ *       **不校验它与总步数的关系** —— 那是节点内部的 ValueError，
+ *       提交阶段完全看不出来。
+ *
+ * ⇒ 前端必须在提交前拦住，且判据要取自工作流本身（不能写死 6）。
+ */
+const wbC2 = code(fs.readFileSync(path.join(HERE, "src", "WorkbenchView.js"), "utf8"));
+
+check("提交前校验 transition_step 与步数冲突",
+  /transition_step/.test(wbC2) && /总步数必须大于它/.test(wbC2),
+  "不拦的话跑几十秒才崩，用户以为卡住了");
+
+check("校验判据取自工作流而不是写死数字",
+  /wf\["397"\]\?\.inputs\?\.transition_step/.test(wbC2),
+  "写死 6 换个工作流就失效");
+
+/* ══ ⑳ ComfyUI 启动必须留日志（2026-10-23，实测无日志查不了崩溃）══ */
+const launcherC = code(fs.readFileSync(path.join(HERE, "..", "dsh-comfy-bridge", "src", "comfy-launcher.mjs"), "utf8"));
+
+check("ComfyUI 启动把输出重定向到日志文件",
+  /**
+   * 实测：v2 跑到第 10 分钟进程退出，而 logs/comfyui.log 时间戳停在 10-18，
+   *      本次运行任何输出都没留下 —— 完全无法判断崩溃原因。
+   * 根因：sh.Run(cmd, 0, False) 的 0 表示隐藏窗口，同时也丢弃了 stdout/stderr。
+   */
+  /dsh-launch\.log|1>>|2>&1/.test(launcherC),
+  "崩溃后连原因都看不到");
+
+check("日志用追加而不是覆盖",
+  />>/.test(launcherC),
+  "覆盖的话只能看到最后一次启动");
+
 /* ── 汇总 ── */
 console.log("");
 console.log("═".repeat(60));
