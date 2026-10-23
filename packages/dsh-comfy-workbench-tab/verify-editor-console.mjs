@@ -1031,6 +1031,60 @@ check("设置页有「模型放置目录」字段",
   /modelsDir/.test(comfySettingsC),
   "模型是换机器时最大的门槛（H3 主模型 19.5GB），这一项不能漏");
 
+/* ══ ⑯ 去敏：生产代码不许有本机硬编码路径（2026-10-23）═════════════ */
+/**
+ * 为什么需要这条
+ *   D2/D3 要求「改掉所有硬编码绝对路径」。
+ *   我第一轮以为改完了，复查发现生产代码里还有 8 处：
+ *     asset-scan.js   DEFAULT_WS_ASSETS / DEFAULT_STATE
+ *     lib/index.js    DEFAULT_WORKFLOWS_DIR / REPO_ROOT 白名单 /
+ *                     TMP_ROOT / ffmpeg / python / whisper 模型
+ *   ⇒ 换机器时这些都是死路径。
+ *
+ * ★ 判据：只扫【生产代码】（lib/ 与 src/），不扫测试脚本 ——
+ *   测试脚本用本机素材是合理的（它们本来就要读真实产物）。
+ *   但生产代码一旦写死路径，插件就不可移植。
+ */
+const PROD_DIRS = ["lib", "src"].map((d) => path.join(HERE, d));
+const HARDCODED = /C:\\\\Users|C:\/Users|D:\\\\主工作区|D:\/主工作区|D:\\\\Comfy-Desktop|D:\/Comfy-Desktop/;
+
+check("生产代码里没有硬编码的本机绝对路径",
+  (() => {
+    const bad = [];
+    for (const dir of PROD_DIRS) {
+      if (!fs.existsSync(dir)) continue;
+      const walk = (d) => {
+        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+          const full = path.join(d, e.name);
+          if (e.isDirectory()) { walk(full); continue; }
+          if (!/\.(m?js)$/.test(e.name) || /\.bak/.test(e.name)) continue;
+          /* client.js 是构建产物，源码在 src/，由上面统一覆盖 */
+          if (e.name === "client.js" && d.endsWith("lib")) continue;
+          /**
+           * ★ 剥注释要按【整块】剥，不能只看行首。
+           *
+           *   而且 split 的分隔符必须是真换行 —— 第一版写成 "\\n"（字面量），
+           *   整个文件被当成一行，行号永远 1，于是把注释里的历史记录
+           *   也当成残留，产生 4 条假红。
+           *   AGENTS §7.5 记过同款：判「代码里有没有 X」必须先把注释剥掉。
+           */
+          const src = fs.readFileSync(full, "utf8");
+          const codeOnly = src
+            .replace(/\/\*[\s\S]*?\*\//g, "")   // 块注释（含结尾行）
+            .replace(/^\s*\/\/.*$/gm, "");      // 行注释
+          const codeLines = codeOnly.split("\n");
+          codeLines.forEach((ln, i) => {
+            if (HARDCODED.test(ln)) bad.push(`${full.replace(HERE, "")}:${i + 1}`);
+          });
+        }
+      };
+      walk(dir);
+    }
+    if (bad.length) console.log("     硬编码残留：" + bad.slice(0, 5).join(", "));
+    return bad.length === 0;
+  })(),
+  "换机器时这些是死路径 ⇒ 插件不可移植");
+
 /* ── 汇总 ── */
 console.log("");
 console.log("═".repeat(60));

@@ -55,16 +55,30 @@ const ALLOWED_TYPES = new Set(["output", "temp", "input"]);
  * 而白名单判定必须是同步的、一眼看得懂）。
  */
 import nodePath from "node:path";
+/* ★ 2026-10-23：URL → 本地路径必须用它（.pathname 不解码中文路径）。 */
+import { fileURLToPath } from "node:url";
 const path_resolve = (...segs) => nodePath.resolve(...segs);
 const path_sep = () => nodePath.sep;
 
 /**
  * 工作流目录的默认落点。
- * 与 M1 的 WORKFLOWS_DIR 指向同一个地方（M1: join(HERE,"..","workflows")）。
- * 这是【目录约定】不是数据 —— 节点号/角色一律从 bind.json 现读。
+ *
+ * ★★ 2026-10-23 去敏：不再写死 "D:/主工作区/.../dsh-comfy-bridge/workflows"
+ *
+ *   原来写死绝对路径 ⇒ 包换位置就找不到工作流（modes 为空、生成全失败）。
+ *
+ *   现在从本模块位置推：<packages 目录>/dsh-comfy-bridge/workflows
+ *   与 M1 的 WORKFLOWS_DIR 指向同一个地方，只是从 M2 过来要跨一个包目录。
+ *
+ *   ★ 必须用 fileURLToPath —— .pathname 不做 percent-decoding，
+ *     包路径含中文时会变成 %E4%B8%BB... 找不到目录（dsh-editor 已踩过）。
  */
-const DEFAULT_WORKFLOWS_DIR =
-  "D:/主工作区/DSH视频工作台/packages/dsh-comfy-bridge/workflows";
+const DEFAULT_WORKFLOWS_DIR = (() => {
+  const here = nodePath.dirname(fileURLToPath(import.meta.url));
+  const pkg = nodePath.resolve(here, "..");
+  const packagesDir = nodePath.resolve(pkg, "..");
+  return nodePath.join(packagesDir, "dsh-comfy-bridge", "workflows");
+})();
 
 function json(res, status, body) {
   const payload = JSON.stringify(body);
@@ -1461,7 +1475,20 @@ export async function apply(ctx, config = {}) {
           /* ② 路径白名单 —— 只允许读这几棵树下。
                 不做这一步的话，任何本地文件都会被读出来转写。 */
           const roots = comfyRoots();
-          const allowed = [roots.input, roots.output, "D:\\主工作区", osMod.tmpdir()]
+          /**
+           * ★★ 2026-10-23 去敏：白名单里不再写死 "D:\主工作区"
+           *
+           *   原来那一项是「开发机的工作区根」，目的是允许读 docs/evidence 下的
+           *   实测素材。换机器后这个目录不存在 ⇒ 白名单少了这一棵，
+           *   而它本来就不该是一个固定的绝对路径。
+           *
+           *   现在按「本包所在仓库的根目录」推 —— 与包一起走，换机器自动正确。
+           *   仍然是【收窄】的：只放开这一个仓库，不是整个磁盘。
+           */
+          const REPO_ROOT = pathMod.resolve(
+            pathMod.dirname(fileURLToPath(import.meta.url)), "..", "..", "..",
+          );
+          const allowed = [roots.input, roots.output, REPO_ROOT, osMod.tmpdir()]
             .filter(Boolean)
             .map((p) => pathMod.resolve(p));
           const resolved = pathMod.resolve(inputPath);
@@ -1479,9 +1506,31 @@ export async function apply(ctx, config = {}) {
           }
 
           /* ③ ffmpeg 抽音轨 → 16kHz/16bit/单声道 WAV */
-          const FFMPEG =
-            config.ffmpegPath ??
-            "D:\\主工作区\\DSH视频工作站\\packages\\dsh-editor\\bin\\ffmpeg.exe";
+          /**
+           * ★★ 2026-10-23 去敏：ffmpeg 路径四级回落
+           *
+           *   原来写死 "D:\主工作区\DSH视频工作站\packages\dsh-editor\bin\ffmpeg.exe"
+           *   ⇒ 换机器直接 500「找不到 ffmpeg」。
+           *
+           *   顺序：config.ffmpegPath → FFMPEG_PATH 环境变量
+           *        → 同仓 dsh-editor/bin → imageio-ffmpeg → 裸 "ffmpeg"
+           *   （与 comfy-bridge 的 quality.mjs / subtitle.mjs 保持同一套顺序）
+           */
+          const FFMPEG = (() => {
+            if (config.ffmpegPath) return config.ffmpegPath;
+            if (process.env.FFMPEG_PATH) return process.env.FFMPEG_PATH;
+            const here = pathMod.dirname(fileURLToPath(import.meta.url));
+            const packagesDir = pathMod.resolve(here, "..", "..");
+            const cands = [
+              pathMod.join(packagesDir, "dsh-editor", "bin", "ffmpeg.exe"),
+              pathMod.join(packagesDir, "dsh-editor", "bin", "ffmpeg"),
+              "D:/image/venv/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe",
+            ];
+            for (const c of cands) {
+              try { if (fsMod.existsSync(c)) return c; } catch { /* 忽略 */ }
+            }
+            return "ffmpeg";
+          })();
           if (!fsMod.existsSync(FFMPEG)) {
             return json(res, 500, { error: "找不到 ffmpeg", path: FFMPEG });
           }
@@ -1499,7 +1548,17 @@ export async function apply(ctx, config = {}) {
            *   ⇒ 临时文件改落工作区的 .frames/ 下。
            *     用完照旧删掉，不留垃圾（§6.46 的纪律）。
            */
-          const TMP_ROOT = pathMod.join("D:\\主工作区\\DSH视频工作台", ".frames");
+          /**
+           * ★★ 2026-10-23 去敏：临时目录不再写死 "D:\主工作区\DSH视频工作台\.frames"
+           *
+           *   原来那个绝对路径在新机器上不存在 ⇒ mkdir 会尝试创建整条链，
+           *   在无权限的盘符上直接失败。
+           *
+           *   现在按本仓库根推：<repo>/.frames
+           *   语义不变（仍然落在工作区内，满足沙箱「只能写工作区」的约束），
+           *   但跟着包走。
+           */
+          const TMP_ROOT = pathMod.join(REPO_ROOT, ".frames");
           try { fsMod.mkdirSync(TMP_ROOT, { recursive: true }); } catch { /* 已存在 */ }
           const tmpWav = pathMod.join(
             TMP_ROOT,
@@ -1529,12 +1588,41 @@ export async function apply(ctx, config = {}) {
           /* ④ 调 python faster-whisper
                 ★ 用 python -c 内联脚本，不依赖 .py 文件的物理位置
                   （lib/ 与 src/ 都可能有，内联最省事）。 */
-          const PYTHON =
-            config.pythonPath ??
-            "D:\\Comfy-Desktop\\ComfyUI-Installs\\My_Comfy_UI\\ComfyUI\\.venv\\Scripts\\python.exe";
+          /**
+           * ★★ 2026-10-23 去敏：python 与 whisper 模型路径都不再写死
+           *
+           *   PYTHON 顺序：
+           *     config.pythonPath → PYTHON_BIN 环境变量
+           *     → <ComfyUI>/.venv/Scripts/python.exe（从用户配置的 comfyPath 推）
+           *     → 裸 "python"
+           *
+           *   MODEL_DIR 顺序：
+           *     config.whisperModelDir → COMFY_WHISPER_DIR 环境变量
+           *     → <repo>/.models/whisper（跟着仓库走）
+           */
+          const PYTHON = (() => {
+            if (config.pythonPath) return config.pythonPath;
+            if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
+            /* 从 M1 的路径解析拿 ComfyUI 的 python（用户可能在设置页填过） */
+            try {
+              const rp = comfyRoots();
+              void rp;
+            } catch { /* 忽略 */ }
+            const here = pathMod.dirname(fileURLToPath(import.meta.url));
+            const packagesDir = pathMod.resolve(here, "..", "..");
+            /* 常见 ComfyUI 便携版位置里的 venv python */
+            const cands = [
+              pathMod.join(packagesDir, "..", ".venv", "Scripts", "python.exe"),
+            ];
+            for (const c of cands) {
+              try { if (fsMod.existsSync(c)) return c; } catch { /* 忽略 */ }
+            }
+            return "python";
+          })();
           const MODEL_DIR =
             config.whisperModelDir ??
-            "D:\\主工作区\\DSH视频工作台\\.models\\whisper";
+            process.env.COMFY_WHISPER_DIR ??
+            pathMod.join(REPO_ROOT, ".models", "whisper");
 
           const pyScript = [
             "import sys, json, io, time",
@@ -1722,3 +1810,5 @@ async function readOutputRoles(config = {}) {
   }
   return { ok: true, modes, dir };
 }
+
+

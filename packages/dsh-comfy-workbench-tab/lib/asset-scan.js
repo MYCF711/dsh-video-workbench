@@ -30,6 +30,9 @@
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
+/* ★ 2026-10-23：把 URL 转本地路径必须用它 —— .pathname 不做 percent-decoding，
+   含中文的包路径会被编码成 %E4%B8%BB... 导致目录找不到（已在 dsh-editor 踩过）。 */
+import { fileURLToPath } from "node:url";
 import { readTextTagsSync } from "./png-tags.mjs";
 
 /* ── 类型判定（与 dsh-editor/assets.mjs 的 kindOf 同表，跨包不引）──── */
@@ -116,7 +119,41 @@ export function comfyRoots() {
  *   ⚠ 代价：不同日期子目录里同名文件会冲突 —— 实测 697 项里没有重名，
  *     但代码要能识别这种情况（见下面的 dup 计数）。
  */
-const DEFAULT_WS_ASSETS = "D:/主工作区/outputs/assets.json";
+/**
+ * 默认路径。
+ *
+ * ★★ 2026-10-23 去敏：不再写死本机绝对路径
+ *
+ *   原来：
+ *     const DEFAULT_WS_ASSETS = "D:/主工作区/outputs/assets.json";
+ *     const DEFAULT_STATE     = "D:/主工作区/DSH视频工作台/.state/asset-library.json";
+ *   ⇒ 换一台机器：assets.json 读不到（角色卡桥失效）、
+ *     状态文件写到不存在的目录（收藏/改名/回收站全丢）。
+ *
+ * ── 现在的推导
+ *   ① 环境变量 COMFY_WS_ASSETS / COMFY_ASSET_STATE
+ *   ② 从本模块位置推：<包目录>/outputs/assets.json
+ *      —— 与 dsh-editor 的 pickOutDir() 同一个约定（包内 outputs/）
+ *   ③ 从 DSH profile 目录推 .state/
+ *
+ *   ★ 为什么用 import.meta.url 而不是 process.cwd()：
+ *     cwd 在重启后可能变（AGENTS §6 记过），不能作为持久路径的基准。
+ */
+const HERE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const PKG_DIR = path.resolve(HERE_DIR, "..");
+
+/** 工作站资产索引（角色卡数据的来源）。不写死本机路径。 */
+const DEFAULT_WS_ASSETS = path.join(PKG_DIR, "outputs", "assets.json");
+
+/**
+ * 状态文件（收藏 / 别名 / 回收站）。
+ * 优先 DSH profile 目录（重启后稳定），否则落在包内 .state/。
+ */
+const DEFAULT_STATE = (() => {
+  const profDir = process.env.DSH_PROFILE_DIR;
+  if (profDir) return path.join(profDir, ".comfy-bridge", "asset-library.json");
+  return path.join(PKG_DIR, ".state", "asset-library.json");
+})();
 
 export const CHAR_TAG = "role:character";
 export const CHAR_PREFIX = "char:";
@@ -175,7 +212,8 @@ export function loadCharacterTags(file) {
 }
 
 /* ── 状态文件：收藏 / 别名 / 隐藏 ─────────────────────────────────── */
-const DEFAULT_STATE = "D:/主工作区/DSH视频工作台/.state/asset-library.json";
+/* ★ 2026-10-23：DEFAULT_STATE 已在文件上部按「profile 目录 / 包内 .state」推导，
+   这里不再重复定义（原先是写死的 D:/主工作区/... 绝对路径）。 */
 
 /**
  * ★★ 2026-10-20 新增：把角色标签写回工作站的 assets.json。
@@ -685,3 +723,4 @@ export async function moveToTrash(stateFile, absPath) {
   await fs.rename(absPath, dest);
   return dest;
 }
+

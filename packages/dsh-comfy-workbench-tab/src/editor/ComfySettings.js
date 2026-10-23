@@ -292,7 +292,7 @@ export function ComfySettingsSection() {
       value: draft.comfyPath,
       onChange: (v) => setDraft((d) => ({ ...d, comfyPath: v })),
       status: statusOf(draft.comfyPath),
-      placeholder: "例如 D:\\ComfyUI  或  D:\\Comfy-Desktop\\ComfyUI-Installs\\My_Comfy_UI",
+      placeholder: "例如 D:\\ComfyUI   或   C:\\ComfyUI_windows_portable\\ComfyUI",
       hint: "该目录下应有 ComfyUI\\main.py 与 ComfyUI\\.venv\\Scripts\\python.exe",
     }),
 
@@ -316,7 +316,7 @@ export function ComfySettingsSection() {
       value: draft.modelsDir,
       onChange: (v) => setDraft((d) => ({ ...d, modelsDir: v })),
       status: statusOf(draft.modelsDir),
-      placeholder: "例如 D:\\Comfy-Desktop\\ComfyUI-Shared\\models  或  <ComfyUI>\\ComfyUI\\models",
+      placeholder: "例如 D:\\ComfyUI\\models   或   C:\\ComfyUI_windows_portable\\ComfyUI\\models",
       hint: "留空则用 <ComfyUI>\\models。模型清单的「缺失」项会提示应放到这个目录下的哪个子目录。",
     }),
 
@@ -470,4 +470,5 @@ export function ComfySettingsSection() {
       : null
   );
 }
+
 
