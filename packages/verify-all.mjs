@@ -806,6 +806,27 @@ steps.push(run('D4/D5（包依赖可移植 + 四包能独立加载）', 'tools',
 steps.push(run('G1（版本记录 + 归档）', 'tools', 'verify-version-discipline.mjs', [], 180000));
 
 /**
+ * ★★ 2026-10-23 新增：E4 验收（README 与代码状态一致）
+ *
+ *   README 是给「第一次接触这个项目的人」看的，它说错了比不说更糟。
+ *
+ *   本项目已经吃过一次文档不一致的亏（AGENTS §6.25）：
+ *   文档写「修：if (caps.aspect) ...」，grep 代码发现那行从未存在。
+ *
+ *   本验收查的都是能从代码/文件核验的：
+ *     ① README 的包清单 = install.ps1 的 $pkgs / $bundleNames
+ *     ② README 里写的硬数字（如 93 / 93）= 当前真实步数
+ *        ★ 这条最容易过期 —— 每加一个验收就变了
+ *     ③ README 引用的 scripts 路径都存在
+ *     ④ 排障章节覆盖「空会话不渲染 tab」这条实测根因
+ *
+ *   变异测试：
+ *     · 把 93 改成 56 → 正确报红（提示「每加一个验收这个数字就过期」）
+ *     · 删掉「空会话不渲染」那段 → 正确报红
+ */
+steps.push(run('E4（README 与代码状态一致）', 'tools', 'verify-readme-consistency.mjs', [], 900000));
+
+/**
  * ★★ 2026-10-23 新增：元验收的元测试
  *
  *   踩过两次同类坑：

@@ -86,13 +86,29 @@ packages/dsh-editor/bin/ffmpeg.exe -version
 
 ### 3.3 装插件
 
-**方式 A：从 GitHub 装**（推荐）
+**方式 A：一键脚本**（本地已有仓库时最省事）
+
+```powershell
+cd <这个仓库>
+pwsh -NoProfile -File .\install.ps1 -Profile <你的profile>
+```
+
+它会做四件事并逐项打印结果：
+
+```
+① 找到 DSH_HOME 与 profile 目录
+② 在 profile 的 package.json 里写入 4 个 link: 依赖
+③ 在 dsh.profile.bundles 里追加 3 个包（dsh-video-knowledge 不进 bundles）
+④ 建 node_modules 软链
+```
+
+**方式 B：从 GitHub 装**
 
 ```bash
 dsh plugin --profile <你的profile> add github:<owner>/<repo>
 ```
 
-**方式 B：本地开发**
+**方式 C：手工改 profile**
 
 ```jsonc
 // <DSH_HOME>/profiles/<profile>/package.json
@@ -118,6 +134,24 @@ dsh plugin --profile <你的profile> add github:<owner>/<repo>
 ```
 
 ★ `dsh-video-knowledge` 只作依赖、不进 bundles（它没有插件入口）。
+
+★ 那 4 个 `link:` **必须**是绝对路径 —— profile 与仓库不在同一个
+workspace 里，写成相对路径（`link:../../../...`）任何一边移动就断。
+`install.ps1` 会按当前仓库位置自动生成，不用手算。
+
+#### 装完怎么确认装对了
+
+**别只看「有没有报错」** —— 跑一遍自检：
+
+```powershell
+cd packages
+node verify-all.mjs --static
+```
+
+期望：`94 / 94`，全部通过。
+
+（这个数字由 `packages/tools/verify-readme-consistency.mjs` 保证与
+`verify-all.mjs` 的实际步数一致 —— 每加一个验收它就会提醒改这里。）
 
 ### 3.4 填路径（**必做，否则跑不起来**）
 
