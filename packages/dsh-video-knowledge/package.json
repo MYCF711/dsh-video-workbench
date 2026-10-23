@@ -1,0 +1,43 @@
+{
+  "name": "dsh-video-knowledge",
+  "version": "0.1.0",
+  "description": "Prompt rules and quality gates for DSH video workbench: H3 production rules (skill), parameter verification, reverse-prompt targets. Consumed by dsh-editor via relative import — not loaded as a DSH plugin.",
+  "type": "module",
+  "exports": {
+    ".": "./src/verify-rules.mjs",
+    "./verify-rules": "./src/verify-rules.mjs",
+    "./skills/*": "./skills/*",
+    "./package.json": "./package.json"
+  },
+  "//dsh": [
+    "★ 这个包【故意没有】 dsh.client / dsh.bundle 声明。",
+    "  它不注册任何 slot、不提供任何路由，只是一个被 dsh-editor",
+    "  用相对路径 import 的纯逻辑库（verify-rules.mjs）。",
+    "",
+    "  为什么还要有 package.json：",
+    "    ① install.ps1 / README 把它列为 link: 依赖 ——",
+    "       没有 package.json 的话 npm 装软链会报「不是有效的包」",
+    "    ② 明确它是个包而不是散落的目录，便于以后单独发布",
+    "",
+    "  ★ 一定不要给它加 dsh.client ——",
+    "    加了之后 DSH 会要求 lib/client.js 存在，缺失会直接崩宿主（AGENTS §3.11）。"
+  ],
+  "scripts": {
+    "test": "node test/verify-m0.mjs"
+  },
+  "files": [
+    "src",
+    "skills",
+    "test"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "video",
+    "prompt-rules"
+  ]
+}
