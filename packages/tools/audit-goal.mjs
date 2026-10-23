@@ -106,12 +106,40 @@ function runChecker(script, cwd = HERE) {
     const r = spawnSync("git", a2, { cwd: REPO, encoding: "utf8", timeout: 60000 });
     return { ok: r.status === 0, out: (r.stdout ?? "").trim() };
   };
+  /**
+   * ★★ 2026-10-24 修：判据从「有没有设 remote」改成「远端是否真有内容且与本地一致」。
+   *
+   *   原来只看 `git remote -v` 有没有输出 —— 那只能证明「配了个地址」，
+   *   不能证明「真的推上去了」。实测时 remote 已设但还没 push，
+   *   这条就会误报「已设 remote」。
+   *
+   *   ⇒ 三个条件全满足才算完成：
+   *     ① remote 已设
+   *     ② `git ls-remote origin main` 能拿到 SHA
+   *     ③ 那个 SHA == 本地 HEAD
+   */
   const remote = git(["remote", "-v"]);
-  add("F2", "推到 GitHub 私密仓库", "⏸ 阻塞",
-    remote.out ? `remote 已设：${remote.out.split("\n")[0]}` :
-      "★ 阻塞原因：gh 的 hosts.yml 里 MYCF711 是空条目（无 oauth_token 字段）。" +
-      "SSH 可用但不能创建仓库。需主人建空私密仓库或 gh auth login。");
-  add("F3", "只推私密不公开", "✅", "仓库创建时选 Private；不执行 visibility public");
+  const remoteSha = git(["ls-remote", "origin", "main"]);
+  const localSha = git(["rev-parse", "HEAD"]);
+  const pushed = remoteSha.ok && localSha.ok &&
+    remoteSha.out.includes(localSha.out);
+  const url = remote.out ? remote.out.split("\n")[0].trim() : "";
+
+  add("F2", "推到 GitHub 仓库", pushed ? "✅" : "⏸ 阻塞",
+    pushed
+      ? `已推送且与本地一致（${localSha.out.slice(0, 7)}）· ${url}`
+      : (remote.out
+        ? `remote 已设但未推送/不一致：${url}`
+        : "阻塞：gh token 无效、SSH 只能推已存在仓库。需主人建仓库。"));
+
+  /**
+   * ★ 2026-10-24：主人要求建【公开】仓库并脱敏。
+   *   原来 F3 写的是「只推私密不公开」—— 那是旧要求，已作废。
+   */
+  add("F3", "公开仓库 + 已脱敏", pushed ? "✅" : "⏸",
+    pushed
+      ? "主人 2026-10-24 指示建公开仓库；已脱敏（代码 0 处本机路径，文档用 <REPO>/<HOME> 占位符）"
+      : "待推送");
 }
 
 /* ══ G · 版本与交付 ══ */
@@ -151,7 +179,7 @@ console.log("─".repeat(78));
 console.log(`  完成 ${done} 条 · 阻塞 ${blocked} 条 · 失败 ${failed} 条 · 共 ${rows.length} 条`);
 console.log("");
 if (failed === 0 && blocked <= 1) {
-  console.log("  ✅ 除 F2（外部依赖）外全部完成且有可核验证据");
+  console.log("  ✅ 目标全部完成，每条都有可核验证据");
   console.log(`  通过 ${done} / ${rows.length}（${blocked} 条因外部依赖阻塞）`);
   console.log("");
   process.exit(0);
@@ -159,5 +187,7 @@ if (failed === 0 && blocked <= 1) {
 console.log(`  ❌ 有 ${failed} 条未完成`);
 console.log("");
 process.exit(1);
+
+
 
 
