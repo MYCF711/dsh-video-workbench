@@ -263,6 +263,29 @@ node verify-subtitle.mjs          # 字幕
 
 ### tab 不出现
 
+**先看这一条：空会话不渲染 tab。**
+
+DSH 的 `conversation.view` 标签条**只在「有消息的会话」里渲染**。
+新建的空会话，或者初次打开 DSH 时，中栏只有「空面板」——
+这时候看不到 视频工作台 / 剪辑台 **是正常的**，不是装坏了。
+
+判据（浏览器控制台里跑）：
+
+```js
+Array.from(document.querySelectorAll('[role="tablist"]')).length
+// 1 → 只有「空面板」，当前没有打开有消息的会话
+// 2 → 第 1 个是会话视图（对话 / 轨迹 / 视频工作台 / 剪辑台）
+```
+
+正确验证方式：**点开左侧任意一个「有历史消息」的会话**，等 12~15 秒
+（插件 bundle 有 22MB，首次加载慢），再跑上面那行 —— 应该是 2。
+
+> 2026-10-23 实测：同一 profile，新建空会话 tablist=1、四个 tab 一个不见；
+> 点开历史会话 tablist=2、四个 tab 全在、视频工作台与剪辑台功能都正常。
+> 我曾因此连续三轮误判「安装脚本有缺陷」，实际安装没问题。
+
+确认不是上面这条之后，再看**跨包依赖是否打包完整**：
+
 ```bash
 node -e "import('./packages/dsh-editor/lib/index.js').then(m=>console.log('OK:',Object.keys(m))).catch(e=>console.log('FAIL:',e.message))"
 ```

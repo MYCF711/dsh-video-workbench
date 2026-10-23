@@ -605,6 +605,30 @@ steps.push(run('静默 catch 检查（会吞掉编程错误的地方）', 'tools
 steps.push(run('死路径检查（引用了不存在的文件 / 已删除的包）', 'tools', 'check-dead-paths.mjs', [], 180000));
 
 /**
+ * ★★ 2026-10-23 新增：安装配置自检
+ *
+ *   起因：我连续 3 轮把「安装脚本」判成有缺陷 —— 装完的新 profile
+ *   看不到 视频工作台 / 剪辑台 两个 tab。实际根因是：
+ *   **conversation.view 只在「有消息的会话」里渲染，空会话不渲染标签条。**
+ *   这是 DSH 固有行为，安装完全没问题。
+ *
+ *   实测判据：同一 profile
+ *     · 新建空会话 → [role="tablist"] 数量 = 1（只有「空面板」）
+ *     · 点开历史会话 → 数量 = 2，四个 tab 全在，两个功能都正常
+ *
+ *   本脚本检查安装配置是否自洽（不需要起实例）：
+ *     ① install.ps1 列出的包都在 packages/ 下且有 package.json
+ *     ② 声明了 dsh.client 的包必须有 lib/client.js（AGENTS §3.11）
+ *     ③ 每个包的 main 指向的文件真实存在
+ *     ④ README 必须写清「空会话不渲染 tab」这条根因 + 可执行判据
+ *     ⑤ 纯逻辑库不进 bundles
+ *
+ *   ★ 第一版有 4 条断言写错了：我假设「每个包都要有 dsh.client」。
+ *     实际有四种形态（纯 host / UI / 混合 / 纯库），见脚本头部注释。
+ */
+steps.push(run('安装配置自检（install.ps1 / package.json / README）', 'tools', 'verify-install-config.mjs', [], 180000));
+
+/**
  * ★★ 2026-10-23 新增：元验收的元测试
  *
  *   踩过两次同类坑：
