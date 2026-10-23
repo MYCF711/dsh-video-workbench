@@ -758,6 +758,31 @@ steps.push(run('E 段（设置页 / 模型清单 / 一键体检）', 'tools', 'v
 steps.push(run('F1（不该进仓库的东西确实没进）', 'tools', 'verify-gitignore.mjs', [], 180000));
 
 /**
+ * ★★ 2026-10-23 新增：D4/D5 验收（包依赖可移植 + 四个包能独立加载）
+ *
+ *   ★ D4 原文「把 3 个 link: 绝对路径依赖改成 workspace 内相对引用」——
+ *     实测澄清：
+ *       ① 实际是【4 个】，而且不在仓库里，在 profile 的 package.json；
+ *       ② profile 与仓库不在同一个 workspace：
+ *          profile = D:\DeepSeek Harness\home\profiles\comfy-test
+ *          仓库    = D:\主工作区\DSH视频工作台
+ *          硬改成相对路径（link:../../../主工作区/...）只会更脆，
+ *          任一边移动就断。
+ *      ⇒ 它们的正确形态就是 install.ps1 按当前仓库位置生成绝对 link。
+ *        「这台机器装到哪，link 就指到哪」正是 link: 的语义。
+ *
+ *   ③ 仓库内包之间【没有】用包名 import（实测 0 处），
+ *      只有 2 处相对路径引用 dsh-video-knowledge ⇒ 不需要 workspace 解析。
+ *
+ *   本验收查：
+ *     · 各包依赖里【不得】有绝对路径（那是 profile 的事，不是包的事）
+ *     · 四个包能【真的 import】（文件存在 ≠ 能加载）
+ *     · dsh.client 声明的必须有 lib/client.js（AGENTS §3.11）
+ *     · 跨包引用只用相对路径
+ */
+steps.push(run('D4/D5（包依赖可移植 + 四包能独立加载）', 'tools', 'verify-d4-packages.mjs', [], 180000));
+
+/**
  * ★★ 2026-10-23 新增：元验收的元测试
  *
  *   踩过两次同类坑：
