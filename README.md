@@ -35,7 +35,7 @@ yz            → 生视频（H3 文武双全）
 | **Node.js ≥ 22** | 插件用 ESM，宿主会加载 `.mjs` |
 | **ComfyUI** | 本机安装，默认 `127.0.0.1:8188` |
 | **模型** | 见下面的清单。**这是最大的门槛** |
-| **ffmpeg** | 剪辑台导出需要。包内自带一份，或用 `scripts/install-ffmpeg.mjs` |
+| **ffmpeg** | 剪辑台导出 / 字幕 / 抽帧必需。**不进 git**（83MB），装法见 §3.2 |
 
 ### 模型清单（会自动检查）
 
@@ -67,7 +67,24 @@ yz            → 生视频（H3 文武双全）
 
 自己按官方方式装。插件不代装。
 
-### 3.2 装插件
+### 3.2 装 ffmpeg（**必做**）
+
+ffmpeg 有 83MB，被 `.gitignore` 排除了 —— **clone 下来的人没有它，导出功能会直接报错。**
+
+```bash
+node scripts/install-ffmpeg.mjs            # 下载到 packages/dsh-editor/bin/
+node scripts/install-ffmpeg.mjs --check    # 只检查，不下载
+```
+
+装好后自检：
+```bash
+packages/dsh-editor/bin/ffmpeg.exe -version
+```
+
+★ 不想下载也行：设 `FFMPEG_PATH` 环境变量指向你已有的 ffmpeg。
+  运行时的回落顺序是 `config.ffmpegPath → FFMPEG_PATH → 包内 bin → imageio-ffmpeg → PATH`。
+
+### 3.3 装插件
 
 **方式 A：从 GitHub 装**（推荐）
 
@@ -102,7 +119,7 @@ dsh plugin --profile <你的profile> add github:<owner>/<repo>
 
 ★ `dsh-video-knowledge` 只作依赖、不进 bundles（它没有插件入口）。
 
-### 3.3 填路径（**必做，否则跑不起来**）
+### 3.4 填路径（**必做，否则跑不起来**）
 
 插件**不内置任何本机路径**。启动后：
 
@@ -120,7 +137,7 @@ dsh plugin --profile <你的profile> add github:<owner>/<repo>
 
 体检会告诉你：ComfyUI 通不通、版本、缺哪些模型、该放到哪个子目录。
 
-### 3.4 启动 ComfyUI
+### 3.5 启动 ComfyUI
 
 两个办法：
 
@@ -310,3 +327,4 @@ packages/
   - AGPL 的传染性是否覆盖你的分发形态
 
   在确认之前，**不要公开分发二进制或源码**。
+
