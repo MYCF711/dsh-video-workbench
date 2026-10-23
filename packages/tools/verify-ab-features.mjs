@@ -146,9 +146,80 @@ console.log("[B1/B3/B4] ComfyUI 状态点开关");
   }
 }
 
+/* ══ A3：--ac-follow-w 必须在 .ac-scope 自己身上，不能在 :root ══ */
+console.log("");
+console.log("[A3] 剪辑台首帧宽度不闪烁（CSS 变量作用域）");
+{
+  /**
+   * ★★ 2026-10-23 实测（真机）：
+   *   把 --ac-follow-w 声明在 :root 上 ⇒ 首帧 .ac-scope 顶格满宽，然后跳到 832px。
+   *
+   *   根因：CSS 自定义属性的 var() 在【声明所在的元素】上解析。
+   *     :root 这一层没有 --dsh-composer-card-max-width（它定义在 viewArea 上），
+   *     于是 var(..., 100%) 落成【字面量 100%】⇒ 首帧满宽。
+   *
+   *   ⇒ 断言两件事：
+   *     ① 源码里不能在 :root 或 html/body 选择器上声明 --ac-follow-w
+   *     ② 必须有 setProperty("--ac-follow-w", ...) 设在具体元素上
+   */
+  const tabSrc = path.join(PKG_ROOT, "dsh-comfy-workbench-tab", "src");
+
+  /**
+   * ★★ 2026-10-23 变异测试抓到两条假通过 —— 两处都是【路径写错】：
+   *
+   *   idxRaw  用的是 src/index.js，实际在 src/editor/index.js
+   *   cssRaw  用的是 src/editor.css.js，实际在 src/editor/editor.css.js
+   *
+   *   后果：readRaw() 对不存在的文件返回 ""，
+   *   于是 /setProperty\(...\)/.test("") === false、
+   *        badRootDecl 也是 false，
+   *   ⇒ 「不在 :root 上声明」这条【永远为真】，永远抓不到复发。
+   *
+   *   ⇒ 教训：读文件的断言必须先确认文件存在。
+   *     文件读不到时应该【报错】而不是当成「内容为空所以没问题」。
+   */
+  const wbPath = path.join(tabSrc, "WorkbenchView.js");
+  const idxPath = path.join(tabSrc, "editor", "index.js");
+  const cssPath = path.join(tabSrc, "editor", "editor.css.js");
+
+  check("A3 WorkbenchView.js 存在", fs.existsSync(wbPath), wbPath);
+  check("A3 editor/index.js 存在", fs.existsSync(idxPath), idxPath);
+  check("A3 editor/editor.css.js 存在", fs.existsSync(cssPath), cssPath);
+
+  /* ② 必须有 setProperty 设在元素上 */
+  const wbRaw = readRaw(wbPath);
+  const idxRaw = readRaw(idxPath);
+
+  /**
+   * ★★ 2026-10-23 变异测试抓到的第三个假通过，也是最难发现的：
+   *
+   *   原断言：/setProperty\(\s*["']--ac-follow-w["']/.test(src)
+   *   变异：  el.style.setProperty(...) → void 0 && el.style.setProperty(...)
+   *   结果：  断言【仍为真】—— 因为那段文本还在，只是被短路了。
+   *
+   *   ⇒ 根本问题：我检测的是「代码里有没有这个字符串」，
+   *     而不是「这行会不会被执行」。
+   *
+   *   ⇒ 修：要求 `el.style.setProperty("--ac-follow-w"` 这一整串出现，
+   *     且【前面不能紧跟】`&&` / `||` / `if (false)` 之类的短路前缀。
+   */
+  const realCall = /(?<!&&\s*|(?:\|\|\s*))(?:el|scope|node)\.style\.setProperty\(\s*["']--ac-follow-w["']/;
+  const anySetProp = realCall.test(wbRaw) || realCall.test(idxRaw);
+  check("A3 --ac-follow-w 用 setProperty 设在具体元素上", anySetProp,
+    "必须设在 .ac-scope 自己身上，不能只靠 :root 继承（也不能被短路）");
+
+  /* ① 不能在任何 CSS 模板里对 :root/html/body 声明它 */
+  const cssRaw = readRaw(cssPath);
+  const cssCode = stripComments(cssRaw);
+  /* 粗判：:root { ... --ac-follow-w ... } 这种块 */
+  const badRootDecl = /(:root|html|body)\s*\{[^}]*--ac-follow-w\s*:/.test(cssCode);
+  check("A3 不在 :root/html/body 上声明 --ac-follow-w", !badRootDecl,
+    "★ 在 :root 上声明会让首帧变字面量 100% ⇒ 顶格闪烁。实测过两次。");
+}
+
 console.log("");
 console.log("═".repeat(70));
-console.log("  A5 导入失败提示 · B1/B3/B4 状态点开关（静态）");
+console.log("  A3 首帧宽度 · A5 导入失败提示 · B1/B3/B4 状态点开关（静态）");
 console.log("═".repeat(70));
 console.log("");
 
@@ -166,3 +237,4 @@ console.log(`  ❌ ${pass} 通过 / ${fails.length} 失败`);
 console.log(`  通过 ${pass} / ${pass + fails.length}`);
 console.log("");
 process.exit(1);
+

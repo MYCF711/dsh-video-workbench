@@ -99,6 +99,39 @@ const MUTATIONS = [
     to: '"/comfy-bridge/ensure"',
     expect: "两个动作由同一处 state.s 判定",
   },
+  /* ── A3：CSS 变量作用域（2 条） ── */
+  {
+    name: "A3 把 --ac-follow-w 声明在 :root 上（复发首帧闪烁）",
+    file: path.join(TAB, "editor", "editor.css.js"),
+    /**
+     * ★ 2026-10-23：前两版锚点都无效 ——
+     *   ① 长串里的缩进对不上
+     *   ② 短锚点插在【注释块内】，插进去的 :root 声明也被 stripComments 一起剥掉
+     *   ⇒ 现在插到【文件末尾】，即真实 CSS 区域。
+     */
+    from: "export default `",
+    to: ":root { --ac-follow-w: var(--dsh-composer-card-max-width, 100%); }\nexport default `",
+    expect: "不在 :root/html/body 上声明",
+  },
+  {
+    /**
+     * ★ 2026-10-23 第一版这个变异「假通过」：
+     *   我改的是 WorkbenchView.js 的 setProperty，但 src/editor/index.js
+     *   里也有同样的 setProperty ⇒ 断言仍为真。
+     *   ⇒ 变异要把【两处】都改掉，否则测的不是「功能在不在」而是「有没有漏一处」。
+     */
+    name: "A3 去掉 setProperty（变量永远没值）",
+    file: path.join(TAB, "WorkbenchView.js"),
+    from: 'el.style.setProperty("--ac-follow-w"',
+    to: 'void 0 && el.style.setProperty("--ac-follow-w"',
+    expect: "setProperty 设在具体元素上",
+    /* 额外还要改这个文件里的同一处 */
+    alsoMutation: {
+      file: path.join(TAB, "editor", "index.js"),
+      from: 'el.style.setProperty("--ac-follow-w"',
+      to: 'void 0 && el.style.setProperty("--ac-follow-w"',
+    },
+  },
   /* ── B2：启动参数完整性（6 条） ── */
   {
     name: "B2 去掉 --listen",
@@ -160,16 +193,40 @@ for (const m of MUTATIONS) {
   }
   try {
     fs.writeFileSync(m.file, orig.replace(m.from, m.to), "utf8");
+
+    /**
+     * ★ 支持「同一条断言被多处代码满足」的情况。
+     *   例：setProperty("--ac-follow-w") 在 WorkbenchView.js 和 editor/index.js
+     *   里各有一份 —— 只改一处，断言仍为真 ⇒ 假通过。
+     */
+    let alsoOrig = null;
+    let alsoApplied = false;
+    if (m.alsoMutation) {
+      if (fs.existsSync(m.alsoMutation.file)) {
+        alsoOrig = fs.readFileSync(m.alsoMutation.file, "utf8");
+        if (alsoOrig.includes(m.alsoMutation.from)) {
+          fs.writeFileSync(
+            m.alsoMutation.file,
+            alsoOrig.replace(m.alsoMutation.from, m.alsoMutation.to),
+            "utf8",
+          );
+          alsoApplied = true;
+        }
+      }
+    }
+
     const r = spawnSync("node", [VERIFIER], { encoding: "utf8", timeout: 120000 });
     const out = (r.stdout ?? "") + (r.stderr ?? "");
     const caught = r.status !== 0 && out.includes(m.expect);
     if (caught) {
       pass++;
-      console.log(`  ✓ ${m.name}  → 变红`);
+      console.log(`  ✓ ${m.name}  → 变红${m.alsoMutation ? (alsoApplied ? "（含第二处）" : " ⚠ 第二处未生效") : ""}`);
     } else {
       fails.push(`${m.name}：期望报「${m.expect}」，实际 ${r.status === 0 ? "全过（假通过）" : "报了别的"}`);
       console.log(`  ✗ ${m.name}  → ${r.status === 0 ? "假通过" : "报错不对"}`);
     }
+
+    if (alsoOrig !== null) fs.writeFileSync(m.alsoMutation.file, alsoOrig, "utf8");
   } finally {
     fs.writeFileSync(m.file, orig, "utf8");
   }
@@ -199,5 +256,9 @@ for (const f of fails) console.log(`  ✗ ${f}`);
 console.log(`  通过 ${pass} / ${MUTATIONS.length}`);
 console.log("");
 process.exit(1);
+
+
+
+
 
 
