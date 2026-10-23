@@ -716,6 +716,24 @@ steps.push(run('D3 去敏（代码里不得有本机专属路径）', 'tools', '
 steps.push(run('E 段（设置页 / 模型清单 / 一键体检）', 'tools', 'verify-e-settings.mjs', [], 180000));
 
 /**
+ * ★★ 2026-10-23 新增：F1 验收（不该进仓库的东西确实没进）
+ *
+ *   核对时发现的真实问题：packages/_snapshot-before.json（288KB）
+ *   被 git 跟踪了 —— 它是 verify-no-pollution 的临时快照，
+ *   每次跑验收都重写 ⇒ 提交一次就永远是脏的，
+ *   而且每次 diff 都是整个文件（279589 字符）。
+ *   加 .gitignore + git rm --cached 后，仓库 26.2MB → 25.9MB。
+ *
+ *   ★ 判据的教训：
+ *     第一遍我用 git check-ignore 判，得到 3 个「未忽略」，
+ *     其中 node_modules/ 和 outputs/ 是误报 ——
+ *     那些目录在这仓库里根本不存在，当然不命中。
+ *     ⇒ 判据改成看【已跟踪文件里有没有它们】（硬判据），
+ *       再加 .gitignore 规则检查（软判据，防下次新建时被 add -A 扫进去）。
+ */
+steps.push(run('F1（不该进仓库的东西确实没进）', 'tools', 'verify-gitignore.mjs', [], 180000));
+
+/**
  * ★★ 2026-10-23 新增：元验收的元测试
  *
  *   踩过两次同类坑：

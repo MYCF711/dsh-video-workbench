@@ -58,3 +58,7 @@ dsh-tok.txt
 .DS_Store
 Thumbs.db
 *.log
+# ── 验收临时产物（每次运行都变，不该进仓库）────────────
+# verify-no-pollution 的快照文件（288KB，每次跑都重写）
+_snapshot-before.json
+_snapshot-after.json
