@@ -22,7 +22,19 @@ import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PKG = path.resolve(HERE, "..");                       // packages/
-const ART = path.join(PKG, "dsh-artcraft-tab");
+/**
+ * ★★ 2026-10-23：dsh-artcraft-tab 已归档移出仓库（剪辑台早已并入本包）
+ *
+ *   旧路径指向已删除的包 ⇒ 3 项全红：
+ *     对齐层文件 / client.js / 产物 lib/client.js
+ *
+ *   现在：
+ *     · 对齐层在 src/editor/dsh-native.css.js
+ *     · 客户端入口是 lib/client.js（本包的构建产物）
+ *     · 注入逻辑在 src/editor/editorHost.js
+ */
+const ART = HERE;                        // 本包就是剪辑台的宿主
+const EDITOR_SUB = path.join(HERE, "src", "editor");
 const UPSTREAM = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
 
 let pass = 0;
@@ -38,7 +50,7 @@ const read = (p) => fs.existsSync(p) ? fs.readFileSync(p, "utf8") : null;
    一组 · 对齐层文件本身
    ───────────────────────────────────────────────────────────────── */
 
-const nativePath = path.join(ART, "src", "dsh-native.css.js");
+const nativePath = path.join(EDITOR_SUB, "dsh-native.css.js");
 const native = read(nativePath);
 check("对齐层文件存在", native !== null, nativePath);
 if (native) {
@@ -249,7 +261,18 @@ if (native) {
    二组 · 接线（对齐层必须真的被注入）
    ───────────────────────────────────────────────────────────────── */
 
-const clientSrc = read(path.join(ART, "src", "client.js"));
+/**
+ * ★★ 2026-10-23：合包后客户端入口拆成两个文件
+ *
+ *   原来 dsh-artcraft-tab 的 client.js 既是插件入口又装剪辑台组件。
+ *   合包后：
+ *     · 插件的 name/apply/inject 归 src/client.js
+ *     · 剪辑台组件与工具留在 src/editor/editorHost.js
+ *   ⇒ 注入对齐层的逻辑在 editorHost.js。
+ *     优先读它；读不到才回退 client.js。
+ */
+const hostSrc = read(path.join(EDITOR_SUB, "editorHost.js"));
+const clientSrc = hostSrc ?? read(path.join(ART, "src", "client.js"));
 check("client.js 存在", clientSrc !== null);
 if (clientSrc) {
   check("client.js 导入了对齐层",
@@ -355,3 +378,4 @@ for (const f of fails) {
   console.log(`      · ${f.name}${f.detail ? `\n        ${f.detail}` : ""}`);
 }
 process.exit(1);
+
