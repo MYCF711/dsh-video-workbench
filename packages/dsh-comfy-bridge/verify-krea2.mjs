@@ -99,7 +99,30 @@ async function runOnce(toggles, label) {
   for (let i = 0; i < 300; i++) {
     await new Promise((r) => setTimeout(r, 2000));
     const j = await api('/job/' + encodeURIComponent(gen.jobId));
-    if (j.completed) return { ...j, sec: Math.round((Date.now() - t0) / 1000) };
+    if (j.completed) {
+      /**
+       * ★★ 2026-10-23：completed 之后再等一轮轮询周期（2 秒）。
+       *
+       *   实测根因（卡了我 5 轮，记录完整）：
+       *     · 单跑 verify-krea2 → 零残留
+       *     · 放进 verify-all → 每轮必多 1 张 Krea2-2ST-*.png，编号递增
+       *     · 双采工作流有【两个保存节点】，completed 早于第二个节点落盘
+       *     · 结尾已改成「等目录稳定」，但仍漏 —— 因为它稳定在
+       *       「第二个保存节点还没开始写」那一刻（两次采样间隔 400ms × 3
+       *       = 1.2 秒内没变化就判稳定，而第二个节点恰好在那之后写）
+       *
+       *   ⇒ 修法：completed 后再等 2 秒，把「保存节点排队」这个窗口吃掉。
+       *     代价是每个任务多 2 秒，可接受（总共 4 秒）。
+       *
+       *   ★ 判据：**「目录数量稳定」不等于「写完了」。**
+       *     如果写入方在两次采样之间处于「还没开始写」的间隙，
+       *     采到的「稳定」是假稳定。
+       *     可靠的判据是「等到写入方明确结束」—— 这里的信号是
+       *     ComfyUI 的 outputs 数量与磁盘文件数量一致。
+       */
+      await new Promise((r) => setTimeout(r, 2000));
+      return { ...j, sec: Math.round((Date.now() - t0) / 1000) };
+    }
   }
   throw new Error(`${label} 超时`);
 }
@@ -162,12 +185,48 @@ check('关闭后产物更少（开关生效）',
   `开=${(j1.outputs ?? []).length} 关=${(j2.outputs ?? []).length}`);
 
 /**
- * ★ 2026-10-21：显式清理，不等 exit。
- *   原因：ComfyUI 写文件比脚本读到 outputs 晚一点，
- *        exit 事件跑的时候文件还没落盘。
- *   等 1.2 秒再清（实测足够）。
+ * ★★ 2026-10-23 修：把「固定等 1.2 秒」改成「等落盘稳定」。
+ *
+ *   实测问题：单跑干净，进 verify-all 必漏 1 张（2850KB 那张）。
+ *
+ *   根因：
+ *     ① runOnce 每 2000ms 轮询一次，j.completed 一旦为真就立刻返回；
+ *     ② 双采工作流有【两个保存节点】（一采 + 二采），
+ *        两轮轮询之间恰好跨过 completed 时刻 ⇒ 第二张还没写完；
+ *     ③ 结尾固定等 1200ms —— 不够覆盖「第二张落盘」的窗口。
+ *
+ *   证据：每次跑都留 1 张，尺寸在 1150 / 2850 之间交替
+ *     （1150 = 单采那张，2850 = 双采那张）⇒ 双采那张反复漏。
+ *
+ *   ⇒ 修法：轮询 output 目录，直到「连续 3 次采样数量不变」或超时 8 秒。
+ *
+ *   ★ 通用判据（AGENTS §6.46 的延伸）：
+ *     「等一个异步写入完成」不能用固定 sleep —— 要观察那个写入的真实信号
+ *     （这里就是目录里文件数量稳定）。固定 sleep 只在「已实测过上限」时可用，
+ *     而工作流一改（加一个保存节点）那个上限就失效了。
  */
-await new Promise((r) => setTimeout(r, 1200));
+async function waitOutDirStable(ms = 8000, interval = 400, needStable = 3) {
+  const dir = "D:/Comfy-Desktop/ComfyUI-Shared/output";
+  const t0 = Date.now();
+  let last = -1;
+  let stable = 0;
+  while (Date.now() - t0 < ms) {
+    let n = -1;
+    try { n = fs.readdirSync(dir).length; } catch { /* 读不到就继续等 */ }
+    if (n === last) {
+      stable += 1;
+      if (stable >= needStable) return { ok: true, count: n, waited: Date.now() - t0 };
+    } else {
+      stable = 0;
+      last = n;
+    }
+    await new Promise((r) => setTimeout(r, interval));
+  }
+  return { ok: false, count: last, waited: Date.now() - t0 };
+}
+
+const stab = await waitOutDirStable();
+console.log(`  （output 目录稳定于 ${stab.count} 个，等了 ${stab.waited}ms${stab.ok ? "" : " · 超时"}）`);
 __cleanupNow__();
 
 console.log('\n' + '═'.repeat(58));
