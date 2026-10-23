@@ -8,10 +8,48 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { build } from "file:///D:/主工作区/DSH视频工作站/packages/dsh-editor/node_modules/esbuild/lib/main.js";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
+/**
+ * ★★ 2026-10-23 D2 去敏：esbuild 不再写死另一个仓库的绝对 URL。
+ *
+ *   原来：
+ *     import { build } from "file:///D:/主工作区/DSH视频工作站/packages/
+ *                            dsh-editor/node_modules/esbuild/lib/main.js";
+ *   ⇒ 别人 clone 下来构建直接失败，错误信息只是「找不到模块」，
+ *     看不出是「esbuild 没装」。
+ *
+ *   现在按顺序找：① 本包 node_modules ② 仓库根 ③ tools/
+ *   都找不到 ⇒ 打印明确的安装命令后退出。
+ */
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+async function loadEsbuild() {
+  const cands = [
+    path.join(HERE, "node_modules", "esbuild", "lib", "main.js"),
+    path.join(HERE, "..", "..", "node_modules", "esbuild", "lib", "main.js"),
+    path.join(HERE, "..", "tools", "node_modules", "esbuild", "lib", "main.js"),
+  ];
+  for (const p of cands) {
+    if (fs.existsSync(p)) return import(pathToFileURL(p).href);
+  }
+  /* 也试一次裸 import（pnpm workspace 里常能直接解析） */
+  try { return await import("esbuild"); } catch { /* 往下报错 */ }
+
+  console.error("");
+  console.error("  ✗ 找不到 esbuild —— 构建需要它。");
+  console.error("");
+  console.error("  装到本包下：");
+  console.error(`     cd "${HERE}"`);
+  console.error("     npm install esbuild --no-save --prefix . --no-package-lock");
+  console.error("");
+  console.error("  ★ 必须加 --prefix：中文路径下 npm 会把 prefix 解析错而报 EPERM。");
+  console.error("");
+  process.exit(1);
+}
+
+const { build } = await loadEsbuild();
+
 const LIB = path.join(HERE, "lib");
 if (!fs.existsSync(LIB)) fs.mkdirSync(LIB, { recursive: true });
 const TMP = path.join(HERE, ".build");

@@ -34,6 +34,12 @@
  *   这些数值依赖几个关键 class，谁把它们删了，这里会红。
  */
 
+/**
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
+ */
+import { fileURLToPath } from "node:url";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 import fs from "node:fs";
 import path from "node:path";
 
@@ -103,7 +109,7 @@ const nativePath = path.join(
   "src", "dsh-native.css.js",
 );
 // ★ 上面的路径算法在 Windows 上不稳，直接用绝对路径兜底
-const NATIVE = "D:/主工作区/DSH视频工作台/packages/dsh-comfy-workbench-tab/src/editor/dsh-native.css.js";
+const NATIVE = path.resolve(HERE, "src", "editor", "dsh-native.css.js");
 const nativeSrc = fs.existsSync(NATIVE) ? fs.readFileSync(NATIVE, "utf8") : "";
 check("dsh-native.css.js 存在", nativeSrc.length > 0, NATIVE);
 
@@ -156,4 +162,5 @@ if (fails.length === 0) {
 console.log(`  ✗ responsive  ${pass}/${total}，失败 ${fails.length} 项：`);
 for (const f of fails) console.log(`      · ${f.name}${f.detail ? `\n        ${f.detail}` : ""}`);
 process.exit(1);
+
 

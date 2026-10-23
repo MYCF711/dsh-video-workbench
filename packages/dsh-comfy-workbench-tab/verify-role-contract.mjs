@@ -30,14 +30,26 @@
  *   ④ defaultRoleFor 对三种 kind 都返回合法 id
  */
 
+/**
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
+ */
+import { fileURLToPath, pathToFileURL } from "node:url";
+/**
+ * ★ 2026-10-23 D2 去敏：HERE 从本文件位置推导。
+ *   pathToFileURL 必须一起 import —— 漏了只会在运行时
+ *   报 `ReferenceError: pathToFileURL is not defined`，
+ *   静态检查抓不到。
+ */
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 import fs from "node:fs";
 import path from "node:path";
 
-const ROOT_WB = "D:/主工作区/DSH视频工作台/packages";
+const ROOT_WB = path.resolve(HERE, "..");
 const ROOT_WS = "D:/主工作区/DSH视频工作站/packages";
 
 const { REF_ROLES, defaultRoleFor, migrateLegacyRole } = await import(
-  "file:///D:/主工作区/DSH视频工作台/packages/dsh-comfy-workbench-tab/src/h3-labels.js"
+  pathToFileURL(path.resolve(HERE, "src", "h3-labels.js")).href
 );
 
 let pass = 0, fail = 0;
@@ -139,8 +151,12 @@ console.log("\n② 生产方产出的 id 存在于 REF_ROLES");
    *   看它实际返回什么。这是「测行为不测文本」的唯一可靠方式
    *   （同 AGENTS §6.25：grep 代码只能证伪，不能证明）。
    */
+  /**
+   * ★ 2026-10-23 D2 去敏：原来指向【另一个仓库】（DSH视频工作站）。
+   *   D1 已把 dsh-editor 并进本仓库 ⇒ 改成从本文件位置推导。
+   */
   const mod = await import(
-    "file:///D:/主工作区/DSH视频工作站/packages/dsh-editor/src/characters.mjs"
+    pathToFileURL(path.resolve(HERE, "..", "dsh-editor", "src", "characters.mjs")).href
   );
 
   // 构造一个假角色分组，真的跑一遍 injectCharacters + toRefSpecs
@@ -200,3 +216,5 @@ if (fail) {
   process.exit(1);
 }
 console.log("  跨模块契约一致");
+
+

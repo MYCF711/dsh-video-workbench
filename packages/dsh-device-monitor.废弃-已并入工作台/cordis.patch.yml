@@ -1,9 +1,0 @@
-# dsh-device-monitor bundle patch
-#
-# 装法：
-#   dsh plugin --profile <name> add dsh-device-monitor
-#
-# 不依赖任何其它插件（纯独立模块）。
-- insert:
-    - id: device-monitor
-      name: 'dsh-device-monitor'

@@ -5,19 +5,33 @@
  *   node verify-all.mjs --static  只跑离线检查（不碰 ComfyUI）
  */
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
-// ★ 2026-10-18 修：两个项目在不同根目录。
-//   M1（dsh-comfy-bridge）在「DSH视频工作台」，M7（dsh-editor）在「DSH视频工作站」。
-//   原来 HERE 只有一个值，导致 dsh-editor 的套件全报「脚本不存在」。
-const HERE = 'D:/主工作区/DSH视频工作台/packages';
-const HERE2 = 'D:/主工作区/DSH视频工作站/packages';
+/**
+ * ★★ 2026-10-23 D2 去敏：HERE 从本文件位置推导，不再写死绝对路径。
+ *
+ *   原写法：
+ *     const HERE  = 'D:/主工作区/DSH视频工作台/packages';
+ *     const HERE2 = 'D:/主工作区/DSH视频工作站/packages';
+ *
+ *   问题：
+ *     ① 别人 clone 到别的盘/别的用户名下，整个总验收一条都跑不起来 ——
+ *        这是「可移植」的硬伤。
+ *     ② HERE2 指向【另一个仓库】。而 D1 已把 dsh-editor 并进本仓库，
+ *        两边现在都有 dsh-editor —— 双根逻辑已经过时，靠
+ *        `existsSync(p2) && !existsSync(p1)` 碰巧走了正确的那个。
+ *
+ *   ⇒ 改成单根（本文件所在目录）。若某包不在本仓库，rootOf 会返回 null，
+ *     由 run() 报「脚本不存在」——这是明确失败，不是静默走错根。
+ */
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
-/** 按包名解析到正确的根：dsh-editor 及其 test/ 在工作站，其余在工作台。 */
+/** 按包名解析到包目录；不存在返回 null。 */
 function rootOf(dir) {
-  const p1 = HERE + "/" + dir;
-  const p2 = HERE2 + "/" + dir;
-  return fs.existsSync(p2) && !fs.existsSync(p1) ? HERE2 : HERE;
+  const p = path.join(HERE, dir);
+  return fs.existsSync(p) ? HERE : null;
 }
 const STATIC = process.argv.includes('--static');
 const steps = [];
@@ -69,6 +83,16 @@ await checkQueue();
 
 function run(label, dir, script, extraArgs = [], timeout = 1800000) {
   const ROOT = rootOf(dir);
+  /**
+   * ★ 2026-10-23：rootOf 现在可能返回 null（包不在本仓库）。
+   *   第一版直接拼 `${ROOT}/${dir}/...`，null 会变成字面量 "null/xxx"，
+   *   existsSync 报 false 后返回「脚本不存在」—— 虽然结果是红的，
+   *   但 note 说「脚本不存在」会让人以为文件名写错了，
+   *   实际是「这个包不在这台机器上」。两者要分开。
+   */
+  if (!ROOT) {
+    return { label, ok: false, note: `包目录不存在：${dir}` };
+  }
   const p = `${ROOT}/${dir}/${script}`;
   if (!fs.existsSync(p)) return { label, ok: false, note: '脚本不存在' };
   const t0 = Date.now();

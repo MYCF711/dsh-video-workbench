@@ -1,7 +1,10 @@
+import { fileURLToPath } from "node:url";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+import path from "node:path";
 // 对比 v1（yz-ultimate-full）与 v2（新转换）的差异
 import fs from "node:fs";
 
-const v1 = JSON.parse(fs.readFileSync("D:/主工作区/DSH视频工作台/packages/dsh-comfy-bridge/workflows/yz-ultimate-full.json", "utf8"));
+const v1 = JSON.parse(fs.readFileSync(path.join(HERE, "..", "dsh-comfy-bridge", "workflows", "yz-ultimate-full.json"), "utf8"));
 const v2 = JSON.parse(fs.readFileSync(process.argv[2] ?? process.env.TEMP + "/yz-v2-api.json", "utf8"));
 
 function models(p) {

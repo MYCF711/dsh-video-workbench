@@ -58,11 +58,17 @@
  *     这样完全不联网。host 侧已经改成用 glob 找到 model.bin 再传目录。
  */
 
+/**
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
+ */
+import { fileURLToPath } from "node:url";
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 import fs from "node:fs";
 import path from "node:path";
 
-const MODEL_ROOT = "D:/主工作区/DSH视频工作台/.models/whisper";
-const HOST = "D:/主工作区/DSH视频工作台/packages/dsh-comfy-workbench-tab/lib/index.js";
+const MODEL_ROOT = path.resolve(HERE, "..", "..", ".models", "whisper");
+const HOST = path.resolve(HERE, "lib", "index.js");
 
 let pass = 0;
 const fails = [];
@@ -179,3 +185,4 @@ if (fails.length === 0) {
 console.log(`  ✗ asr-models  ${pass}/${total}，失败 ${fails.length} 项：`);
 for (const f of fails) console.log(`      · ${f.name}${f.detail ? `\n        ${f.detail}` : ""}`);
 process.exit(1);
+
