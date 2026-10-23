@@ -515,6 +515,19 @@ steps.push(run('漏翻检测器自检（验证它真能抓到英文）', '.', 'v
  *   ★ 纯逻辑测试，不碰 ComfyUI ⇒ 放静态段。
  */
 steps.push(run('UI→API 转换器（widgets 对位 5 条判据）', 'tools', 'verify-ui-to-api.mjs', [], 120000));
+/**
+ * ★★ 2026-10-23 新增：未声明变量检查
+ *
+ *   实测事故：onGenerate 里写了 mode?._workflow，而组件里叫 currentMode。
+ *   症状是「点生成毫无反应」—— 不报错、不发请求、按钮不变。
+ *
+ *   ★ 可空链 ?. 只能防「值是 null/undefined」，
+ *     防不住「变量根本没声明」。这类错误 node --check 抓不到。
+ *
+ *   用 acorn 做词法作用域分析。装法见 tools/check-undeclared.mjs 顶部注释
+ *   （npm 在中文路径下要加 --prefix，否则 EPERM mkdir D:\\）。
+ */
+steps.push(run('未声明变量检查（ReferenceError 的静态形态）', 'tools', 'check-undeclared.mjs', [], 180000));
 }
 
 // ── 工作流 1：krea2 ──
@@ -535,4 +548,5 @@ console.log('─'.repeat(64));
 console.log(`  ${okAll ? '全部通过' : '有失败项'}`);
 console.log('═'.repeat(64));
 process.exit(okAll ? 0 : 1);
+
 

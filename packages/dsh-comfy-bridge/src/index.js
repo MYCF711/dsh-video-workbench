@@ -827,7 +827,15 @@ export async function apply(ctx, config = {}) {
                 try {
                   const { resolveComfyPaths } = await import("./comfy-launcher.mjs");
                   const rp = resolveComfyPaths({ comfyPath: paths.comfyPath });
-                  if (rp) modelsDir = path.join(path.dirname(rp.mainPy), "models");
+                  /**
+                   * ★★ 2026-10-23 修：原来写的是裸 nodePath 缺失 —— 本文件没有 `path`，
+                   *   只有 `nodePath`（node:path 的命名空间导入）。
+                   *
+                   *   后果：这句抛 ReferenceError，但被下面的 catch 吞掉 ——
+                   *   **静默不兜底**，ComfyUI 没开时模型清单永远 unknown。
+                   *   由 tools/check-undeclared.mjs 抓出来的。
+                   */
+                  if (rp) modelsDir = nodePath.join(nodePath.dirname(rp.mainPy), "models");
                 } catch { /* 解析不到就不兜底，走 unknown 分支 */ }
               }
               const r = await buildModelManifest({ workflowsDir: WORKFLOWS_DIR, base, modelsDir });
