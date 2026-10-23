@@ -6854,8 +6854,8 @@ function WorkbenchView(props) {
     steps2: false,
     secondPassToggle: null
   };
-  function applyDefaults(mode) {
-    const d = mode?.defaults ?? {};
+  function applyDefaults(mode2) {
+    const d = mode2?.defaults ?? {};
     setPrompt(d.prompt ?? "");
     setNegative(d.negative ?? "");
     setAspect(d.aspect ?? "16:9");
@@ -6867,7 +6867,7 @@ function WorkbenchView(props) {
     setSeedvrModel(d.seedvrModel ?? SEEDVR_MODELS[0].v);
     setSeed(d.seed != null ? String(d.seed) : "");
     const tg = {};
-    for (const [k, spec] of Object.entries(mode?.toggles ?? {})) tg[k] = spec.default === true;
+    for (const [k, spec] of Object.entries(mode2?.toggles ?? {})) tg[k] = spec.default === true;
     setToggles(tg);
   }
   const pickMode = useCallback3((id) => {
@@ -7128,6 +7128,19 @@ function WorkbenchView(props) {
     if (!visible) {
       setError("\u63D0\u793A\u8BCD\u4E0D\u80FD\u4E3A\u7A7A\uFF08\u53EA\u6709\u7A7A\u767D\u6216\u4E0D\u53EF\u89C1\u5B57\u7B26\uFF09\u2014\u2014 \u4F1A\u751F\u6210\u968F\u673A\u7684\u56FE");
       return;
+    }
+    {
+      const wf = mode?._workflow;
+      if (wf && wf["397"]?.inputs?.transition_step != null) {
+        const ts = Number(wf["397"].inputs.transition_step);
+        const s = Number(steps);
+        if (Number.isFinite(ts) && Number.isFinite(s) && s <= ts) {
+          setError(
+            `\u6B65\u6570 ${s} \u592A\u5C0F\uFF1A\u8FD9\u4E2A\u5DE5\u4F5C\u6D41\u7684\u4F4E\u5206\u8FA8\u7387\u6C42\u89E3\u6B21\u6570\uFF08transition_step\uFF09\u662F ${ts}\uFF0C\u603B\u6B65\u6570\u5FC5\u987B\u5927\u4E8E\u5B83\u3002\u8BF7\u9009 ${ts + 1} \u6B65\u6216\u66F4\u591A\u3002`
+          );
+          return;
+        }
+      }
     }
     if (submitting) return;
     setSubmitting(true);
@@ -9092,7 +9105,7 @@ var MEDIA_VIEW_MODES = [
 ];
 function MediaPane({ U, items, loading, onPick, emptyHint }) {
   const I = U.Icon;
-  const [mode, setMode] = import_react6.default.useState("grid");
+  const [mode2, setMode] = import_react6.default.useState("grid");
   const segItems = MEDIA_VIEW_MODES.map((m) => {
     const IconComp = I[m.icon] ?? I.flatList;
     return {
@@ -9116,7 +9129,7 @@ function MediaPane({ U, items, loading, onPick, emptyHint }) {
       h6("span", { className: "ac-pane-title" }, `\u7D20\u6750\uFF08${items.length}\uFF09`),
       h6(U.SegmentedTabs, {
         items: segItems,
-        value: mode,
+        value: mode2,
         onChange: setMode,
         label: "\u7D20\u6750\u89C6\u56FE",
         className: "ac-pane-seg"
@@ -9136,7 +9149,7 @@ function MediaPane({ U, items, loading, onPick, emptyHint }) {
     ) : h6(
       "div",
       {
-        className: "ac-media-" + mode,
+        className: "ac-media-" + mode2,
         role: "list",
         "aria-label": "\u7D20\u6750\u5217\u8868"
       },
@@ -15185,8 +15198,8 @@ function detectDshTheme(el) {
   const lum = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
   return lum > 0.5 ? "light" : "dark";
 }
-function artcraftThemeClass(mode) {
-  return mode === "light" ? "theme-light" : "theme-gray";
+function artcraftThemeClass(mode2) {
+  return mode2 === "light" ? "theme-light" : "theme-gray";
 }
 function watchDshTheme(onChange) {
   let last = detectDshTheme(null);

@@ -207,16 +207,49 @@ export async function ensureComfy(opts) {
   return inflight;
 }
 
-/** 用 VBS 静默启动（不弹黑框）。 */
-function launchHidden(pyExe, args, cwd) {
+/**
+ * 用 VBS 静默启动（不弹黑框），并【把输出写进日志文件】。
+ *
+ * ★★ 2026-10-23 修：原来 stdio:"ignore"，ComfyUI 的输出全部丢弃
+ *
+ *   实测事故：v2 工作流生成到第 10 分钟时 ComfyUI 退出，
+ *   而 `D:\...\logs\comfyui.log` 的时间戳还停在 10-18 ——
+ *   本次运行的任何输出都没留下，**完全无法判断它为什么退出**。
+ *
+ *   根因：sh.Run(cmd, 0, False) 的 0 表示「隐藏窗口」，
+ *         但同时也把 stdout/stderr 指向了空设备。
+ *
+ *   ⇒ 现在用 cmd /c 加重定向：`cmd /c "<命令> 1>log 2>&1"`。
+ *     日志落在 <ComfyUI 根>/.dsh-launch.log（不在 ComfyUI 自己的 logs/，
+ *     避免和它自己的日志轮转打架）。
+ *
+ *   ★ 只追加不覆盖：多次启动的记录都在，崩溃前的最后一段能直接看到。
+ */
+function launchHidden(pyExe, args, cwd, logPath) {
   const vbsPath = path.join(os.tmpdir(), `comfy-launch-${Date.now()}.vbs`);
   const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
   const cmdLine = [q(pyExe), ...args.map(q)].join(" ");
 
+  /**
+   * 有 logPath ⇒ 走 cmd 重定向。
+   * 没有（理论上不会发生）⇒ 退回原来的直跑，保证能启动。
+   */
+  let runLine;
+  if (logPath) {
+    /**
+     * ★ 用 >> 追加、2>&1 合并 stderr。
+     *   整个命令再包一层 cmd /c，VBS 的 Run 才能正确解释重定向符。
+     */
+    const redirected = `cmd /c ""${cmdLine.replace(/^"|"$/g, "")}" 1>>"${logPath}" 2>&1"`;
+    runLine = `sh.Run ${q(redirected)}, 0, False`;
+  } else {
+    runLine = `sh.Run ${q(cmdLine)}, 0, False`;
+  }
+
   const vbs = [
     'Set sh = CreateObject("WScript.Shell")',
     `sh.CurrentDirectory = ${q(cwd)}`,
-    `sh.Run ${q(cmdLine)}, 0, False`,
+    runLine,
   ].join("\r\n");
 
   writeFileSync(vbsPath, vbs, "utf8");

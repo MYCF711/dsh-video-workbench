@@ -1691,6 +1691,40 @@ export function WorkbenchView(props) {
       setError("提示词不能为空（只有空白或不可见字符）—— 会生成随机的图");
       return;
     }
+    /**
+     * ★★ 2026-10-23 新增：步数必须大于 SelfLift 的 transition_step
+     *
+     *   实测事故（接 v2 工作流时）：
+     *     前端 STEPS = [4, 6, 8, 10, 15, 20]，用户选 4 步
+     *     ⇒ ComfyUI 执行到节点 397（SelfLiftH3Sampler）报：
+     *        SelfLift: transition_step 6 out of range for 4 steps
+     *        sigmas = [1.0, 0.973, 0.923, 0.8, 0.0]   ← 5 个 = 4 步
+     *
+     *   根因：工作流里 397.transition_step = 6（低分辨率求解次数），
+     *         它必须 < 总步数。而前端只给了 4。
+     *         ComfyUI 的 schema 只校验 transition_step 的 min/max（1~10000），
+     *         **不校验它与步数的关系** —— 那是节点内部的 ValueError，
+     *         提交阶段看不出来，要跑几十秒才炸。
+     *
+     *   ⇒ 前端在提交前拦住，并说清原因与可选值。
+     *
+     *   ★ 判据来自工作流本身（mode._workflow 里的 transition_step），
+     *     不是写死 6 —— 换工作流时自动跟着变。
+     */
+    {
+      const wf = mode?._workflow;
+      if (wf && wf["397"]?.inputs?.transition_step != null) {
+        const ts = Number(wf["397"].inputs.transition_step);
+        const s = Number(steps);
+        if (Number.isFinite(ts) && Number.isFinite(s) && s <= ts) {
+          setError(
+            `步数 ${s} 太小：这个工作流的低分辨率求解次数（transition_step）是 ${ts}，`
+            + `总步数必须大于它。请选 ${ts + 1} 步或更多。`,
+          );
+          return;
+        }
+      }
+    }
     // ★ 2026-10-18（质检 P1-3）：同步互斥门。
     //   这里必须先于任何 await 置位 —— 否则连点 5 次会真的提交 5 个任务
     //   （实测 fetch 拦截到 5 次相同 body，/queue 里 pending 排到 2）。
