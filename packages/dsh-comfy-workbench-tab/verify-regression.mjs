@@ -34,7 +34,32 @@ const ART = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeli
 const AC_TAB = path.join(HERE, "src", "editor");
 // ★ 2026-10-22 合包：payload 生成逻辑从 build.mjs 抽到 dsh-artcraft-tab/build-payload.mjs
 //   （build.mjs 现在只打包源码，不再读 10MB 上游产物）
-const BUILD = path.join(HERE, '..', 'dsh-artcraft-tab', 'build-payload.mjs');
+/**
+ * ★★ 2026-10-23：dsh-artcraft-tab 已归档移出仓库（剪辑台早已并入本包），
+ *   所以 build-payload.mjs 不在 packages 里了。
+ *
+ *   ★ 但第 ⑧ 项断言的是【构建期历史约束】：
+ *     「ArtCraft 的 payload 必须 base64，否则 esbuild 把它当导出声明」。
+ *     这条约束的产物（_artcraft-payload.js）还在本包里，
+ *     所以约束本身仍然有效 —— 只是产生它的脚本搬去归档了。
+ *
+ *   ⇒ 从归档目录找；找不到就走「跳过」而不是失败
+ *     （归档可能被清理，不该因此判功能坏了）。
+ */
+const BUILD = (() => {
+  const arch = path.join(HERE, "..", "..", "_branch-archive");
+  try {
+    const dirs = fs.readdirSync(arch)
+      .filter((n) => n.startsWith("deprecated-dsh-artcraft-tab-"))
+      .sort()
+      .reverse();
+    for (const d of dirs) {
+      const p = path.join(arch, d, "build-payload.mjs");
+      if (fs.existsSync(p)) return p;
+    }
+  } catch { /* 归档目录不存在 */ }
+  return null;
+})();
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -185,19 +210,28 @@ console.log("\n⑧ ArtCraft payload 必须 base64（否则 esbuild 导出被劫�
    * → 我的 exports.apply 消失 → DSH 拿不到 apply → 插件静默不激活
    * → 时间轴 tab 在、但内容区空白、没有任何报错
    */
-  const bsrc = fs.readFileSync(BUILD, "utf8");
-  t("build-payload.mjs 用 base64 编码 payload", /toString\("base64"\)/.test(bsrc));
   /**
-   * ★ 断言必须排除注释 —— build.mjs 的注释里写了旧写法做对照：
-   *     「第一版写的是 `export default ${JSON.stringify(raw)}`」
-   *   只搜全文会把这条注释当成违规。
+   * ★ 2026-10-23：归档被清理时走「跳过」而不是失败。
+   *   归档不属仓库，它不在不该判「功能坏了」。
    */
-  const bcode = bsrc
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
-  t("代码里不再用 JSON.stringify 直接嵌源码（注释不算）",
-    !bcode.includes("JSON.stringify(raw)"),
-    (bcode.match(/JSON\.stringify\(raw\)/g) || []).length);
+  if (!BUILD) {
+    console.log("  – 跳过：build-payload.mjs 已随 dsh-artcraft-tab 归档，归档目录里也找不到");
+    console.log("     （这条约束的产物 _artcraft-payload.js 仍在，运行时不受影响）");
+  } else {
+    const bsrc = fs.readFileSync(BUILD, "utf8");
+    t("build-payload.mjs 用 base64 编码 payload", /toString\("base64"\)/.test(bsrc));
+    /**
+     * ★ 断言必须排除注释 —— build.mjs 的注释里写了旧写法做对照：
+     *     「第一版写的是 `export default ${JSON.stringify(raw)}`」
+     *   只搜全文会把这条注释当成违规。
+     */
+    const bcode = bsrc
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    t("代码里不再用 JSON.stringify 直接嵌源码（注释不算）",
+      !bcode.includes("JSON.stringify(raw)"),
+      (bcode.match(/JSON\.stringify\(raw\)/g) || []).length);
+  }
   t("editorHost.js 用 atob 解码", /atob\(ARTCRAFT_SRC\)/.test(
     fs.readFileSync(path.join(AC_TAB, "editorHost.js"), "utf8")));
 }
