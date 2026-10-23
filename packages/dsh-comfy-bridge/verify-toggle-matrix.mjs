@@ -159,6 +159,63 @@ for (const mode of modes) {
       ok(`${mode.id} ${label} 输出齐全`, gotKeys.join(","));
     }
 
+    // ②b 输出链不能被空节点打断 / 不能多出空输出节点
+    /**
+     * ★★ 2026-10-23 新增，针对「忽略多组孤海」那个 bug
+     *
+     *   实测事故：v2 工作流里有 4 个 UI 占位节点在 /object_info 里
+     *   output_node: true，却没有 inputs。ComfyUI 执行时【在它们那里就终止】，
+     *   保存视频的节点（364）永远不跑。
+     *   现象极具误导：任务 55 毫秒就「成功」，outputs 为空。
+     *
+     *   ⇒ 两条判据都要：
+     *     ① 从每个输出节点向上追溯，链路必须完整（节点都在、没有空节点）
+     *     ② prompt 里【不许有】除声明之外的、无输入的空节点
+     *        —— 第一版只写了 ①，塞回那个空节点时仍全绿（假绿），
+     *           因为它不在 364 的上游，追溯不到。
+     */
+    {
+      /* ① 上游完整 */
+      for (const outId of Object.values(mode.outputs ?? {})) {
+        const root = String(outId);
+        if (!prompt[root]) continue;     // 缺输出已在 ② 报过
+        const seen = new Set();
+        const stack = [root];
+        const broken = [];
+        while (stack.length) {
+          const id = stack.pop();
+          if (seen.has(id)) continue;
+          seen.add(id);
+          const node = prompt[id];
+          if (!node) { broken.push(`${id}(缺失)`); continue; }
+          const ins = Object.values(node.inputs ?? {});
+          const linked = ins.filter((v) => Array.isArray(v) && typeof v[0] === "string");
+          if (linked.length === 0 && ins.length === 0) {
+            broken.push(`${id}(${node.class_type} 无任何输入)`);
+            continue;
+          }
+          for (const v of linked) stack.push(String(v[0]));
+        }
+        if (broken.length) {
+          bad(`${mode.id} ${label} 输出链完整`, `断了 ${broken.length} 处：${broken.slice(0, 4).join(",")}`);
+        } else {
+          ok(`${mode.id} ${label} 输出链完整`, `从 ${root} 上溯 ${seen.size} 个节点`);
+        }
+      }
+
+      /* ② 不许有多余的空节点 */
+      const emptyNodes = [];
+      for (const [id, node] of Object.entries(prompt)) {
+        const ins = Object.values(node.inputs ?? {});
+        if (ins.length === 0) emptyNodes.push(`${id}(${node.class_type})`);
+      }
+      if (emptyNodes.length) {
+        bad(`${mode.id} ${label} 无空节点`, `多余 ${emptyNodes.length} 个：${emptyNodes.slice(0, 4).join(",")}`);
+      } else {
+        ok(`${mode.id} ${label} 无空节点`);
+      }
+    }
+
     // ③ 该被删的节点真的没了
     const shouldBeGone = [];
     for (const name of toggleNames) {
