@@ -125,8 +125,8 @@ export function comfyRoots() {
  * ★★ 2026-10-23 去敏：不再写死本机绝对路径
  *
  *   原来：
- *     const DEFAULT_WS_ASSETS = "D:/主工作区/outputs/assets.json";
- *     const DEFAULT_STATE     = "D:/主工作区/DSH视频工作台/.state/asset-library.json";
+ *     const DEFAULT_WS_ASSETS = "<WORKSPACE>/outputs/assets.json";
+ *     const DEFAULT_STATE     = "<REPO>/.state/asset-library.json";
  *   ⇒ 换一台机器：assets.json 读不到（角色卡桥失效）、
  *     状态文件写到不存在的目录（收藏/改名/回收站全丢）。
  *

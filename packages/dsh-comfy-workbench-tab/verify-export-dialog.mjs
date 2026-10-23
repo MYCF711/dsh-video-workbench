@@ -36,11 +36,13 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-export-dialog.mjs");
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const SRC = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
+const SRC = UPSTREAM;
 const EXPORT_TSX = path.join(SRC, "lib", "components", "editor", "export-button.tsx");
 const NATIVE_CSS = path.join(HERE, "src", "editor", "dsh-native.css.js");
 

@@ -32,10 +32,9 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-no-english.mjs");
 import path from "node:path";
-
-const UPSTREAM = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
-
 const WHITELIST = new Set([
   "fps", "FPS",
   "MP4", "WebM", "WEBM", "MOV", "MKV", "AVI",
@@ -187,3 +186,4 @@ console.log("");
 //   用 --strict 才返回 1。等把已知项清完再改成默认阻塞。
 const strict = process.argv.includes("--strict");
 process.exit(strict ? 1 : 0);
+

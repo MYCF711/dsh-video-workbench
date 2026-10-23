@@ -40,9 +40,11 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-captions.mjs");
 import path from "node:path";
 
-const SRC = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
+const SRC = UPSTREAM;
 
 let pass = 0;
 const fails = [];

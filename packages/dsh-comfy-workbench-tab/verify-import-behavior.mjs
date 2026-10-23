@@ -26,9 +26,11 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-import-behavior.mjs");
 import path from "node:path";
 
-const SRC = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
+const SRC = UPSTREAM;
 const ASSETS = path.join(SRC, "lib", "panels", "assets", "views", "assets.tsx");
 
 let pass = 0;

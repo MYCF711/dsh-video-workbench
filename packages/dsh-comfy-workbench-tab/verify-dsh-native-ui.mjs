@@ -17,6 +17,8 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-dsh-native-ui.mjs");
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,8 +37,6 @@ const PKG = path.resolve(HERE, "..");                       // packages/
  */
 const ART = HERE;                        // 本包就是剪辑台的宿主
 const EDITOR_SUB = path.join(HERE, "src", "editor");
-const UPSTREAM = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
-
 let pass = 0;
 const fails = [];
 const check = (name, ok, detail = "") => {
@@ -378,4 +378,5 @@ for (const f of fails) {
   console.log(`      · ${f.name}${f.detail ? `\n        ${f.detail}` : ""}`);
 }
 process.exit(1);
+
 

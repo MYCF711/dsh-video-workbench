@@ -1,7 +1,7 @@
 # v2026.10.22 · DSH 视频工作台
 
 > 打包时间：2026-10-22 20:02（本机时间）
-> 归档：`D:\主工作区\_branch-archive\DSH视频工作台-v2026.10.22-b-20261022-200247.zip`（82.7MB）
+> 归档：`<WORKSPACE>\_branch-archive\DSH视频工作台-v2026.10.22-b-20261022-200247.zip`（82.7MB）
 > 验收：**53 / 55 通过**（2 项失败是 ComfyUI 未运行，与本次改动无关）
 > 上一版：`VERSION-v2026.10.21.md`
 
@@ -190,10 +190,10 @@ Ctrl+D  已删除
 
 ```powershell
 # 起测试实例（不动主人的 19387）
-pwsh -NoProfile -File C:\Users\Administrator\restart-test.ps1
+pwsh -NoProfile -File <HOME>\restart-test.ps1
 
 # 只跑离线检查（约 1 分钟）
-cd D:\主工作区\DSH视频工作台\packages
+cd <REPO>\packages
 node verify-all.mjs --static
 
 # 剪辑台单独验

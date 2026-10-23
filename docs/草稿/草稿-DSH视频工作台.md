@@ -229,7 +229,7 @@ D:\YUH Studio  2.7 GB
 ### 7.5 现有资产（M1/M2 可复用）
 
 ```
-D:\主工作区\本地H3视频工作站\
+<WORKSPACE>\本地H3视频工作站\
   4,131 行，零 npm 依赖
   src/comfy.mjs          194 行   ComfyUI 桥
   src/workflows.mjs      693 行   可插拔 bind 层   ★

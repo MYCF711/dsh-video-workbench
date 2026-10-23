@@ -13,8 +13,8 @@ import { spawnSync } from 'node:child_process';
  * ★★ 2026-10-23 D2 去敏：HERE 从本文件位置推导，不再写死绝对路径。
  *
  *   原写法：
- *     const HERE  = 'D:/主工作区/DSH视频工作台/packages';
- *     const HERE2 = 'D:/主工作区/DSH视频工作站/packages';
+ *     const HERE  = '<REPO>/packages';
+ *     const HERE2 = '<OLD_REPO>/packages';
  *
  *   问题：
  *     ① 别人 clone 到别的盘/别的用户名下，整个总验收一条都跑不起来 ——
@@ -765,7 +765,7 @@ steps.push(run('F1（不该进仓库的东西确实没进）', 'tools', 'verify-
  *       ① 实际是【4 个】，而且不在仓库里，在 profile 的 package.json；
  *       ② profile 与仓库不在同一个 workspace：
  *          profile = D:\DeepSeek Harness\home\profiles\comfy-test
- *          仓库    = D:\主工作区\DSH视频工作台
+ *          仓库    = <REPO>
  *          硬改成相对路径（link:../../../主工作区/...）只会更脆，
  *          任一边移动就断。
  *      ⇒ 它们的正确形态就是 install.ps1 按当前仓库位置生成绝对 link。
@@ -845,6 +845,25 @@ steps.push(run('E4（README 与代码状态一致）', 'tools', 'verify-readme-c
  *   当前结果：完成 22 条 · 阻塞 1 条（F2 外部依赖）· 失败 0 条。
  */
 steps.push(run('目标总核对（A~G 23 条逐条）', 'tools', 'audit-goal.mjs', [], 600000));
+
+/**
+ * ★★ 2026-10-24 新增：部署链路静态验收
+ *
+ *   补上了「可部署」的最后一块实证：从零装一个实例 → 起起来 → 真生成。
+ *
+ *   实测（2026-10-24，见 docs/部署实测-20261024.md）：
+ *     ① install.ps1 → 4 个包 + 3 个 bundles
+ *     ② dsh plugin install → Already up to date
+ *     ③ 起实例（端口 19530）→ 无 skipping、无 error
+ *     ④ 四个路由全通：health ok=True modes=4 / assets total=529 / config / modes
+ *     ⑤ 真实生成：krea2 → 17 节点 → 产物落盘（跑前 912 → 跑后 912）
+ *
+ *   ★ 完整实测（起实例 + 生成 ≈ 1.5 分钟）不在每轮验收里跑 ——
+ *     它会占 ComfyUI 队列、污染 output。
+ *     需要时手动：pwsh -NoProfile -File ./scripts/deploy-verify.ps1
+ *     日常用本项（静态）防回退。
+ */
+steps.push(run('部署链路（静态：install.ps1 / 四包 import / 证据留档）', 'tools', 'verify-deploy-static.mjs', [], 300000));
 
 /**
  * ★★ 2026-10-23 新增：元验收的元测试

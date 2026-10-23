@@ -16,7 +16,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
  *           id = "output:<文件名>"（路径派生，稳定）
  *           我这一轮加的 role / folder 存这里
  *
- *   工作站  D:\主工作区\outputs\assets.json
+ *   工作站  <WORKSPACE>\outputs\assets.json
  *           id = uid()（随机，每次扫描都变）
  *           tags = ["role:character", "char:<名字>", "view:<视角>"]
  *
@@ -43,7 +43,7 @@ import os from "node:os";
 import path from "node:path";
 
 /**
- * ★ 2026-10-23 D2 去敏：原来写死 file:///D:/主工作区/... 绝对 URL。
+ * ★ 2026-10-23 D2 去敏：原来写死 file:///<WORKSPACE>/... 绝对 URL。
  *   改用 pathToFileURL 从本文件推导 —— 别的机器 clone 下来也能跑。
  */
 const MOD = pathToFileURL(path.resolve(HERE, "lib", "asset-scan.js")).href;

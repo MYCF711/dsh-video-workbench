@@ -10,8 +10,8 @@
  *
  * ★★ 路径坑（本轮踩了两次，务必记住）：
  *   本机有【两份】artcraft 源码：
- *     D:\主工作区\_upstream\artcraft-src\    ← 参考源，构建【不读】它
- *     D:\主工作区\_upstream\artcraft-demo\video-editor\src\  ← ★ 构建真正读这份
+ *     <UPSTREAM>\artcraft-src\    ← 参考源，构建【不读】它
+ *     <UPSTREAM>\artcraft-demo\video-editor\src\  ← ★ 构建真正读这份
  *   第一次改 ruler-utils 改在 artcraft-src 上，构建毫无变化，
  *   我一度以为「改了没生效」。第二版文件头已经写过这个坑，这次又踩了。
  *   ⇒ 判据：改完构建，产物体积/mtime 没变 ⇒ 先确认改的是不是构建读的那份。
@@ -25,6 +25,8 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-default-tracks.mjs");
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,7 +34,7 @@ import { fileURLToPath } from "node:url";
 const HERE_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 // ★ 必须是 artcraft-demo 那份（构建真正读的），不是 artcraft-src
-const SRC = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/scenes.ts";
+const SRC = upstreamFile("lib/timeline/scenes.ts");
 
 let pass = 0;
 const fails = [];
@@ -153,8 +155,8 @@ check("音频2 的轨道名是「音频 2」", /name:\s*"音频 2"/.test(body));
           → DSH 打开时间轴必走这条路
      实测踩到：改完 ① 之后界面仍显示 Main Track，因为运行时走的是 ②。
    ⇒ 断言两条路径都是「视频 1」。 */
-const mtPath = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/placement/main-track.ts";
-const projPath = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/dsh-projection.ts";
+const mtPath = upstreamFile("lib/timeline/placement/main-track.ts");
+const projPath = upstreamFile("lib/timeline/dsh-projection.ts");
 
 if (fs.existsSync(mtPath)) {
   const mt = fs.readFileSync(mtPath, "utf8");
@@ -182,7 +184,7 @@ if (fs.existsSync(projPath)) {
    ★ 实测（子代理 + 我复跑）：原来轨道头只有 justify-end 的图标，
      完全没渲染 track.name，用户看到五条轨道但不知道哪条是什么。
    判据：index.tsx 里要有 {track.name}。 */
-const idxPath = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/components/index.tsx";
+const idxPath = upstreamFile("lib/timeline/components/index.tsx");
 if (fs.existsSync(idxPath)) {
   const idx = fs.readFileSync(idxPath, "utf8");
   check("轨道头渲染了 track.name", /\{track\.name\}/.test(idx),
@@ -194,7 +196,7 @@ if (fs.existsSync(idxPath)) {
    ★ 实测：原轨道高 video 65/audio 50 + 间距 6，五条合计 285px，
      而可用容器只有 278px ⇒ 第五条被裁在滚动区外。
    判据：layout.ts 里 video ≤ 58、audio ≤ 46。 */
-const layoutPath = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/components/layout.ts";
+const layoutPath = upstreamFile("lib/timeline/components/layout.ts");
 if (fs.existsSync(layoutPath)) {
   const lo = fs.readFileSync(layoutPath, "utf8");
   const vMatch = /video:\s*(\d+)/.exec(lo);
@@ -217,7 +219,7 @@ if (fs.existsSync(layoutPath)) {
      ② 改成滑块后宽度被 flex 压成 0px（工具栏太挤），
         最终改成 ↑↓ 按钮
  */
-const tlToolbar = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/components/timeline-toolbar.tsx";
+const tlToolbar = upstreamFile("lib/timeline/components/timeline-toolbar.tsx");
 if (fs.existsSync(tlToolbar)) {
   const tb = fs.readFileSync(tlToolbar, "utf8");
   check("工具栏接受 trackScale / onTrackScaleChange",
@@ -231,7 +233,7 @@ if (fs.existsSync(tlToolbar)) {
     /Math\.min\(2,\s*trackScale/.test(tb) && /Math\.max\(0\.6,\s*trackScale/.test(tb));
 }
 
-const tlLayout = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/components/track-layout.ts";
+const tlLayout = upstreamFile("lib/timeline/components/track-layout.ts");
 if (fs.existsSync(tlLayout)) {
   const tr = fs.readFileSync(tlLayout, "utf8");
   check("轨道行高有缩放因子", /trackHeightScale/.test(tr));
@@ -266,7 +268,7 @@ if (fs.existsSync(nativeCssPath)) {
      但没人再同步一次 ⇒ 两侧停在不同的位置。
    ★ 修：加一个依赖尺寸信号的 useEffect，在 rAF 里强制同步一次。
    ★ 判据（实测 4 档面板高度）：两侧 scrollTop 差 ≤ 1px。 */
-const idxPath2 = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/timeline/components/index.tsx";
+const idxPath2 = upstreamFile("lib/timeline/components/index.tsx");
 if (fs.existsSync(idxPath2)) {
   const idx2 = fs.readFileSync(idxPath2, "utf8");
   check("有 syncFollowers（轨道区 → 标尺/轨道头的单向同步）",
@@ -284,7 +286,7 @@ if (fs.existsSync(idxPath2)) {
    ★ 第二版 minSize=58：五条全看到了，但【高度锁死】—— 主人明确否掉
    ★ 第三版 minSize=26：只保证「至少一条轨道完整可见」，五条靠默认值 + 滚动
    判据：minSize ≤ 30（能压缩），且 maxSize ≥ 60（能拉大） */
-const vePath = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/VideoEditor.tsx";
+const vePath = upstreamFile("lib/VideoEditor.tsx");
 if (fs.existsSync(vePath)) {
   const ve = fs.readFileSync(vePath, "utf8");
 

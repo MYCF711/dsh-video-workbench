@@ -135,10 +135,10 @@ asset-library.json 的 folder 表原来有 8 条，其中 7 条指向已删文�
 
 ```powershell
 # 起测试实例（不动主人的 19387）
-pwsh -NoProfile -File C:\Users\Administrator\restart-test2.ps1
+pwsh -NoProfile -File <HOME>\restart-test2.ps1
 
 # 总验收（含真生成，约 5-8 分钟）
-cd D:\主工作区\DSH视频工作台\packages
+cd <REPO>\packages
 node verify-all.mjs
 
 # 只跑离线检查（约 1 分钟）

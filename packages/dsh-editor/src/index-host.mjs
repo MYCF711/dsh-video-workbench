@@ -199,7 +199,7 @@ export async function apply(ctx, config = {}) {
    *   而磁盘上明明有 4 段）。
    *
    *   改成【基于本文件位置】推导，与 cwd 无关：
-   *     src/index-host.mjs → 往上三级 = 工作区根（D:\主工作区）
+   *     src/index-host.mjs → 往上三级 = 工作区根（<WORKSPACE>）
    *   也兼容显式配置：config.outputDir / 环境变量 TIMELINE_OUT_DIR。
    *
    * ★ 还要兜旧路径：之前已经写到过 cwd/outputs 与 dsh-editor/outputs 两处，
@@ -212,7 +212,7 @@ export async function apply(ctx, config = {}) {
    *     new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")
    *
    *   `.pathname` 【不做 percent-decoding】。包一旦放在含中文的路径下
-   *   （如 D:\主工作区\DSH视频工作台\packages\dsh-editor），得到的是：
+   *   （如 <REPO>\packages\dsh-editor），得到的是：
    *     D:\%E4%B8%BB%E5%B7%A5%E4%BD%9C%E5%8C%BA\...\outputs
    *   ⇒ pickOutDir() 的候选目录全都不存在，
    *     assets.json 读不到 ⇒ /timeline/assets 恒为 0、src=editor 恒 0 条。

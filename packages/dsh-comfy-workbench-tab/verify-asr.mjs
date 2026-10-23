@@ -12,7 +12,7 @@
  *   opencc-python-reimplemented 0.1.7
  *     ← whisper 对中文默认输出【繁体】，必须 t2s
  *   模型 Systran/faster-whisper-small 463.7MB
- *     ← 落在 D:\主工作区\DSH视频工作台\.models\whisper
+ *     ← 落在 <REPO>\.models\whisper
  *     ← 下载时要关 SSL 校验（本机 CA 链不全，报 CERTIFICATE_VERIFY_FAILED）
  *
  * ── 为什么不用 Windows 自带的 System.Speech 中文识别器
@@ -42,10 +42,12 @@
  */
 
 import fs from "node:fs";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-asr.mjs");
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SRC = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
+const SRC = UPSTREAM;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 let pass = 0;
@@ -204,7 +206,7 @@ check("字号 6.5（约 1080p 下 78px）", /fontSize:\s*6\.5/.test(capSrc),
   "FONT_SIZE_SCALE_REFERENCE=90，实质像素 = fontSize x canvasH / 90");
 
 /* ── ⑤c 描边必须是渲染层真实能力，不是只写参数 ─────────────── */
-const PRIM = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/text/primitives.ts";
+const PRIM = upstreamFile("lib/text/primitives.ts");
 const primSrc = fs.existsSync(PRIM) ? fs.readFileSync(PRIM, "utf8") : "";
 check("primitives.ts 支持描边参数", primSrc.length > 0, PRIM);
 check("渲染时调了 strokeText", /ctx\.strokeText\(/.test(primSrc), "只写参数不画 = 参数是摆设");
@@ -213,14 +215,14 @@ check("描边在填字之前画",
     primSrc.indexOf("ctx.strokeText(") < primSrc.indexOf("ctx.fillText("),
   "先描后填，字腔不被覆盖");
 
-const NODEF = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/services/renderer/nodes/text-node.ts";
+const NODEF = upstreamFile("lib/services/renderer/nodes/text-node.ts");
 const nodeSrc2 = fs.existsSync(NODEF) ? fs.readFileSync(NODEF, "utf8") : "";
 check("text-node 把描边参数传给渲染",
   /outlineColor/.test(nodeSrc2) && /outlineWidth/.test(nodeSrc2),
   "中间层漏传 = 参数到不了渲染");
 
 /* ── ⑤d 描边参数要能被用户调 ─────────────────────────────── */
-const REGF = "D:/主工作区/_upstream/artcraft-demo/video-editor/src/lib/params/registry.ts";
+const REGF = upstreamFile("lib/params/registry.ts");
 const regSrc2 = fs.existsSync(REGF) ? fs.readFileSync(REGF, "utf8") : "";
 check("registry 有 outline.width", /key:\s*"outline\.width"/.test(regSrc2));
 check("registry 有 outline.color", /key:\s*"outline\.color"/.test(regSrc2));

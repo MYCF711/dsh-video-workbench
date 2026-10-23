@@ -35,15 +35,17 @@
  */
 
 /**
- * ★ 2026-10-23 D2 去敏：本文件原来写死了 D:/主工作区/... 绝对路径。
+ * ★ 2026-10-23 D2 去敏：本文件原来写死了 <WORKSPACE>/... 绝对路径。
  *   别人 clone 到别的盘就全失效 ⇒ 改成从本文件位置推导。
  */
 import { fileURLToPath } from "node:url";
+import { UPSTREAM, upstreamFile, skipWithoutUpstream } from "../tools/upstream-env.mjs";
+if (!UPSTREAM) skipWithoutUpstream("verify-responsive.mjs");
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 import fs from "node:fs";
 import path from "node:path";
 
-const SRC = "D:/主工作区/_upstream/artcraft-demo/video-editor/src";
+const SRC = UPSTREAM;
 
 let pass = 0;
 const fails = [];

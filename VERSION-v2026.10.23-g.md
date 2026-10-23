@@ -1,7 +1,7 @@
 # v2026.10.23-g · dsh-editor 并入 + 四个真 bug
 
 > 打包：2026-10-23 05:42
-> 归档：`D:\主工作区\_branch-archive\DSH视频工作台-v2026.10.23-g-20261023-054207.zip`（51.5MB，含 ffmpeg 83.58MB 压缩后）
+> 归档：`<WORKSPACE>\_branch-archive\DSH视频工作台-v2026.10.23-g-20261023-054207.zip`（51.5MB，含 ffmpeg 83.58MB 压缩后）
 > 源码备份：`merge-backup-20261023-054207`
 > 上一版：`VERSION-v2026.10.23-f.md`
 
@@ -33,8 +33,8 @@ dsh-video-knowledge           提示词规则（被 dsh-editor 引用）
 
 **profile 依赖**全部指向本仓：
 ```json
-"dsh-editor": "link:D:/主工作区/DSH视频工作台/packages/dsh-editor"
-"dsh-video-knowledge": "link:D:/主工作区/DSH视频工作台/packages/dsh-video-knowledge"
+"dsh-editor": "link:<REPO>/packages/dsh-editor"
+"dsh-video-knowledge": "link:<REPO>/packages/dsh-video-knowledge"
 ```
 
 ---
@@ -48,7 +48,7 @@ dsh-video-knowledge           提示词规则（被 dsh-editor 引用）
 const HERE_DIR = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
 ```
 
-`.pathname` **不做 percent-decoding**。包放在 `D:\主工作区\DSH视频工作台\...` 时得到：
+`.pathname` **不做 percent-decoding**。包放在 `<REPO>\...` 时得到：
 
 ```
 D:\%E4%B8%BB%E5%B7%A5%E4%BD%9C%E5%8C%BA\DSH%E8%A7%86%E9%A2%91...\outputs

@@ -323,7 +323,7 @@ preset: comfy-video-workbench
 ## 十 · 目录约定
 
 ```
-D:\主工作区\DSH视频工作台\
+<REPO>\
 ├── AGENTS.md                         项目规范
 ├── docs\
 │   ├── 草稿\草稿-DSH视频工作台.md      ★ 否决留痕，永不删
