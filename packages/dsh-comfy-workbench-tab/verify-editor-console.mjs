@@ -1085,6 +1085,104 @@ check("生产代码里没有硬编码的本机绝对路径",
   })(),
   "换机器时这些是死路径 ⇒ 插件不可移植");
 
+/* ══ ⑰ 一键体检五项覆盖（E3，2026-10-23）═════════════════════════ */
+/**
+ * 主人要求：「一键体检：ComfyUI 目录对不对、模型齐不齐、
+ *            ffmpeg 在不在、端到端探活」
+ *
+ * ★ 之前设置页的「体检」只查 /health 和 /models/required 两项，
+ *   目录有效性与 ffmpeg 完全没覆盖 —— 配错了只能靠猜。
+ */
+const bridgeIndexC = code(fs.readFileSync(path.join(HERE, "..", "dsh-comfy-bridge", "src", "index.js"), "utf8"));
+
+check("后端有 /doctor 体检路由",
+  /prefix \+ "\/doctor"/.test(bridgeIndexC));
+
+check("体检五项齐全（目录/输出/输入/ffmpeg/模型/探活）",
+  /**
+   * ★★ 2026-10-23 收紧两次，两个坑都要记住
+   *
+   *   ① 第一版写 `includes(\`"${id}"\`)` —— 源码里还有别的 "ffmpeg" 字样，
+   *      把那一项的 id 改掉后仍然通过（假绿）。
+   *
+   *   ② 第二版改成只认字面量 `add("id"` —— 但 outputDir / inputDir
+   *      是【循环里用变量 id 传的】（`for (const [id,label,dir] of [...]) add(id,...)`），
+   *      字面量根本不存在 ⇒ 误判成缺项（假红）。
+   *
+   *   ⇒ 两种形式都认：字面量 add("id", 或「数组里有 "id" 且函数体用 add(id,」。
+   */
+  (() => {
+    const hasAdd = (id) =>
+      new RegExp(`add\\("${id}"`).test(bridgeIndexC)
+      || (bridgeIndexC.includes(`"${id}"`) && /add\(id,/.test(bridgeIndexC));
+    return ["comfyPath", "outputDir", "inputDir", "ffmpeg", "models", "probe"].every(hasAdd);
+  })(),
+  "少一项就意味着某类问题用户查不出来");
+
+check("目录可写是【真写一次】而不是只判 exists",
+  /**
+   * ★ 只判 exists 不够 —— 只读盘上的目录也存在，但写不进去。
+   *   判据：必须出现 writeFileSync + unlinkSync。
+   */
+  /writeFileSync\(probe/.test(bridgeIndexC) && /unlinkSync\(probe\)/.test(bridgeIndexC),
+  "exists 通过 ≠ 能写");
+
+check("体检失败项给出修复建议（fix 字段）",
+  /fix:/.test(bridgeIndexC) && /c\.ok === false && c\.fix/.test(comfySettingsC),
+  "只说「有问题」不说「怎么修」等于没说");
+
+check("设置页体检改走 /doctor",
+  /j\("\/doctor"\)/.test(comfySettingsC),
+  "否则目录与 ffmpeg 两项永远不会被检查");
+
+check("体检三态（通过 / 失败 / 判断不了）",
+  /c\.ok === true[\s\S]{0,300}c\.ok === false[\s\S]{0,300}#81858c/.test(comfySettingsC),
+  "灰色 = 判断不了，不能当成失败");
+
+/* ══ ⑱ 模型清单按作用分组（2026-10-23 主人要求）═══════════════════ */
+/**
+ * 主人：「然后还要根据模型作用分类吧？」
+ *       「你现在弄一起，看起来也看不懂」
+ *
+ * ★ 关键：分类的依据必须是【工作流字段名】，不是文件名猜测。
+ *   实测：按文件名猜会把 7 个 LoRA（H3_Combat_V2 / Motion_Repair_V2 …）
+ *   和 taeh3.safetensors（其实是 tiny_vae）全归进「主模型」。
+ *   而字段名 lora_name / unet_name / vae_name / clip_name 一次就判对。
+ */
+const mmC = code(fs.readFileSync(path.join(HERE, "..", "dsh-comfy-bridge", "src", "model-manifest.mjs"), "utf8"));
+
+check("模型分类优先用工作流字段名",
+  /FIELD_ROLE/.test(mmC) && /lora_name:\s*"lora"/.test(mmC) && /tiny_vae:\s*"vae"/.test(mmC),
+  "按文件名猜会把 LoRA 归进主模型");
+
+check("classifyModel 接受 fields 参数且【调用时真的传了】",
+  /**
+   * ★★ 2026-10-23 收紧：只测定义会假绿。
+   *
+   *   把调用点 `classifyModel(name, fields)` 改成 `classifyModel(name)` 后，
+   *   定义还在，第一版断言照样通过 —— 但分类就退回按文件名猜了
+   *   （7 个 LoRA 会被归进「主模型」）。
+   *
+   *   判据：必须同时断言【定义】和【传参的调用点】。
+   */
+  /export function classifyModel\(filename,\s*fields/.test(mmC)
+  && /classifyModel\(name,\s*fields\)/.test(mmC),
+  "定义了不传 = 白定义");
+
+check("collectModelRefs 记录字段名",
+  /out\.get\(s\)\.add\(fieldName\)/.test(mmC),
+  "不记字段名就没法可靠分类");
+
+check("后端返回 groups 分组汇总",
+  /groups,/.test(mmC) && /byRole/.test(mmC) && /missingTotal/.test(mmC));
+
+check("前端按 groups 分组渲染（含该放哪个目录）",
+  /models\.groups/.test(comfySettingsC) && /g\.dir/.test(comfySettingsC),
+  "只显示模型名不显示目录，用户不知道放哪");
+
+check("分组显示每组缺几个",
+  /g\.missing/.test(comfySettingsC));
+
 /* ── 汇总 ── */
 console.log("");
 console.log("═".repeat(60));
@@ -1103,6 +1201,7 @@ console.log("─".repeat(60));
 console.log(`  通过 ${pass} / ${pass + fails.length}`);
 console.log("═".repeat(60));
 process.exit(1);
+
 
 
 

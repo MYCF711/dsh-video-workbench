@@ -47,7 +47,21 @@ const MODEL_FIELDS = new Set([
 ]);
 
 /** 从工作流 JSON 递归收集模型文件名。 */
-export function collectModelRefs(obj, out = new Set(), fieldName = "") {
+/**
+ * 从工作流 JSON 递归收集模型引用。
+ *
+ * ★★ 2026-10-23 改：连【字段名】一起收集
+ *
+ *   为什么要字段名：分类要靠它。
+ *   实测同一个文件名在不同工作流里可能挂在不同加载器上，
+ *   而字段名（lora_name / unet_name / vae_name …）就是 ComfyUI 的加载器输入名，
+ *   比按文件名猜准得多 —— 第一版按名字猜把 7 个 LoRA 归进了「主模型」。
+ *
+ * @param {object} obj
+ * @param {Map<string, Set<string>>} out  文件名 → 出现它的字段名集合
+ * @param {string} fieldName
+ */
+export function collectModelRefs(obj, out = new Map(), fieldName = "") {
   if (obj == null) return out;
 
   if (typeof obj === "string") {
@@ -62,7 +76,8 @@ export function collectModelRefs(obj, out = new Set(), fieldName = "") {
        */
       if (/^https?:/i.test(s) || /^data:/i.test(s)) return out;
       if (/\.(png|jpe?g|webp|gif|mp4|webm|mov|wav|mp3|m4a|flac|srt)$/i.test(s)) return out;
-      out.add(s);
+      if (!out.has(s)) out.set(s, new Set());
+      if (fieldName) out.get(s).add(fieldName);
     }
     return out;
   }
@@ -81,8 +96,14 @@ export function collectModelRefs(obj, out = new Set(), fieldName = "") {
 }
 
 /** 读一个目录下所有 .json 工作流，收集模型引用。 */
+/**
+ * 读一个目录下所有 .json 工作流，收集模型引用。
+ *
+ * @returns {Map<string, {workflows:Set<string>, fields:Set<string>}>}
+ *   文件名 → 用于哪些工作流 + 挂在哪些加载器字段上
+ */
 export function collectFromDir(dir) {
-  const refs = new Map();   // filename -> Set<workflowName>
+  const refs = new Map();
   if (!existsSync(dir)) return refs;
 
   let names = [];
@@ -94,11 +115,13 @@ export function collectFromDir(dir) {
     const p = path.join(dir, n);
     let j;
     try { j = JSON.parse(readFileSync(p, "utf8")); } catch { continue; }
-    const set = new Set();
-    collectModelRefs(j, set);
-    for (const f of set) {
-      if (!refs.has(f)) refs.set(f, new Set());
-      refs.get(f).add(n);
+    /* collectModelRefs 现在返回 Map<文件名, Set<字段名>> */
+    const perFile = collectModelRefs(j, new Map());
+    for (const [f, fields] of perFile) {
+      if (!refs.has(f)) refs.set(f, { workflows: new Set(), fields: new Set() });
+      const rec = refs.get(f);
+      rec.workflows.add(n);
+      for (const fl of fields) rec.fields.add(fl);
     }
   }
   return refs;
@@ -193,6 +216,99 @@ export function scanModelsDir(modelsDir, { maxDepth = 4, maxFiles = 20000 } = {}
   return found;
 }
 
+/**
+ * 模型作用分类（2026-10-23 主人要求）
+ *
+ *   主人：「然后还要根据模型作用分类吧？」「你现在弄一起，看起来也看不懂」
+ *
+ * ★★ 判据：用【工作流的字段名】分类，不是用文件名猜
+ *
+ *   实测 26 个模型的工作流字段（2026-10-23，从 workflows/*.json 提取）：
+ *     lora_name         → LoRA            （7 个）
+ *     unet_name         → 扩散主模型      （5 个）
+ *     clip_name         → 文本编码器      （5 个）
+ *     vae_name          → VAE             （4 个）
+ *     tiny_vae          → VAE（小）       （1 个）
+ *     upscaler_model    → 放大            （1 个）
+ *     model_name        → 放大/超分       （1 个 OmniSR）
+ *
+ *   我第一版按文件名猜，结果 7 个 LoRA（H3_Combat_V2 等）被归进「主模型」，
+ *   taeh3.safetensors 也是（它是 tiny_vae）。字段名一次就判对了。
+ *
+ *   ⇒ 分类优先级：
+ *     ① 字段名（权威 —— 它就是 ComfyUI 那个加载器节点的实际输入名）
+ *     ② 文件名关键字（字段名没传进来时的兜底）
+ *     ③ 都没有 ⇒ "other" 并明确标出，不硬塞
+ */
+const FIELD_ROLE = {
+  lora_name: "lora",
+  lora_name_2: "lora",
+  unet_name: "unet",
+  diffusion_model: "unet",
+  ckpt_name: "main",
+  clip_name: "textEncoder",
+  clip_name1: "textEncoder",
+  clip_name2: "textEncoder",
+  text_encoder: "textEncoder",
+  vae_name: "vae",
+  tiny_vae: "vae",
+  clip_vision_name: "clipVision",
+  control_net_name: "controlnet",
+  upscaler_model: "upscale",
+  model_name: "upscale",   /* 实测 OmniSR 用的是 model_name */
+};
+
+const ROLE_META = {
+  lora:        { label: "LoRA（风格/角色/动作增强）", dir: "models/loras" },
+  vae:         { label: "VAE（解码器）",              dir: "models/vae" },
+  textEncoder: { label: "文本 / 视觉编码器",           dir: "models/text_encoders 或 models/clip" },
+  clipVision:  { label: "CLIP Vision",               dir: "models/clip_vision" },
+  controlnet:  { label: "ControlNet",                dir: "models/controlnet" },
+  upscale:     { label: "放大 / 超分",                 dir: "models/upscale_models" },
+  unet:        { label: "扩散主模型（UNet / DiT）",     dir: "models/diffusion_models 或 models/unet" },
+  main:        { label: "主模型（checkpoint 整套）",    dir: "models/checkpoints" },
+  other:       { label: "未分类（判不出来）",           dir: "看工作流里它接在哪个加载器上" },
+};
+
+/** 文件名兜底规则（字段名缺失时才用）。 */
+const NAME_RULES = [
+  { role: "lora",        test: (n) => /lora/i.test(n) },
+  { role: "vae",         test: (n) => /(^|[_\-.\\/])vae([_\-.\/]|$)/i.test(n) || /_vae_/i.test(n) },
+  { role: "textEncoder", test: (n) => /(text_?encoder|t5|umt5|clip_l|clip_g|qwen3vl|qwen3\.5|llava)/i.test(n) },
+  { role: "clipVision",  test: (n) => /clip_?vision/i.test(n) },
+  { role: "controlnet",  test: (n) => /control_?net/i.test(n) },
+  { role: "upscale",     test: (n) => /(upscale|esrgan|swinir|omnisr|seedvr|real_?esrgan)/i.test(n) },
+  { role: "unet",        test: (n) => /(unet|diffusion_?model)/i.test(n) },
+  { role: "main",        test: (n) => /\.(ckpt|safetensors|gguf)$/i.test(n) },
+];
+
+/**
+ * 判一个模型属于哪一类。
+ *
+ * @param {string} filename
+ * @param {string[]} [fields]  工作流里出现它的字段名（权威依据）
+ * @returns {{role:string, label:string, dir:string, byField:string|null}}
+ */
+export function classifyModel(filename, fields = []) {
+  /* ① 字段名优先 —— 有多个字段时取第一个能认出来的 */
+  for (const f of fields) {
+    const role = FIELD_ROLE[f];
+    if (role) {
+      const meta = ROLE_META[role] ?? ROLE_META.other;
+      return { role, label: meta.label, dir: meta.dir, byField: f };
+    }
+  }
+  /* ② 文件名兜底 */
+  for (const r of NAME_RULES) {
+    if (r.test(String(filename))) {
+      const meta = ROLE_META[r.role];
+      return { role: r.role, label: meta.label, dir: meta.dir, byField: null };
+    }
+  }
+  /* ③ 判不出来 —— 明确标出，不硬塞 */
+  return { role: "other", label: ROLE_META.other.label, dir: ROLE_META.other.dir, byField: null };
+}
+
 /** 按扩展名给「应该放哪个 models 子目录」的提示。 */
 function subdirHint(filename) {
   const low = filename.toLowerCase();
@@ -243,7 +359,9 @@ export async function buildModelManifest({ workflowsDir, base, modelsDir = null 
     : null;
 
   const items = [];
-  for (const [name, usedBy] of refs) {
+  for (const [name, rec] of refs) {
+    const usedBy = rec?.workflows ?? new Set();
+    const fields = [...(rec?.fields ?? new Set())];
     const bn = baseName(name);
     let found;
     let sourceOfTruth = null;
@@ -270,6 +388,9 @@ export async function buildModelManifest({ workflowsDir, base, modelsDir = null 
        */
       unknown: found === null,
       sourceOfTruth,
+      /* ★ 2026-10-23：按作用分类（优先用工作流字段名），供前端分组显示 */
+      ...classifyModel(name, fields),
+      workflows: [...usedBy],
       note: `用于：${[...usedBy].join("、")}${
         found === false
           ? ` · 应放到 ${subdirHint(name)}`
@@ -281,13 +402,63 @@ export async function buildModelManifest({ workflowsDir, base, modelsDir = null 
     });
   }
 
-  /* 缺失的排前面 —— 用户最需要先看到的 */
+  /**
+   * 排序（2026-10-23 改：按作用分组排在前面）
+   *
+   *   主人：「根据模型作用分类吧」「你现在弄一起，看起来也看不懂」
+   *
+   *   主排序：作用分类的顺序（lora → vae → 编码器 → 放大 → 主模型 → 未分类）
+   *   次排序：同组内缺失的在前，再按名字
+   */
+  const ROLE_ORDER = ["lora", "vae", "textEncoder", "clipVision", "controlnet", "upscale", "unet", "main", "other"];
+  const rank = (r) => {
+    const i = ROLE_ORDER.indexOf(r);
+    return i < 0 ? ROLE_ORDER.length : i;
+  };
   items.sort((a, b) => {
+    const ra = rank(a.role);
+    const rb = rank(b.role);
+    if (ra !== rb) return ra - rb;
     if (a.found === b.found) return a.name.localeCompare(b.name);
     if (a.found === false) return -1;
     if (b.found === false) return 1;
     return 0;
   });
 
-  return { items, unknown: known === null, total: items.length };
+  /**
+   * ★ 分组汇总：前端直接渲染，不用自己算。
+   *   files = 该组里的模型名（用于「这个组缺几个」的直观展示）
+   */
+  const groups = [];
+  const byRole = new Map();
+  for (const it of items) {
+    if (!byRole.has(it.role)) {
+      byRole.set(it.role, {
+        role: it.role,
+        label: it.label,
+        dir: it.dir,
+        items: [],
+        found: 0,
+        missing: 0,
+        unknownCnt: 0,
+      });
+    }
+    const g = byRole.get(it.role);
+    g.items.push(it);
+    if (it.found === true) g.found += 1;
+    else if (it.found === false) g.missing += 1;
+    else g.unknownCnt += 1;
+  }
+  for (const r of ROLE_ORDER) {
+    if (byRole.has(r)) groups.push(byRole.get(r));
+  }
+
+  return {
+    items,
+    groups,
+    unknown: known === null,
+    total: items.length,
+    /** 需要用户处理的（缺失）总数 —— 前端据此决定是否标红 */
+    missingTotal: items.filter((x) => x.found === false).length,
+  };
 }

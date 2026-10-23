@@ -20,6 +20,20 @@
 
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+/**
+ * ★★ 2026-10-23 补：/doctor 需要 fs 与完整 path API
+ *
+ *   我写 /doctor 时用了 `fsMod` / `pathMod` 两个标识符，
+ *   但它们在【本文件模块级根本不存在】——
+ *   那是 dsh-comfy-workbench-tab 里 lib/index.js 的命名习惯，不是这里的。
+ *   实测表现：/doctor 五项里四项直接报 "fsMod is not defined"。
+ *
+ *   ⇒ 按本文件既有风格补 import：
+ *     fs 用命名空间（nodeFs），path 补一个完整对象（nodePath）。
+ *   ★ 保留原有的 dirname/join 具名导入 —— 其它地方在用，不动它们。
+ */
+import nodeFs from "node:fs";
+import nodePath from "node:path";
 
 import { createComfy } from "./comfy.mjs";
 /**
@@ -862,6 +876,156 @@ export async function apply(ctx, config = {}) {
               /* ★ 保存失败必须让前端知道 —— 用户以为存上了但没存是最糟的 */
               json(res, 500, { ok: false, error: String(err?.message ?? err) });
             }
+          },
+        })
+      );
+
+      // ── 一键体检（2026-10-23 新增）──
+      /**
+       * GET /doctor → 逐项体检，每项带 ok / detail / 修复建议
+       *
+       * ★★ 为什么需要这个（E3 要求）
+       *   主人：「一键体检：ComfyUI 目录对不对、模型齐不齐、ffmpeg 在不在、端到端探活」
+       *
+       *   之前设置页的「体检」只查了 /health 和 /models/required 两项，
+       *   剩下三项（目录、ffmpeg、端到端）没覆盖 —— 用户配错了目录只能靠猜。
+       *
+       * ★ 设计：每项【独立】，一项挂了不影响其它项。
+       *   返回结构固定，前端可以逐行渲染。
+       */
+      disposers.push(
+        ctx.webServer.register({
+          kind: "exact",
+          path: prefix + "/doctor",
+          handler: async (_req, res) => {
+            const checks = [];
+            const add = (id, label, ok, detail, fix) => {
+              checks.push({ id, label, ok, detail: detail ?? null, fix: fix ?? null });
+            };
+
+            /* ① ComfyUI 安装目录 */
+            try {
+              const { resolveComfyPaths } = await import("./comfy-launcher.mjs");
+              const rp = resolveComfyPaths({ comfyPath: paths.comfyPath });
+              if (!rp) {
+                add("comfyPath", "ComfyUI 安装目录", false,
+                  "没找到含 main.py 与 .venv 的目录",
+                  "在设置里填 ComfyUI 安装目录（如 D:\\ComfyUI）");
+              } else {
+                const pyOk = nodeFs.existsSync(rp.pyExe);
+                const mainOk = nodeFs.existsSync(rp.mainPy);
+                add("comfyPath", "ComfyUI 安装目录", pyOk && mainOk,
+                  `${rp.root}`,
+                  pyOk && mainOk ? null : "目录存在但缺 main.py 或 .venv\\Scripts\\python.exe");
+              }
+            } catch (err) {
+              add("comfyPath", "ComfyUI 安装目录", false, String(err?.message ?? err), null);
+            }
+
+            /* ② 目录可写（输出 / 输入） */
+            for (const [id, label, dir] of [
+              ["outputDir", "输出目录可写", paths.outputDir],
+              ["inputDir", "输入目录可写", paths.inputDir],
+            ]) {
+              if (!dir) {
+                add(id, label, false, "未配置", "在设置里填这个目录");
+                continue;
+              }
+              try {
+                if (!nodeFs.existsSync(dir)) {
+                  add(id, label, false, `不存在：${dir}`, "创建该目录，或在设置里改路径");
+                } else {
+                  /* 真的写一次再看能不能删 —— 只判 exists 不够（只读盘也会 exists） */
+                  const probe = nodePath.join(dir, `.doctor-${Date.now()}.tmp`);
+                  nodeFs.writeFileSync(probe, "x");
+                  nodeFs.unlinkSync(probe);
+                  add(id, label, true, dir, null);
+                }
+              } catch (err) {
+                add(id, label, false, `${dir}：${err?.code ?? err?.message ?? err}`,
+                  "检查目录权限，或换一个有写权限的路径");
+              }
+            }
+
+            /* ③ ffmpeg（导出与字幕都要它） */
+            try {
+              const cands = [
+                config.ffmpegPath,
+                process.env.FFMPEG_PATH,
+                /* 同仓 dsh-editor/bin */
+                (() => {
+                  const here = nodePath.dirname(fileURLToPath(import.meta.url));
+                  return nodePath.join(nodePath.resolve(here, "..", ".."), "dsh-editor", "bin", "ffmpeg.exe");
+                })(),
+                "D:/image/venv/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe",
+              ].filter(Boolean);
+              const found = cands.find((c) => {
+                try { return nodeFs.existsSync(c); } catch { return false; }
+              });
+              if (found) {
+                add("ffmpeg", "ffmpeg", true, found, null);
+              } else {
+                add("ffmpeg", "ffmpeg", false,
+                  "四级回落都没找到（config / FFMPEG_PATH / dsh-editor/bin / imageio-ffmpeg）",
+                  "装一份到 packages/dsh-editor/bin/ffmpeg.exe，或设 FFMPEG_PATH");
+              }
+            } catch (err) {
+              add("ffmpeg", "ffmpeg", false, String(err?.message ?? err), null);
+            }
+
+            /* ④ 模型（复用 /models/required 的逻辑） */
+            try {
+              const { buildModelManifest } = await import("./model-manifest.mjs");
+              let modelsDir = paths.modelsDir ?? null;
+              if (!modelsDir) {
+                try {
+                  const { resolveComfyPaths } = await import("./comfy-launcher.mjs");
+                  const rp = resolveComfyPaths({ comfyPath: paths.comfyPath });
+                  if (rp) modelsDir = nodePath.join(nodePath.dirname(rp.mainPy), "models");
+                } catch { /* 无兜底 */ }
+              }
+              const m = await buildModelManifest({ workflowsDir: WORKFLOWS_DIR, base, modelsDir });
+              const missing = m.items.filter((x) => x.found === false).length;
+              const unknown = m.items.filter((x) => x.found === null).length;
+              const found = m.items.filter((x) => x.found === true).length;
+              add("models", "模型", unknown === m.items.length ? null : missing === 0,
+                `共 ${m.total} 项：${found} 就位${missing ? `，缺 ${missing}` : ""}${unknown ? `，${unknown} 判断不了` : ""}`,
+                missing ? "点「模型需求」看具体缺哪些、该放哪个子目录" : null);
+            } catch (err) {
+              add("models", "模型", false, String(err?.message ?? err), null);
+            }
+
+            /* ⑤ 端到端探活 */
+            try {
+              const t0 = Date.now();
+              const ac = new AbortController();
+              const timer = setTimeout(() => ac.abort(), 5000);
+              const r = await fetch(`${String(base).replace(/\/+$/, "")}/system_stats`, { signal: ac.signal });
+              clearTimeout(timer);
+              const ms = Date.now() - t0;
+              if (r.ok) {
+                const j = await r.json().catch(() => ({}));
+                add("probe", "端到端探活", true,
+                  `HTTP ${r.status} · ${ms}ms · ComfyUI ${j?.system?.comfyui_version ?? "?"}`, null);
+              } else {
+                add("probe", "端到端探活", false, `HTTP ${r.status}`,
+                  "ComfyUI 起来了但返回异常，看它的控制台日志");
+              }
+            } catch (err) {
+              add("probe", "端到端探活", false,
+                `${String(err?.message ?? err).slice(0, 120)}`,
+                "ComfyUI 没在运行。点底部状态栏那个 ComfyUI 圆点启动它");
+            }
+
+            const failed = checks.filter((c) => c.ok === false).length;
+            const unknownCnt = checks.filter((c) => c.ok === null).length;
+            json(res, 200, {
+              ok: failed === 0,
+              summary: failed === 0
+                ? (unknownCnt ? `通过（${unknownCnt} 项无法判断）` : "全部通过")
+                : `${failed} 项有问题`,
+              checks,
+            });
           },
         })
       );

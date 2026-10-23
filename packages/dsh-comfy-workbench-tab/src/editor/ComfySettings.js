@@ -172,7 +172,8 @@ export function ComfySettingsSection() {
   const [cfg, setCfg] = React.useState(null);          // 当前配置
   const [info, setInfo] = React.useState(null);        // 存哪了
   const [models, setModels] = React.useState(null);    // 模型清单
-  const [health, setHealth] = React.useState(null);    // 体检结果
+  const [health, setHealth] = React.useState(null);    // /health（版本/延迟，兼容旧渲染）
+  const [doctor, setDoctor] = React.useState(null);    // /doctor 五项体检结果
   const [busy, setBusy] = React.useState("");
   const [msg, setMsg] = React.useState(null);          // { kind, text }
 
@@ -231,16 +232,32 @@ export function ComfySettingsSection() {
     setBusy("check");
     setMsg(null);
     try {
-      const hlt = await j("/health");
-      const md = await j("/models/required");
-      setHealth(hlt);
+      /**
+       * ★★ 2026-10-23 改：体检改走 /doctor（E3 要求五项全覆盖）
+       *
+       *   主人原话：「一键体检：ComfyUI 目录对不对、模型齐不齐、
+       *              ffmpeg 在不在、端到端探活」
+       *
+       *   之前这里只查 /health 与 /models/required 两项，
+       *   目录有效性和 ffmpeg 完全没覆盖 —— 用户配错目录只能靠猜。
+       *
+       *   ★ /doctor 的返回结构是固定的 checks 数组，每项带 ok/detail/fix，
+       *     所以这里不需要自己判断，直接把结果交给渲染层。
+       *   ★ 仍然并行拉 models（那份带每个模型的明细，/doctor 只给汇总）。
+       */
+      const [doc, md] = await Promise.all([
+        j("/doctor"),
+        j("/models/required").catch(() => null),
+      ]);
+      setDoctor(doc);
       setModels(md);
-      const missing = (md?.items ?? []).filter((x) => !x.found).length;
+      /* health 兼容旧渲染分支（版本/延迟），失败不影响体检结果 */
+      const hlt = await j("/health").catch(() => null);
+      if (hlt) setHealth(hlt);
+
       setMsg({
-        kind: missing ? "warn" : "ok",
-        text: hlt?.ok
-          ? (missing ? `ComfyUI 已连接，但缺 ${missing} 个模型` : "环境完整，可以生成")
-          : `ComfyUI 未连接${hlt?.error ? `：${hlt.error}` : ""}`,
+        kind: doc?.ok ? "ok" : "error",
+        text: doc?.summary ?? (doc?.ok ? "环境完整" : "环境有问题"),
       });
     } catch (e) {
       setMsg({ kind: "error", text: `体检失败：${e.message}` });
@@ -389,7 +406,87 @@ export function ComfySettingsSection() {
         }, msg.text)
       : null,
 
-    /* ── 体检结果 ── */
+    /* ── 体检结果（/doctor 五项）── */
+    /**
+     * ★ 2026-10-23：新增五项体检渲染
+     *
+     *   主人要求：「一键体检：ComfyUI 目录对不对、模型齐不齐、
+     *              ffmpeg 在不在、端到端探活」
+     *
+     *   每行：状态点 + 标签 + 详情；不通过时额外给一行【怎么修】。
+     *   ★ 三态：true 绿 / false 红 / null 灰（判断不了）。
+     */
+    doctor && Array.isArray(doctor.checks)
+      ? h("div", { style: { marginBottom: 14 } },
+          h("div", {
+            style: {
+              display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6,
+            },
+          },
+            h("span", {
+              style: {
+                fontSize: 12, fontWeight: 600,
+                color: "var(--dsw-alias-label-primary, #0f1115)",
+              },
+            }, "环境体检"),
+            h("span", {
+              style: {
+                fontSize: 11,
+                color: doctor.ok
+                  ? "rgb(31,136,61)"
+                  : "rgb(207,34,46)",
+              },
+            }, doctor.summary ?? "")),
+          doctor.checks.map((c) =>
+            h("div", {
+              key: c.id,
+              style: {
+                display: "flex", alignItems: "flex-start", gap: 8,
+                padding: "5px 0",
+                borderBottom: "0.5px solid var(--dsw-alias-border-l2, #0000001a)",
+              },
+            },
+              h("span", {
+                style: {
+                  width: 6, height: 6, borderRadius: "50%", marginTop: 5, flex: "none",
+                  background: c.ok === true
+                    ? "var(--dsw-alias-state-success-primary, #3fb950)"
+                    : c.ok === false
+                      ? "var(--dsw-alias-state-error-primary, #f85149)"
+                      : "var(--dsw-alias-label-tertiary, #81858c)",
+                },
+                "aria-hidden": "true",
+              }),
+              h("div", { style: { flex: "1 1 auto", minWidth: 0 } },
+                h("div", {
+                  style: {
+                    fontSize: 12, lineHeight: "17px",
+                    color: "var(--dsw-alias-label-primary, #0f1115)",
+                  },
+                }, c.label),
+                c.detail
+                  ? h("div", {
+                      style: {
+                        fontSize: 11, lineHeight: "15px", marginTop: 1,
+                        color: "var(--dsw-alias-label-tertiary, #81858c)",
+                        wordBreak: "break-all",
+                      },
+                    }, c.detail)
+                  : null,
+                /* ★ 只在失败时给修复建议 —— 通过了不需要看怎么修 */
+                c.ok === false && c.fix
+                  ? h("div", {
+                      style: {
+                        fontSize: 11, lineHeight: "15px", marginTop: 2,
+                        color: "rgb(154,103,0)",
+                      },
+                    }, `→ ${c.fix}`)
+                  : null
+              )))
+        )
+      : null,
+
+    /* ── health 摘要（保留：版本/延迟/工作流数）── */
     health
       ? h("div", { style: { marginBottom: 14 } },
           h("div", {
@@ -427,7 +524,7 @@ export function ComfySettingsSection() {
 
             const summary = isUnknown
               ? `模型需求（无法判断 —— ComfyUI 未连接，共 ${items.length} 项）`
-              : `模型需求（${foundCount}/${items.length} 已就位${missingCount ? `，缺 ${missingCount}` : ""}）`;
+              : `模型需求（${foundCount}/${items.length} 已就位${missingCount ? `，缺 ${missingCount}` : ""} · ${(models.groups ?? []).length} 类）`;
 
             return h("div", null,
               h("div", {
@@ -452,23 +549,91 @@ export function ComfySettingsSection() {
                 ? h("div", {
                     style: { fontSize: 12, color: "var(--dsw-alias-label-tertiary, #81858c)", padding: "6px 0" },
                   }, "工作流没有声明模型依赖，或没读到工作流文件。")
-                : h("div", null,
-                    items.map((m, i) =>
-                      h(ModelRow, {
-                        key: `${m.name}-${i}`,
-                        name: m.name,
-                        note: m.note,
-                        /**
-                         * ★ 判断不了时不显示红点 —— 传 null 让 ModelRow 用中性色。
-                         */
-                        found: m.found,
-                        size: m.sizeText,
-                      })))
+                : (() => {
+                    /**
+                     * ★★ 2026-10-23 改：按【作用】分组渲染
+                     *
+                     *   主人：「然后还要根据模型作用分类吧？」
+                     *        「你现在弄一起，看起来也看不懂」
+                     *
+                     *   原来 26 项平铺，看不出哪个是 LoRA、哪个是 VAE、
+                     *   哪个缺了会真的跑不起来。
+                     *
+                     *   现在按后端给的 groups 渲染（后端用【工作流字段名】分类，
+                     *   不是按文件名猜 —— 字段名就是 ComfyUI 加载器的输入名）。
+                     *
+                     *   ★ 每组标题后面直接给「缺 N」，用户一眼看到哪一类不齐。
+                     *   ★ 组标题下面一行写【该放哪个目录】—— 这是最实用的信息。
+                     */
+                    const groups = Array.isArray(models.groups) ? models.groups : null;
+                    if (!groups) {
+                      /* 后端老版本没有 groups ⇒ 退回平铺，不白屏 */
+                      return h("div", null,
+                        items.map((m, i) =>
+                          h(ModelRow, {
+                            key: `${m.name}-${i}`,
+                            name: m.name,
+                            note: m.note,
+                            found: m.found,
+                            size: m.sizeText,
+                          })));
+                    }
+                    return h("div", null,
+                      groups.map((g) => {
+                        const bad = (g.missing ?? 0) + (g.unknownCnt ?? 0);
+                        return h("div", { key: g.role, style: { marginTop: 10 } },
+                          /* 组标题 */
+                          h("div", {
+                            style: {
+                              display: "flex", alignItems: "baseline", gap: 6,
+                              marginBottom: 2,
+                            },
+                          },
+                            h("span", {
+                              style: {
+                                fontSize: 12, fontWeight: 600,
+                                color: "var(--dsw-alias-label-primary, #0f1115)",
+                              },
+                            }, g.label),
+                            h("span", {
+                              style: {
+                                fontSize: 11,
+                                color: g.missing > 0
+                                  ? "rgb(207,34,46)"
+                                  : "var(--dsw-alias-label-tertiary, #81858c)",
+                              },
+                            },
+                              `${g.items.length} 个` +
+                              (g.missing ? ` · 缺 ${g.missing}` : "") +
+                              (g.unknownCnt ? ` · ${g.unknownCnt} 未知` : "")),
+                          ),
+                          /* ★ 该放哪个目录 —— 最实用的信息，放在组标题下 */
+                          h("div", {
+                            style: {
+                              fontSize: 11, lineHeight: "15px", marginBottom: 2,
+                              color: "var(--dsw-alias-label-tertiary, #81858c)",
+                              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                            },
+                          }, g.dir),
+                          h("div", null,
+                            g.items.map((m, i) =>
+                              h(ModelRow, {
+                                key: `${m.name}-${i}`,
+                                name: m.name,
+                                /* ★ 显示来源字段名，方便对着工作流核对 */
+                                note: (m.byField ? `[${m.byField}] ` : "") + (m.note ?? ""),
+                                found: m.found,
+                                size: m.sizeText,
+                              })))
+                        );
+                      }));
+                  })()
             );
           })()
         )
       : null
   );
 }
+
 
 
