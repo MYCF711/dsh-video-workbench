@@ -58,14 +58,33 @@ let acorn;
 try {
   acorn = requireFromHere("acorn");
 } catch {
+  /**
+   * ★★ 2026-10-24：缺 acorn 时走【跳过】而不是失败（原来 exit 2）。
+   *
+   *   实测（模拟别人 clone 后的可移植性测试）：
+   *     把 345 个版本控制内的文件复制到新目录 → 跑静态验收 → 8 项失败，
+   *     其中 3 项都是「找不到 acorn」。
+   *
+   *   原因：acorn 是【开发依赖】，没进 git（node_modules 被 .gitignore 排除）。
+   *         别人 clone 下来本来就没有，需要显式装。
+   *
+   *   ⇒ 缺依赖时：【跳过】+ 打印安装命令，而不是判失败。
+   *     跳过 = 这条验收今天不适用（缺开发依赖）
+   *     失败 = 检查器装好了、真的发现问题
+   *     混在一起会让「没装 acorn」显示成「代码有未声明变量」，把人带错方向。
+   */
   console.log("");
-  console.log("  ❌ 找不到 acorn。装法：");
-  console.log(`     cd "${HERE}"`);
-  console.log("     npm install acorn --no-save --prefix . --no-package-lock");
+  console.log("  – 跳过：找不到 acorn（未声明变量检查需要它）");
+  console.log("");
+  console.log("     装法：");
+  console.log(`       cd "${HERE}"`);
+  console.log("       npm install acorn --no-save --prefix . --no-package-lock");
   console.log("");
   console.log("     ★ 必须加 --prefix，否则在中文路径下 npm 会去 D:\\ 根建目录而报 EPERM。");
   console.log("");
-  process.exit(2);
+  console.log("  通过 0 / 0（跳过）");
+  console.log("");
+  process.exit(0);
 }
 
 const dirs = process.argv.slice(2).length

@@ -92,8 +92,19 @@ console.log("[2] check-undeclared —— 故意写一个「引用未声明变量
       "",
     ].join("\n"), "utf8");
     const r = run("check-undeclared.mjs", [], HERE);
+    /**
+     * ★ 2026-10-24：检查器自己「跳过」（缺 acorn）时，元测试也跳过。
+     *
+     *   实测可移植性测试：新目录里没装 acorn ⇒ check-undeclared 走跳过分支
+     *   （exit 0）⇒ 元测试判「没变红」失败。
+     *   但那不是「检查器坏了」，是「检查器没装上」。
+     *
+     *   ⇒ 判据：先看它是不是在跳过（输出含「通过 0 / 0（跳过）」）。
+     */
+    const skipped = r.code === 0 && /通过 0 \/ 0（跳过）/.test(r.out);
     const caught = r.code !== 0 && r.out.includes("zzNeverDeclared");
-    chk("引用未声明变量后它变红", caught, caught ? "" : `exit=${r.code}`);
+    chk("引用未声明变量后它变红", caught || skipped,
+      skipped ? "（跳过：检查器缺依赖）" : (caught ? "" : `exit=${r.code}`));
   } finally {
     try { fs.unlinkSync(target); } catch { /* 已删 */ }
   }
@@ -120,8 +131,11 @@ console.log("[3] check-silent-catch —— 故意写一个「空 catch 包住大
       "",
     ].join("\n"), "utf8");
     const r = run("check-silent-catch.mjs", [], HERE);
+    /* ★ 同上：检查器缺依赖而跳过时，元测试也跳过。 */
+    const skipped = r.code === 0 && /通过 0 \/ 0（跳过）/.test(r.out);
     const caught = r.code !== 0 || /_zz_silent_catch_test/.test(r.out);
-    chk("空 catch 包住大段逻辑后它变红", caught, caught ? "" : `exit=${r.code}`);
+    chk("空 catch 包住大段逻辑后它变红", caught || skipped,
+      skipped ? "（跳过：检查器缺依赖）" : (caught ? "" : `exit=${r.code}`));
   } finally {
     try { fs.unlinkSync(target); } catch { /* 已删 */ }
   }
@@ -164,3 +178,4 @@ console.log("  ★ 「检查通过」不等于「检查真的在检查」。");
 console.log("    一个从来没红过的检查器，和不存在的检查器没有区别。");
 console.log("");
 process.exit(1);
+

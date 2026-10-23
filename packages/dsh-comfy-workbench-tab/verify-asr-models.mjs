@@ -70,6 +70,21 @@ import path from "node:path";
 const MODEL_ROOT = path.resolve(HERE, "..", "..", ".models", "whisper");
 const HOST = path.resolve(HERE, "lib", "index.js");
 
+/**
+ * ★ 2026-10-24：缺模型时整条跳过（同 verify-asr.mjs 的修法）。
+ *   `.models/` 按 .gitignore 规则不进仓库（3.9GB），
+ *   别人 clone 下来本来就没有 —— 不该判成「功能坏了」。
+ */
+if (!fs.existsSync(MODEL_ROOT)) {
+  console.log("");
+  console.log("  – 跳过：没有 whisper 模型（.models/whisper 不存在）");
+  console.log("     .models/ 不进仓库（3.9GB），需要单独准备。");
+  console.log("");
+  console.log("  通过 0 / 0（跳过）");
+  console.log("");
+  process.exit(0);
+}
+
 let pass = 0;
 const fails = [];
 const check = (name, ok, detail = "") => {
@@ -185,4 +200,5 @@ if (fails.length === 0) {
 console.log(`  ✗ asr-models  ${pass}/${total}，失败 ${fails.length} 项：`);
 for (const f of fails) console.log(`      · ${f.name}${f.detail ? `\n        ${f.detail}` : ""}`);
 process.exit(1);
+
 

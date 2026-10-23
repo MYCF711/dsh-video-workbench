@@ -49,8 +49,22 @@ let acorn;
 try {
   acorn = requireFromHere("acorn");
 } catch {
-  console.log("  ❌ 找不到 acorn。见 tools/check-undeclared.mjs 顶部注释。");
-  process.exit(2);
+  /**
+   * ★ 2026-10-24：缺 acorn 走【跳过】而不是失败（同 check-undeclared 的修法）。
+   *   实测可移植性测试里 3 项都因这个失败，而根因只是「没装开发依赖」。
+   */
+  console.log("");
+  console.log("  – 跳过：找不到 acorn（静默 catch 检查需要它）");
+  console.log("");
+  console.log("     装法：");
+  console.log(`       cd "${HERE}"`);
+  console.log("       npm install acorn --no-save --prefix . --no-package-lock");
+  console.log("");
+  console.log("     ★ 必须加 --prefix，否则在中文路径下 npm 会去 D:\\ 根建目录而报 EPERM。");
+  console.log("");
+  console.log("  通过 0 / 0（跳过）");
+  console.log("");
+  process.exit(0);
 }
 
 const dirs = [
@@ -222,4 +236,5 @@ console.log("");
 
 if (suspicious > 0 || (STRICT && hints > 0)) process.exit(1);
 process.exit(0);
+
 
