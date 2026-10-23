@@ -585,6 +585,23 @@ steps.push(run('未声明变量检查（ReferenceError 的静态形态）', 'too
 steps.push(run('静默 catch 检查（会吞掉编程错误的地方）', 'tools', 'check-silent-catch.mjs', [], 180000));
 
 /**
+ * ★★ 2026-10-23 新增：元验收的元测试
+ *
+ *   踩过两次同类坑：
+ *   ① check-undeclared 登记在 if (!STATIC) 块内，--static 下从没跑过，
+ *      但显示「全部通过」（靠核对步骤数才发现）。
+ *   ② verify-registry-complete 自己漏扫三个层级，报 134/134 全过，
+ *      而 verify-png-tags.mjs 从没登记。
+ *
+ *   ⇒ 共同点：「检查通过」不等于「检查真的在检查」。
+ *     一个从来没红过的检查器，和不存在的检查器没有区别。
+ *
+ *   本脚本对三个检查器各注入一个「必然发现的缺陷」，确认它们变红，
+ *   然后清理。★ 只做可逆注入（写临时文件再删）。
+ */
+steps.push(run('元测试（三个检查器是否真的在工作）', 'tools', 'meta-test-checkers.mjs', [], 600000));
+
+/**
  * ★★ 2026-10-23 补：verify-png-tags.mjs 一直在 packages/ 根目录，
  *   从没登记进 verify-all —— 而 verify-registry-complete 早该报出来，
  *   但它自己也漏扫了根目录（只扫 PACKAGES 子目录的第一层）。
