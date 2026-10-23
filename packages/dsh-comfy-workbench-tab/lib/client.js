@@ -11334,6 +11334,7 @@ function ComfySettingsSection() {
   const [info, setInfo] = import_react11.default.useState(null);
   const [models, setModels] = import_react11.default.useState(null);
   const [health, setHealth] = import_react11.default.useState(null);
+  const [doctor, setDoctor] = import_react11.default.useState(null);
   const [busy, setBusy] = import_react11.default.useState("");
   const [msg, setMsg] = import_react11.default.useState(null);
   const [draft, setDraft] = import_react11.default.useState({ comfyPath: "", modelsDir: "", outputDir: "", inputDir: "" });
@@ -11389,14 +11390,17 @@ function ComfySettingsSection() {
     setBusy("check");
     setMsg(null);
     try {
-      const hlt = await j("/health");
-      const md = await j("/models/required");
-      setHealth(hlt);
+      const [doc, md] = await Promise.all([
+        j("/doctor"),
+        j("/models/required").catch(() => null)
+      ]);
+      setDoctor(doc);
       setModels(md);
-      const missing = (md?.items ?? []).filter((x) => !x.found).length;
+      const hlt = await j("/health").catch(() => null);
+      if (hlt) setHealth(hlt);
       setMsg({
-        kind: missing ? "warn" : "ok",
-        text: hlt?.ok ? missing ? `ComfyUI \u5DF2\u8FDE\u63A5\uFF0C\u4F46\u7F3A ${missing} \u4E2A\u6A21\u578B` : "\u73AF\u5883\u5B8C\u6574\uFF0C\u53EF\u4EE5\u751F\u6210" : `ComfyUI \u672A\u8FDE\u63A5${hlt?.error ? `\uFF1A${hlt.error}` : ""}`
+        kind: doc?.ok ? "ok" : "error",
+        text: doc?.summary ?? (doc?.ok ? "\u73AF\u5883\u5B8C\u6574" : "\u73AF\u5883\u6709\u95EE\u9898")
       });
     } catch (e) {
       setMsg({ kind: "error", text: `\u4F53\u68C0\u5931\u8D25\uFF1A${e.message}` });
@@ -11547,7 +11551,98 @@ function ComfySettingsSection() {
         color: msg.kind === "error" ? "rgb(207,34,46)" : msg.kind === "warn" ? "rgb(154,103,0)" : "rgb(31,136,61)"
       }
     }, msg.text) : null,
-    /* ── 体检结果 ── */
+    /* ── 体检结果（/doctor 五项）── */
+    /**
+     * ★ 2026-10-23：新增五项体检渲染
+     *
+     *   主人要求：「一键体检：ComfyUI 目录对不对、模型齐不齐、
+     *              ffmpeg 在不在、端到端探活」
+     *
+     *   每行：状态点 + 标签 + 详情；不通过时额外给一行【怎么修】。
+     *   ★ 三态：true 绿 / false 红 / null 灰（判断不了）。
+     */
+    doctor && Array.isArray(doctor.checks) ? h11(
+      "div",
+      { style: { marginBottom: 14 } },
+      h11(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "baseline",
+            gap: 8,
+            marginBottom: 6
+          }
+        },
+        h11("span", {
+          style: {
+            fontSize: 12,
+            fontWeight: 600,
+            color: "var(--dsw-alias-label-primary, #0f1115)"
+          }
+        }, "\u73AF\u5883\u4F53\u68C0"),
+        h11("span", {
+          style: {
+            fontSize: 11,
+            color: doctor.ok ? "rgb(31,136,61)" : "rgb(207,34,46)"
+          }
+        }, doctor.summary ?? "")
+      ),
+      doctor.checks.map((c) => h11(
+        "div",
+        {
+          key: c.id,
+          style: {
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
+            padding: "5px 0",
+            borderBottom: "0.5px solid var(--dsw-alias-border-l2, #0000001a)"
+          }
+        },
+        h11("span", {
+          style: {
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            marginTop: 5,
+            flex: "none",
+            background: c.ok === true ? "var(--dsw-alias-state-success-primary, #3fb950)" : c.ok === false ? "var(--dsw-alias-state-error-primary, #f85149)" : "var(--dsw-alias-label-tertiary, #81858c)"
+          },
+          "aria-hidden": "true"
+        }),
+        h11(
+          "div",
+          { style: { flex: "1 1 auto", minWidth: 0 } },
+          h11("div", {
+            style: {
+              fontSize: 12,
+              lineHeight: "17px",
+              color: "var(--dsw-alias-label-primary, #0f1115)"
+            }
+          }, c.label),
+          c.detail ? h11("div", {
+            style: {
+              fontSize: 11,
+              lineHeight: "15px",
+              marginTop: 1,
+              color: "var(--dsw-alias-label-tertiary, #81858c)",
+              wordBreak: "break-all"
+            }
+          }, c.detail) : null,
+          /* ★ 只在失败时给修复建议 —— 通过了不需要看怎么修 */
+          c.ok === false && c.fix ? h11("div", {
+            style: {
+              fontSize: 11,
+              lineHeight: "15px",
+              marginTop: 2,
+              color: "rgb(154,103,0)"
+            }
+          }, `\u2192 ${c.fix}`) : null
+        )
+      ))
+    ) : null,
+    /* ── health 摘要（保留：版本/延迟/工作流数）── */
     health ? h11(
       "div",
       { style: { marginBottom: 14 } },
@@ -11576,7 +11671,7 @@ function ComfySettingsSection() {
         const isUnknown = models.unknown === true;
         const foundCount = items.filter((x) => x.found === true).length;
         const missingCount = items.filter((x) => x.found === false).length;
-        const summary = isUnknown ? `\u6A21\u578B\u9700\u6C42\uFF08\u65E0\u6CD5\u5224\u65AD \u2014\u2014 ComfyUI \u672A\u8FDE\u63A5\uFF0C\u5171 ${items.length} \u9879\uFF09` : `\u6A21\u578B\u9700\u6C42\uFF08${foundCount}/${items.length} \u5DF2\u5C31\u4F4D${missingCount ? `\uFF0C\u7F3A ${missingCount}` : ""}\uFF09`;
+        const summary = isUnknown ? `\u6A21\u578B\u9700\u6C42\uFF08\u65E0\u6CD5\u5224\u65AD \u2014\u2014 ComfyUI \u672A\u8FDE\u63A5\uFF0C\u5171 ${items.length} \u9879\uFF09` : `\u6A21\u578B\u9700\u6C42\uFF08${foundCount}/${items.length} \u5DF2\u5C31\u4F4D${missingCount ? `\uFF0C\u7F3A ${missingCount}` : ""} \xB7 ${(models.groups ?? []).length} \u7C7B\uFF09`;
         return h11(
           "div",
           null,
@@ -11601,20 +11696,84 @@ function ComfySettingsSection() {
           }, "ComfyUI \u672A\u8FDE\u63A5\uFF0C\u65E0\u6CD5\u786E\u8BA4\u8FD9\u4E9B\u6A21\u578B\u662F\u5426\u5B58\u5728\u3002\u542F\u52A8 ComfyUI \u540E\u518D\u4F53\u68C0\u3002") : null,
           items.length === 0 ? h11("div", {
             style: { fontSize: 12, color: "var(--dsw-alias-label-tertiary, #81858c)", padding: "6px 0" }
-          }, "\u5DE5\u4F5C\u6D41\u6CA1\u6709\u58F0\u660E\u6A21\u578B\u4F9D\u8D56\uFF0C\u6216\u6CA1\u8BFB\u5230\u5DE5\u4F5C\u6D41\u6587\u4EF6\u3002") : h11(
-            "div",
-            null,
-            items.map((m, i) => h11(ModelRow, {
-              key: `${m.name}-${i}`,
-              name: m.name,
-              note: m.note,
-              /**
-               * ★ 判断不了时不显示红点 —— 传 null 让 ModelRow 用中性色。
-               */
-              found: m.found,
-              size: m.sizeText
-            }))
-          )
+          }, "\u5DE5\u4F5C\u6D41\u6CA1\u6709\u58F0\u660E\u6A21\u578B\u4F9D\u8D56\uFF0C\u6216\u6CA1\u8BFB\u5230\u5DE5\u4F5C\u6D41\u6587\u4EF6\u3002") : (() => {
+            const groups = Array.isArray(models.groups) ? models.groups : null;
+            if (!groups) {
+              return h11(
+                "div",
+                null,
+                items.map((m, i) => h11(ModelRow, {
+                  key: `${m.name}-${i}`,
+                  name: m.name,
+                  note: m.note,
+                  found: m.found,
+                  size: m.sizeText
+                }))
+              );
+            }
+            return h11(
+              "div",
+              null,
+              groups.map((g) => {
+                const bad = (g.missing ?? 0) + (g.unknownCnt ?? 0);
+                return h11(
+                  "div",
+                  { key: g.role, style: { marginTop: 10 } },
+                  /* 组标题 */
+                  h11(
+                    "div",
+                    {
+                      style: {
+                        display: "flex",
+                        alignItems: "baseline",
+                        gap: 6,
+                        marginBottom: 2
+                      }
+                    },
+                    h11("span", {
+                      style: {
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "var(--dsw-alias-label-primary, #0f1115)"
+                      }
+                    }, g.label),
+                    h11(
+                      "span",
+                      {
+                        style: {
+                          fontSize: 11,
+                          color: g.missing > 0 ? "rgb(207,34,46)" : "var(--dsw-alias-label-tertiary, #81858c)"
+                        }
+                      },
+                      `${g.items.length} \u4E2A` + (g.missing ? ` \xB7 \u7F3A ${g.missing}` : "") + (g.unknownCnt ? ` \xB7 ${g.unknownCnt} \u672A\u77E5` : "")
+                    )
+                  ),
+                  /* ★ 该放哪个目录 —— 最实用的信息，放在组标题下 */
+                  h11("div", {
+                    style: {
+                      fontSize: 11,
+                      lineHeight: "15px",
+                      marginBottom: 2,
+                      color: "var(--dsw-alias-label-tertiary, #81858c)",
+                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
+                    }
+                  }, g.dir),
+                  h11(
+                    "div",
+                    null,
+                    g.items.map((m, i) => h11(ModelRow, {
+                      key: `${m.name}-${i}`,
+                      name: m.name,
+                      /* ★ 显示来源字段名，方便对着工作流核对 */
+                      note: (m.byField ? `[${m.byField}] ` : "") + (m.note ?? ""),
+                      found: m.found,
+                      size: m.sizeText
+                    }))
+                  )
+                );
+              })
+            );
+          })()
         );
       })()
     ) : null
