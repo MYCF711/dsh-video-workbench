@@ -452,10 +452,13 @@ console.log("");
 console.log("─".repeat(66));
 if (problems === 0) {
   console.log(`  ✅ ${files} 个文件，没有引用未声明的变量`);
+  /* ★ verify-all 用「通过 N / M」提取统计 —— 这里给一个统一口径 */
+  console.log(`  通过 ${files} / ${files}`);
   console.log("");
   process.exit(0);
 }
 console.log(`  ❌ ${files} 个文件里发现 ${problems} 处`);
+console.log(`  通过 ${files - problems} / ${files}`);
 console.log("");
 console.log("  ★ 这类错误不会被 node --check 抓到（语法合法），");
 console.log("    也不会被现有断言抓到（除非刚好执行到那一行）。");
@@ -463,3 +466,4 @@ console.log("    而它一旦出现在 onGenerate 里，整条生成链路就死
 console.log("    界面上却只表现为「点了没反应」。");
 console.log("");
 process.exit(1);
+
