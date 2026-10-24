@@ -153,6 +153,38 @@ node verify-all.mjs --static
 （这个数字由 `packages/tools/verify-readme-consistency.mjs` 保证与
 `verify-all.mjs` 的实际步数一致 —— 每加一个验收它就会提醒改这里。）
 
+#### 3.3.1 构建客户端产物（**必做**，否则宿主启动会崩）
+
+`dsh-comfy-workbench-tab` 声明了 `dsh.client`，而按 DSH 的规则
+**声明了就必须有 `lib/client.js`，缺失会让整个宿主崩溃**
+（不是「跳过这个插件」）。
+
+这个文件**不在仓库里** —— 原因见 [§ 关于第三方组件](#关于第三方组件)：
+它内联了 ArtCraft 的 base64 payload，而 ArtCraft 上游未声明许可协议。
+
+所以从本仓库装的第一次，必须先构建：
+
+```powershell
+cd packages/dsh-comfy-workbench-tab
+npm install          # 装 esbuild（devDependency）
+node build.mjs       # 生成 lib/client.js
+```
+
+看到这个就算成功：
+
+```
+  ✓ lib/client.js  11383.5 KB
+```
+
+★ `npm install` 若报 `EPERM mkdir 'D:\'`，是中文路径下 npm 解析 prefix 出错，
+改用：`npm install esbuild --no-save --prefix . --no-package-lock`
+
+★ 剪辑台还需要额外的 ArtCraft 产物（可选，没有则只有剪辑台降级）：
+
+```powershell
+pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1
+```
+
 ### 3.4 填路径（**必做，否则跑不起来**）
 
 插件**不内置任何本机路径**。启动后：
@@ -376,14 +408,46 @@ packages/
 
 ## 九 · 许可
 
-本项目自身的代码随作者意愿。
+本项目自身的代码是 **MIT**，全文见仓库根的 [`LICENSE`](./LICENSE)。
 
-⚠ **但它依赖的 OpenCut（`opencut-wasm`）是 AGPL-3.0。**
-  如果你要分发这个插件，**必须先确认**：
-  - 这份改编代码的来源与授权
-  - AGPL 的传染性是否覆盖你的分发形态
+### 关于第三方组件
 
-  在确认之前，**不要公开分发二进制或源码**。
+这个仓库**不含** ArtCraft 引擎（`@storyteller/ui-video-editor`）的代码 ——
+这一点与常见项目不同，需要说清楚：
 
+| 项 | 状态 |
+|---|---|
+| ArtCraft 上游许可 | ⚠ **未声明任何协议** |
+| 未声明 = | 默认「版权保留（All Rights Reserved）」 |
+| 因此 | 不能在没有明确许可的情况下再分发它的代码 |
+| 本仓库的做法 | **不含**它的源码与构建产物 |
+
+具体地：
+
+- `src/editor/_artcraft-payload.js` 只是一个占位符（`export default ""`）
+- `lib/client.js` 不在仓库里（它内联了 ArtCraft 的 base64 payload）
+- `.gitignore` 排除了这两者
+
+需要剪辑台功能的，自行获取并构建，产物留在本地：
+
+```powershell
+pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1
+```
+
+★ **没有 ArtCraft 产物也能用**：视频工作台（生图 / 生视频 / ComfyUI 桥接）
+完全不依赖它，只有剪辑台会显示「需要先准备 ArtCraft 产物」的提示。
+
+★ 本项目原创的适配层（`artcraft-adapter.mjs` / `artcraft-wire.mjs` /
+`artcraft-storage.mjs`）适用 MIT —— 它们是与 ArtCraft 对接的接口代码，
+不含上游实现。
+
+### 其他第三方依赖
+
+React、esbuild 等通过 npm 依赖引入，各自的许可见各自包内声明。
+以 npm 依赖方式引用不构成对这些代码的再分发。
+
+### 如果你认为侵权
+
+请开 issue 说明具体文件与理由，核实后会立即移除相关内容。
 
 

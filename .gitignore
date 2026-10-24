@@ -62,3 +62,18 @@ Thumbs.db
 # verify-no-pollution 的快照文件（288KB，每次跑都重写）
 _snapshot-before.json
 _snapshot-after.json
+# ── 第三方产物：不进仓库（上游未声明许可协议，不能随仓库分发）──
+# 剪辑台依赖 ArtCraft（@storyteller/ui-video-editor）的构建产物。
+# 上游没有 license 声明 ⇒ 默认版权保留 ⇒ 不能再分发。
+# 使用者自行生成：pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1
+packages/dsh-comfy-workbench-tab/src/editor/_artcraft-payload.js
+packages/dsh-comfy-workbench-tab/src/editor/_artcraft-css.js
+# ── 构建产物：不进仓库 ──
+# lib/client.js 里【内联了 ArtCraft 的 base64 payload】，
+# 而 ArtCraft 上游未声明许可协议（默认版权保留）。
+# ⇒ 产物不能随仓库分发，使用者要自己构建：
+#      cd packages/dsh-comfy-workbench-tab && npm install && node build.mjs
+#      cd packages/dsh-editor && node build.mjs
+packages/dsh-comfy-workbench-tab/lib/client.js
+
+

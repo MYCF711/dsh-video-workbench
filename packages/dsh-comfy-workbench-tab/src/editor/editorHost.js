@@ -82,9 +82,25 @@ const VIEW_ID = "artcraft";
  * ArtCraft 产物求值
  * ══════════════════════════════════════════════════════════════════════ */
 
+/**
+ * ★★ 2026-10-24：没有 ArtCraft 产物时的降级处理。
+ *
+ *   主人指出仓库不该带第三方产物 —— 上游 @storyteller/ui-video-editor
+ *   【没有声明任何 license】，默认版权保留，不能再分发。
+ *   所以 _artcraft-payload.js 改为占位符（export default ""）。
+ *
+ *   这里要保证：**缺 payload 时插件照常加载，只有剪辑台降级。**
+ *   判据 —— 一个可选功能的依赖缺失，不能拖垮核心功能
+ *   （视频工作台的生图/生视频完全不依赖 ArtCraft）。
+ */
+const HAS_ARTCRAFT = typeof ARTCRAFT_SRC === "string" && ARTCRAFT_SRC.length > 0;
+
 let _decodedSrc = null;
 function decodeArtCraftSrc() {
   if (_decodedSrc) return _decodedSrc;
+  if (!HAS_ARTCRAFT) {
+    throw new Error("ARTCRAFT_MISSING");
+  }
   const bin = atob(ARTCRAFT_SRC);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -94,6 +110,12 @@ function decodeArtCraftSrc() {
 
 function evalArtCraftOnce(hostRequire) {
   if (window.__ARTCRAFT__) return window.__ARTCRAFT__;
+  if (!HAS_ARTCRAFT) {
+    /* 用一个明确的错误类型，让上层能区分「缺产物」和「产物坏了」 */
+    const e = new Error("ARTCRAFT_MISSING");
+    e.code = "ARTCRAFT_MISSING";
+    throw e;
+  }
   const factory = new Function(
     "module", "exports", "require",
     decodeArtCraftSrc() + "\n;return module.exports;"
@@ -225,6 +247,39 @@ export class ArtCraftBoundary extends React.Component {
   }
   render() {
     if (this.state.err) {
+      /**
+       * ★★ 2026-10-24：区分「缺产物」和「产物坏了」。
+       *
+       *   缺产物是【使用者还没准备】—— 该给操作指引，不该甩一段 stack。
+       *   产物坏了是【真 bug】—— 才需要 stack 去排查。
+       *
+       *   判据：错误码是 ARTCRAFT_MISSING ⇒ 前者。
+       */
+      const missing = this.state.err?.code === "ARTCRAFT_MISSING"
+        || String(this.state.err?.message || "").includes("ARTCRAFT_MISSING");
+
+      if (missing) {
+        return React.createElement("div", {
+          style: {
+            margin: 12, padding: 16, borderRadius: 10,
+            background: "rgba(210,153,34,.10)", color: "rgb(150,110,20)",
+            fontSize: 12, lineHeight: "20px",
+          },
+        },
+          React.createElement("div", { style: { fontWeight: 600, marginBottom: 8 } },
+            "剪辑台需要先准备 ArtCraft 产物"),
+          React.createElement("div", { style: { marginBottom: 8 } },
+            "视频工作台（生图 / 生视频）不受影响，可以正常使用。"),
+          React.createElement("div", {
+            style: { fontFamily: "ui-monospace, monospace", fontSize: 11, opacity: .85 },
+          },
+            "在仓库根目录执行：",
+            React.createElement("br"),
+            "pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1"),
+          React.createElement("div", { style: { marginTop: 8, opacity: .7, fontSize: 11 } },
+            "★ 本仓库不内置 ArtCraft 代码 —— 上游未声明许可协议，不能随仓库分发。"));
+      }
+
       return React.createElement("div", {
         style: {
           margin: 12, padding: 12, borderRadius: 10,
