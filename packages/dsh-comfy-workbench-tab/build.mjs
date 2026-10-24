@@ -29,6 +29,8 @@ async function loadEsbuild() {
     path.join(HERE, "node_modules", "esbuild", "lib", "main.js"),
     path.join(HERE, "..", "..", "node_modules", "esbuild", "lib", "main.js"),
     path.join(HERE, "..", "tools", "node_modules", "esbuild", "lib", "main.js"),
+    /* ★ 2026-10-24：本机 _upstream 里常有现成的（构建上游时装的） */
+    path.join(HERE, "..", "..", "..", "_upstream", "artcraft-demo", "node_modules", "esbuild", "lib", "main.js"),
   ];
   for (const p of cands) {
     if (fs.existsSync(p)) return import(pathToFileURL(p).href);
@@ -39,11 +41,15 @@ async function loadEsbuild() {
   console.error("");
   console.error("  ✗ 找不到 esbuild —— 构建需要它。");
   console.error("");
-  console.error("  装到本包下：");
+  console.error("  它是本包的 devDependency，装一下就行：");
   console.error(`     cd "${HERE}"`);
+  console.error("     npm install");
+  console.error("");
+  console.error("  如果 npm 报 EPERM（中文路径下 npm 会解析错 prefix）：");
   console.error("     npm install esbuild --no-save --prefix . --no-package-lock");
   console.error("");
-  console.error("  ★ 必须加 --prefix：中文路径下 npm 会把 prefix 解析错而报 EPERM。");
+  console.error("  ★ lib/client.js 是构建产物，不进 git ——");
+  console.error("    所以使用者第一次用之前必须自己构建一次。");
   console.error("");
   process.exit(1);
 }

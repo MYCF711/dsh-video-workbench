@@ -1,0 +1,65 @@
+MIT License
+
+Copyright (c) 2026 MYCF711
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+────────────────────────────────────────────────────────────────────────────────
+关于第三方组件
+────────────────────────────────────────────────────────────────────────────────
+
+本仓库（DSH 视频工作台）自身的代码采用上面的 MIT 协议。
+
+但它【不含】第三方 ArtCraft 引擎（@storyteller/ui-video-editor）的代码，
+这一点与常见项目不同，需要说明清楚：
+
+  1. 剪辑台的底层依赖 ArtCraft —— 一个独立的第三方视频编辑引擎。
+     本项目通过适配层（artcraft-adapter.mjs / artcraft-wire.mjs /
+     artcraft-storage.mjs）与它对接，这些适配层是本项目原创的，适用 MIT。
+
+  2. ArtCraft 上游项目【没有声明任何开源许可协议】。
+     按伯尔尼公约及各国著作权法，未声明协议即默认「版权保留
+     （All Rights Reserved）」—— 这意味着不能在没有明确许可的情况下
+     复制、修改或再分发它的代码。
+
+  3. 因此本仓库【不包含】ArtCraft 的任何源码或构建产物：
+     · 不从 _upstream 读取或复制它的源码到仓库
+     · src/editor/_artcraft-payload.js 只是一个占位符（空字符串）
+     · .gitignore 排除了由使用者本地生成的产物
+
+  4. 使用者如需剪辑台功能，须自行获取 ArtCraft 并自行承担
+     与上游权利人之间的授权关系：
+       pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1
+     这一步在本地完成，产物不进 git。
+
+  5. 没有 ArtCraft 产物时，视频工作台（生图 / 生视频 / ComfyUI 桥接）
+     完全可用，只有剪辑台显示「需要先准备 ArtCraft 产物」的提示。
+
+────────────────────────────────────────────────────────────────────────────────
+第三方依赖
+────────────────────────────────────────────────────────────────────────────────
+
+本项目通过 npm 依赖引用若干第三方包（React、esbuild 等），
+它们各自的许可协议见各自的包内声明。以 npm 依赖方式引入
+不构成对这些代码的再分发。
+
+────────────────────────────────────────────────────────────────────────────────
+
+如果你认为本仓库某个部分侵犯了你的权利，请开 issue 说明，
+我会在核实后移除相关内容。

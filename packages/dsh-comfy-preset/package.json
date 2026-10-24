@@ -4,6 +4,14 @@
   "description": "DSH agent preset: a video-workbench persona plus the comfy-mode-dispatch skill. Depends on dsh-comfy-bridge for generation; contributes no host or client code itself.",
   "type": "module",
   "main": "index.js",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-preset",
+    "comfyui",
+    "skill"
+  ],
   "files": [
     "preset.yml",
     "agent.cordis.yml",

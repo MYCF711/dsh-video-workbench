@@ -29,7 +29,24 @@
     "cordis.patch.yml",
     "README.md"
   ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "comfyui",
+    "video",
+    "image",
+    "workbench",
+    "ui"
+  ],
   "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "build-payload": "node ../../scripts/build-payload.mjs"
+  },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.4",
     "dsh-comfy-bridge": "*"
