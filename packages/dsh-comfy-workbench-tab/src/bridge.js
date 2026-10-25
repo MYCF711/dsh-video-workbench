@@ -54,7 +54,38 @@ export function createBridgeOn(prefix, kind = "m1") {
       }
       throw err;
     }
-    if (!res.ok) throw new Error(`HTTP ${res.status} @ ${p}`);
+    /**
+     * ★★ 2026-10-25 修：后端明明返回了人话，前端只显示「HTTP 500 @ /generate」。
+     *
+     *   实测（ComfyUI 未运行时点生成）：
+     *     后端响应体 {"error":"ComfyUI 未运行或不可达：http://127.0.0.1:8188（fetch failed）",
+     *                 "name":"ComfyUnreachable"}
+     *     界面显示 "HTTP 500 @ /generate"   ← 用户看不出该干什么
+     *
+     *   判据：凡是后端已经写了「给用户看的错误」的路由，前端必须把它透出来。
+     *        只有后端没给可读信息时，才退回状态码。
+     */
+    if (!res.ok) {
+      let detail = "";
+      try {
+        const text = await res.text();
+        if (text) {
+          try {
+            const j2 = JSON.parse(text);
+            detail = String(j2?.error ?? j2?.message ?? "").trim();
+          } catch {
+            detail = text.trim().slice(0, 300);
+          }
+        }
+      } catch { /* 读不到就只报状态码 */ }
+      const err = new Error(
+        detail ? `${detail}（HTTP ${res.status}）` : `HTTP ${res.status} @ ${p}`
+      );
+      err.status = res.status;
+      err.detail = detail;
+      err.path = p;
+      throw err;
+    }
     return res.json();
   };
 

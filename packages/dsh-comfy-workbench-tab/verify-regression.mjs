@@ -234,8 +234,30 @@ console.log("\n⑧ ArtCraft payload 必须 base64（否则 esbuild 导出被劫�
       !bcode.includes("JSON.stringify(raw)"),
       (bcode.match(/JSON\.stringify\(raw\)/g) || []).length);
   }
-  t("editorHost.js 用 atob 解码", /atob\(ARTCRAFT_SRC\)/.test(
+  /**
+   * ★★ 2026-10-25 修：这条断言原来写死 `atob(ARTCRAFT_SRC)`。
+   *
+   *   它锁的是「AGENTS §6.39 ⑧ payload 必须 base64」这个【行为】，
+   *   而不是某个变量名。10-25 把 payload 从「静态 import 内联」改成
+   *   「运行时按需取」之后，变量从 ARTCRAFT_SRC 变成 _rawSrc，
+   *   断言就假红了 —— 而 base64 + atob 的事实一点没变。
+   *
+   *   ⇒ 改成「atob 的入参是什么都行，只要还走 atob 这条路」。
+   *     判据：断言要锚在【不变量】上，不能锚在易变的实现细节上。
+   */
+  t("editorHost.js 仍用 atob 解码 base64（变量名可变，路径不变）", /atob\(\s*[A-Za-z_$][\w$.]*\s*\)/.test(
     fs.readFileSync(path.join(AC_TAB, "editorHost.js"), "utf8")));
+
+  /**
+   * ★ 必须先剥注释再判 —— 本项目的老坑（AGENTS §7.5）：
+   *   editorHost.js 的注释里正写着「原来这么写」的示例，
+   *   直接搜全文会抓到注释，造成假红。
+   */
+  const hostCode = fs.readFileSync(path.join(AC_TAB, "editorHost.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  t("payload 不再静态 import 进产物（首屏不该背 10MB）",
+    !/import\s+\w+\s+from\s+["']\.\/_artcraft-payload\.js["']/.test(hostCode));
 }
 
 /* ─── ⑨ 运行时抽查：真实函数行为 ────────────────────────── */

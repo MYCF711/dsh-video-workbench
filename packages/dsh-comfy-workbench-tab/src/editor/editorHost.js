@@ -42,8 +42,20 @@
  */
 
 import React from "react";
-import ARTCRAFT_SRC from "./_artcraft-payload.js";
-import ARTCRAFT_CSS from "./_artcraft-css.js";
+/**
+ * ★★★ 2026-10-25 拆包：payload / css 不再静态 import。
+ *
+ *   原来：
+ *     import ARTCRAFT_SRC from "./_artcraft-payload.js";   // 10.43 MB base64
+ *     import ARTCRAFT_CSS from "./_artcraft-css.js";       // 93 KB base64
+ *   静态 import ⇒ esbuild 必然内联进 lib/client.js
+ *   ⇒ 首屏 11.4 MB，而这两个东西只有「打开剪辑台」才用得上（实测数据见下）。
+ *
+ *   现在：改为运行时向 host 侧取
+ *     GET /comfy-assets/artcraft-asset?name=payload.js|css.js
+ *   ⇒ 打包产物 614 KB（实测，旧版 11.4 MB）。
+ *   ⇒ 不开剪辑台的人，一分钱不花。
+ */
 import DSH_NATIVE_CSS from "./dsh-native.css.js";
 import EDITOR_CSS from "./editor.css.js";
 import { createHttpAdapters } from "./adapters.js";
@@ -92,16 +104,72 @@ const VIEW_ID = "artcraft";
  *   这里要保证：**缺 payload 时插件照常加载，只有剪辑台降级。**
  *   判据 —— 一个可选功能的依赖缺失，不能拖垮核心功能
  *   （视频工作台的生图/生视频完全不依赖 ArtCraft）。
+ *
+ * ★★★ 2026-10-25：从「打包内联」改成「按需 fetch」。
+ *
+ *   【实测的问题】首屏 performance 资源明细：
+ *     client.js 传输 5096 KB / 解码 14559 KB，其中 10.43 MB 是 ArtCraft 的
+ *     base64 payload —— 而它只在【打开剪辑台】那一刻才用得上。
+ *     ⇒ 不开剪辑台的人，每次刷新白下 10MB，再 atob 一遍（再吃 ~7MB 内存）。
+ *     ⇒ 打包产物 11.4 MB；抽掉 payload/css 后只有 614 KB（实测）。
+ *
+ *   【做法】构建期 payload 是 ""，真要用时向 host 侧取：
+ *     GET /comfy-assets/artcraft-asset?name=payload.js|css.js
+ *   host 侧从 src/editor/artcraft-*.b64.txt 读（不在 git 里）。
+ *
+ *   ★ 为什么不直接 import 那两个 .js：静态 import 会被 esbuild 内联进产物，
+ *     体积问题原样保留。必须让「取」这个动作发生在运行时、且只在需要时。
  */
-const HAS_ARTCRAFT = typeof ARTCRAFT_SRC === "string" && ARTCRAFT_SRC.length > 0;
+/** ArtCraft 产物（唯一来源：host 侧按需取）。空 = 还没取过。 */
+let _rawSrc = "";
+let _rawCss = "";
+
+/** 取一次就记住；失败也记住（避免每次挂载都重试 10MB）。 */
+let _assetPromise = null;
+function loadArtCraftAssets() {
+  if (_assetPromise) return _assetPromise;
+  _assetPromise = (async () => {
+    const get = async (name) => {
+      const r = await fetch(`/comfy-assets/artcraft-asset?name=${name}`, {
+        headers: { Accept: "text/plain" },
+      });
+      if (r.status === 404) {
+        /* 缺产物是正常降级态，不是异常 */
+        const j = await r.json().catch(() => ({}));
+        const e = new Error("ARTCRAFT_MISSING");
+        e.code = "ARTCRAFT_MISSING";
+        e.hint = j?.hint ?? "";
+        throw e;
+      }
+      if (!r.ok) throw new Error(`取 ArtCraft 产物失败（HTTP ${r.status}）`);
+      return (await r.text()).trim();
+    };
+    _rawSrc = await get("payload.js");
+    _rawCss = await get("css.js");
+    return true;
+  })().catch((e) => {
+    /* 让下一次挂载还能重试 —— 用户可能刚跑完 fetch-artcraft.ps1 */
+    _assetPromise = null;
+    throw e;
+  });
+  return _assetPromise;
+}
+
+/** 是否已有可用产物（同步判断，给降级 UI 用）。 */
+function hasArtCraft() {
+  return typeof _rawSrc === "string" && _rawSrc.length > 0;
+}
 
 let _decodedSrc = null;
 function decodeArtCraftSrc() {
   if (_decodedSrc) return _decodedSrc;
-  if (!HAS_ARTCRAFT) {
-    throw new Error("ARTCRAFT_MISSING");
+  const b64 = _rawSrc;
+  if (!b64) {
+    const e = new Error("ARTCRAFT_MISSING");
+    e.code = "ARTCRAFT_MISSING";
+    throw e;
   }
-  const bin = atob(ARTCRAFT_SRC);
+  const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   _decodedSrc = new TextDecoder("utf-8").decode(bytes);
@@ -110,7 +178,7 @@ function decodeArtCraftSrc() {
 
 function evalArtCraftOnce(hostRequire) {
   if (window.__ARTCRAFT__) return window.__ARTCRAFT__;
-  if (!HAS_ARTCRAFT) {
+  if (!hasArtCraft()) {
     /* 用一个明确的错误类型，让上层能区分「缺产物」和「产物坏了」 */
     const e = new Error("ARTCRAFT_MISSING");
     e.code = "ARTCRAFT_MISSING";
@@ -144,10 +212,12 @@ function b64ToText(b64) {
 }
 
 function injectCssOnce() {
-  if (!document.getElementById("artcraft-tab-css")) {
+  /* ★ 2026-10-25：CSS 也改成按需取，_rawCss 为空时跳过 ArtCraft 那层
+     —— DSH 原生对齐层与外壳样式仍然注入，降级提示框照样能看。 */
+  if (!document.getElementById("artcraft-tab-css") && _rawCss) {
     const style = document.createElement("style");
     style.id = "artcraft-tab-css";
-    style.textContent = b64ToText(ARTCRAFT_CSS);
+    style.textContent = b64ToText(_rawCss);
     document.head.appendChild(style);
   }
   /* ★ 剪辑台外壳样式：必须在 artcraft-tab-css 之后 */
@@ -262,7 +332,7 @@ export class ArtCraftBoundary extends React.Component {
         return React.createElement("div", {
           style: {
             margin: 12, padding: 16, borderRadius: 10,
-            background: "rgba(210,153,34,.10)", color: "rgb(150,110,20)",
+            background: "rgba(210,153,34,.10)", color: "var(--dsw-alias-state-warning-primary, #d29922)",
             fontSize: 12, lineHeight: "20px",
           },
         },
@@ -283,7 +353,7 @@ export class ArtCraftBoundary extends React.Component {
       return React.createElement("div", {
         style: {
           margin: 12, padding: 12, borderRadius: 10,
-          background: "rgba(248,81,73,.08)", color: "rgb(207,34,46)",
+          background: "rgba(248,81,73,.08)", color: "var(--dsw-alias-state-error-primary, #f25a5a)",
           fontFamily: "ui-monospace, monospace", fontSize: 11, lineHeight: "16px",
           whiteSpace: "pre-wrap", overflow: "auto", maxHeight: "80vh",
         },
@@ -558,6 +628,16 @@ export function ArtCraftHost({ t, hostRequire }) {
     let alive = true;
     const timer = setTimeout(async () => {
       try {
+        /**
+         * ★★ 2026-10-25 顺序关键：先取产物（可能 10MB），再注入 CSS，再求值。
+         *   原来 CSS 先注入 —— 但现在 CSS 也在按需产物里，
+         *   不先取就拿到空串，剪辑台会没样式（一片黑底白字）。
+         *
+         *   取失败（ARTCRAFT_MISSING）直接抛，走 ArtCraftBoundary 的降级面板。
+         *   ★ 只在【打开剪辑台】时才走到这里 ⇒ 视频工作台不付这笔钱。
+         */
+        await loadArtCraftAssets();
+        if (!alive) return;
         injectCssOnce();
         const el = timelineElRef.current;
         if (!el || !alive) return;
@@ -687,7 +767,32 @@ export function ArtCraftHost({ t, hostRequire }) {
           setState({ s: "ready", err: null });
         }, 300);
       } catch (e) {
-        if (alive) setState({ s: "error", err: String(e?.stack ?? e) });
+        /**
+         * ★★ 2026-10-25 修：缺产物时甩了一屏 stack，降级面板没生效。
+         *
+         *   实测（把 artcraft-payload.b64.txt 移走后打开剪辑台）：
+         *     界面显示「[剪辑台] 加载失败（视频工作台不受影响）」+ 一屏红色调用栈。
+         *     而 ArtCraftBoundary 里明明写了「ARTCRAFT_MISSING ⇒ 显示操作指引」。
+         *
+         *   根因：这一行原来写的是
+         *     err: String(e?.stack ?? e)
+         *   把 Error 对象【转成字符串】了 —— `e.code` 就此丢失，
+         *   下游只能拿到一坨文本，识别不出「这是缺产物」。
+         *
+         *   ⇒ 保留 Error 对象本身，把 stack 放到另一个字段。
+         *     判据：任何要在下游按 `code`/`name` 分支的错误，都不许提前 String()。
+         */
+        if (alive) {
+          const code = e?.code ?? e?.cause?.code;
+          const hint = e?.hint ?? e?.cause?.hint;
+          setState({
+            s: "error",
+            err: String(e?.message ?? e),
+            errCode: code ?? null,
+            errHint: hint ?? null,
+            errStack: String(e?.stack ?? e),
+          });
+        }
       }
     }, 0);
 
@@ -1025,14 +1130,50 @@ export function ArtCraftHost({ t, hostRequire }) {
   };
 
   if (state.s === "error") {
+    /**
+     * ★★ 2026-10-25：与 ArtCraftBoundary 用同一套判据 ——
+     *   缺产物 = 使用者还没准备，该给操作指引；
+     *   其它 = 真 bug，才值得甩 stack。
+     *   （原来这里无差别甩 stack，降级设计等于只在 Boundary 那一层有效）
+     */
+    const missing = state.errCode === "ARTCRAFT_MISSING"
+      || String(state.err ?? "").includes("ARTCRAFT_MISSING");
+
+    if (missing) {
+      return React.createElement("div", {
+        style: {
+          margin: 16, padding: 16, borderRadius: 12,
+          background: "rgba(210,153,34,.10)",
+          color: "var(--dsw-alias-state-warning-primary, #d29922)",
+          fontSize: 13, lineHeight: "22px",
+        },
+      },
+        React.createElement("div", { style: { fontWeight: 600, marginBottom: 8, fontSize: 14 } },
+          "剪辑台需要先准备 ArtCraft 产物"),
+        React.createElement("div", { style: { marginBottom: 10 } },
+          "视频工作台（生图 / 生视频）不受影响，可以正常使用。"),
+        React.createElement("div", {
+          style: {
+            padding: "10px 12px", borderRadius: 8,
+            background: "rgba(0,0,0,.05)",
+            fontFamily: "ui-monospace, monospace", fontSize: 12,
+            userSelect: "all", marginBottom: 10,
+          },
+        }, "pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1"),
+        React.createElement("div", { style: { opacity: .75, fontSize: 12 } },
+          "在仓库根目录执行上面这条命令，然后刷新页面。"),
+        React.createElement("div", { style: { marginTop: 6, opacity: .6, fontSize: 12 } },
+          "★ 本仓库不内置 ArtCraft 代码 —— 上游未声明许可协议，不能随仓库分发。"));
+    }
+
     return React.createElement("div", {
       style: {
         padding: 16, margin: 12, borderRadius: 12,
-        background: "rgba(248,81,73,.08)", color: "rgb(207,34,46)",
+        background: "rgba(248,81,73,.08)", color: "var(--dsw-alias-state-error-primary, #f25a5a)",
         fontFamily: "ui-monospace, monospace", fontSize: 11,
         whiteSpace: "pre-wrap", overflow: "auto", maxHeight: "80vh",
       },
-    }, "[剪辑台] 加载失败（视频工作台不受影响）：\n" + state.err);
+    }, "[剪辑台] 加载失败（视频工作台不受影响）：\n\n" + (state.errStack ?? state.err));
   }
 
   return React.createElement("div", {

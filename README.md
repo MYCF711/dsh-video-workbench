@@ -148,7 +148,7 @@ cd packages
 node verify-all.mjs --static
 ```
 
-期望：`96 / 96`，全部通过。
+期望：`97 / 97`，全部通过。
 
 （这个数字由 `packages/tools/verify-readme-consistency.mjs` 保证与
 `verify-all.mjs` 的实际步数一致 —— 每加一个验收它就会提醒改这里。）

@@ -81,6 +81,75 @@ function json(res, status, body) {
   res.end(payload);
 }
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * ★★★ 2026-10-25 · 跨站请求防护（CSRF guard）
+ *
+ *   【发现】实测这些路由【完全不需要认证】就能打：
+ *     curl -H "Origin: https://evil.example" \
+ *          http://127.0.0.1:19387/comfy-bridge/config
+ *     → 200 OK，返回本机 ComfyUI 的绝对路径
+ *
+ *   DSH 自己的页面有 cookie 认证（/ 不带 token 直接 401），
+ *   但 dsh-host-webserver 的 register(route) 走的是【先匹配路由】，
+ *   match 到就直接 handler —— 认证那一层只挡 index 与 fallback。
+ *   ⇒ 插件路由是裸的。
+ *
+ *   【危害】
+ *     · /clean 默认 dryRun，但 ?dryRun=0 会真删 output/ 里的文件
+ *     · /stop  会关掉主人的 ComfyUI（正在生成的活也一起没了）
+ *     · /config POST 会改路径
+ *   任何网页（含广告 iframe）都能用 `fetch(url,{mode:'no-cors'})` 打它们，
+ *   因为 text/plain 是「简单请求」，浏览器不发 CORS 预检，页面拿不到回包
+ *   但请求已经执行了 —— 正是 CSRF 的经典形状。
+ *
+ *   【做法】不引入鉴权（那会让 curl/脚本全废，也与 DSH 的会话无关），
+ *   只做「来源判定」：
+ *     ① Sec-Fetch-Site 明确是 cross-site → 403（现代浏览器的硬信号）
+ *     ② 带了 Origin，且它和本次请求的 Host 不一致 → 403
+ *        ★ 用「Origin vs Host」而不是「Origin 是否 localhost」：
+ *          主人可能从局域网 IP 打开 DSH（有局域网记忆工程），
+ *          写死 localhost 会把正常使用一起挡掉。
+ *     ③ 没带任何来源信息（curl / 本地脚本 / 老浏览器）→ 放行
+ *        ★ 这条是关键：本项目的验收脚本、命令行都要能直接用。
+ *
+ *   判据：挡「浏览器自动带上的跨源信号」，不挡「主动调用」。
+ * ══════════════════════════════════════════════════════════════════════
+ */
+/** ★ 导出供单测（verify-csrf-guard.mjs）用 —— 纯函数，不改状态。 */
+export function isCrossSite(req) {
+  const h = req.headers ?? {};
+
+  const site = String(h["sec-fetch-site"] ?? "").toLowerCase();
+  /* same-origin / same-site / none（地址栏直访）/ 空（非浏览器）都放行 */
+  if (site === "cross-site") return true;
+
+  const origin = h.origin;
+  if (origin === undefined) return false;
+  if (origin === "null") return true;   /* 沙箱 iframe / data: 页面 —— 可疑 */
+
+  let originHost;
+  try {
+    originHost = new URL(origin).host.toLowerCase();
+  } catch {
+    return true;                        /* 不像 URL 的 Origin —— 可疑 */
+  }
+  const reqHost = String(h.host ?? "").toLowerCase();
+  if (!reqHost) return false;           /* 没有 Host（HTTP/1.0 脚本）—— 放行 */
+  /* 同源 = Origin 的 host:port 与请求的 Host 完全一致 */
+  return originHost !== reqHost;
+}
+
+/** 命中跨站就写 403 并返回 true（调用方直接 return）。 */
+function rejectCrossSite(req, res) {
+  if (!isCrossSite(req)) return false;
+  json(res, 403, {
+    error: "拒绝跨站请求（cross-site request rejected）",
+    hint: "本路由只接受来自本机 DSH 页面的调用。命令行/脚本请直接调用，不要带 Origin 头。",
+  });
+  return true;
+}
+
 /** 读请求体（限制 64 MiB，素材上传够用）。 */
 function readBody(req, limit = 64 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
@@ -778,13 +847,34 @@ export async function apply(ctx, config = {}) {
   ];
 
   if (typeof ctx?.webServer?.register === "function") {
+    /**
+     * ★★ 2026-10-25：所有路由统一套一层跨站判定。
+     *
+     *   为什么不逐条加：本文件有 21 个 register，逐个加必然漏
+     *   （本项目已踩过「只修一处」的坑，见 AGENTS §6.43）。
+     *   包住 register 本体 ⇒ 新增路由自动受保护，不需要记得。
+     */
+    const ws = {
+      register: (route) => {
+        const orig = route.handler;
+        /* ★ 必须直连 ctx.webServer.register —— 写成 ws.register 会无限递归 */
+        return ctx.webServer.register({
+          ...route,
+          handler: async (req, res) => {
+            if (rejectCrossSite(req, res)) return;
+            return orig(req, res);
+          },
+        });
+      },
+    };
+
     ctx.effect(() => {
       const disposers = [];
 
       // 三个只读端点用 exact
       for (const [method, path, fn] of routes) {
         disposers.push(
-          ctx.webServer.register({
+          ws.register({
             kind: "exact",
             path: prefix + path,
             handler: async (req, res) => {
@@ -811,7 +901,7 @@ export async function apply(ctx, config = {}) {
        *   前端必须区分「判断不了」和「缺失」，否则会把「没开 ComfyUI」误报成「缺模型」。
        */
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/models/required",
           handler: async (_req, res) => {
@@ -860,7 +950,7 @@ export async function apply(ctx, config = {}) {
        *     不需要重启实例。否则用户填完还得重启，体验断掉。
        */
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/config",
           handler: async (req, res) => {
@@ -926,7 +1016,7 @@ export async function apply(ctx, config = {}) {
        *   返回结构固定，前端可以逐行渲染。
        */
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/doctor",
           handler: async (_req, res) => {
@@ -1066,7 +1156,7 @@ export async function apply(ctx, config = {}) {
       //   「而且没有关闭能力，应该做成开关」
       //   ⇒ /ensure 启动，/stop 关闭。两个都由状态栏那个按钮触发。
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/ensure",
           handler: async (req, res) => {
@@ -1096,7 +1186,7 @@ export async function apply(ctx, config = {}) {
       //   POST /subtitle/transcribe { file, language?, model? } → segments + srt
       //   POST /subtitle/burn       { video, srt }             → 烧硬字幕
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/subtitle/status",
           handler: async (_req, res) => {
@@ -1111,7 +1201,7 @@ export async function apply(ctx, config = {}) {
       );
 
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/subtitle/transcribe",
           handler: async (req, res) => {
@@ -1133,7 +1223,7 @@ export async function apply(ctx, config = {}) {
       );
 
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/subtitle/burn",
           handler: async (req, res) => {
@@ -1160,7 +1250,7 @@ export async function apply(ctx, config = {}) {
       //   让「哪一段该重跑」是算出来的，不是猜的。
       //   阈值 0.65 是实测标定的（同源切开 0.823 / 无关视频 0.397）。
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/audit",
           handler: async (req, res) => {
@@ -1182,7 +1272,7 @@ export async function apply(ctx, config = {}) {
       // ── 首尾帧衔接（学 YUH 的 canvas 节点 chain_from）──
       //   上一镜尾帧 → 下一镜参考图槽。多镜一致性的关键。
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/chain",
           handler: async (req, res) => {
@@ -1230,7 +1320,7 @@ export async function apply(ctx, config = {}) {
       //   首尾帧衔接是多镜一致性的关键：上一镜尾帧 → 下一镜首帧。
       //   我现在只有「整段替换」，缺这个原子操作。
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/frame",
           handler: async (req, res) => {
@@ -1255,7 +1345,7 @@ export async function apply(ctx, config = {}) {
 
       // 抽帧能力探活
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/frame/status",
           handler: async (_req, res) => {
@@ -1273,7 +1363,7 @@ export async function apply(ctx, config = {}) {
       //   ?dryRun=1 只报告不删（默认就是 dryRun，安全）。
       //   只清白名单前缀 + 超过保留天数的文件，主人的历史产出一个不碰。
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/clean",
           handler: async (req, res) => {
@@ -1307,7 +1397,7 @@ export async function apply(ctx, config = {}) {
       );
 
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/stop",
           handler: async (req, res) => {
@@ -1324,7 +1414,7 @@ export async function apply(ctx, config = {}) {
 
       // POST /generate
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/generate",
           handler: async (req, res) => {
@@ -1365,7 +1455,7 @@ export async function apply(ctx, config = {}) {
       };
 
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "prefix",
           path: prefix + "/job",
           handler: async (req, res) => {
@@ -1381,7 +1471,7 @@ export async function apply(ctx, config = {}) {
       );
 
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "prefix",
           path: prefix + "/cancel",
           handler: async (req, res) => {
@@ -1414,7 +1504,7 @@ export async function apply(ctx, config = {}) {
        *     计数只用于「进程退出时清理」。
        */
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/progress/status",
           handler: async (_req, res) => {
@@ -1441,7 +1531,7 @@ export async function apply(ctx, config = {}) {
       );
 
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "prefix",
           path: prefix + "/progress",
           handler: async (req, res) => {
@@ -1467,7 +1557,7 @@ export async function apply(ctx, config = {}) {
       // ── 设备监控（工作台 UI 的一个子模块；坏了只丢那块 UI）──
       //   挂在这里是因为工作台插件是纯浏览器侧，自己没有 webServer。
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/device",
           handler: async (_req, res) => {
@@ -1489,7 +1579,7 @@ export async function apply(ctx, config = {}) {
       //   失败也返回 200 + loras:[]，前端据此把下拉降级成「不可用」，
       //   不许因为拿不到名单就把整个参数区拖垮。
       disposers.push(
-        ctx.webServer.register({
+        ws.register({
           kind: "exact",
           path: prefix + "/loras",
           handler: async (_req, res) => {

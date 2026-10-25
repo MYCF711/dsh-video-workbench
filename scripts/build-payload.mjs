@@ -158,6 +158,17 @@ fs.mkdirSync(DEST, { recursive: true });
 fs.writeFileSync(path.join(DEST, OUT_NAME), payloadSource, "utf8");
 console.log(`  ✓ ${OUT_NAME}  ${(Buffer.byteLength(payloadSource) / 1024 / 1024).toFixed(2)}MB`);
 
+/**
+ * ★★ 2026-10-25：同时落一份纯 base64 文本。
+ *
+ *   为什么两份：_artcraft-payload.js 是给【打包期】用的（现在是空占位），
+ *   artcraft-payload.b64.txt 是给【宿主运行时按需下发】用的。
+ *   宿主读 txt → 吐给浏览器 → 只有打开剪辑台才走这一趟。
+ *   ⇒ 首屏从 11.4MB 降到 614KB（实测）。
+ */
+fs.writeFileSync(path.join(DEST, "artcraft-payload.b64.txt"), b64, "utf8");
+console.log(`  ✓ artcraft-payload.b64.txt  ${(b64.length / 1024 / 1024).toFixed(2)}MB（宿主按需下发）`);
+
 /* ── CSS 载荷 ───────────────────────────────────────────── */
 const cssPath = path.join(ART, "dsh-dist", "ac.css");
 if (fs.existsSync(cssPath)) {
@@ -171,6 +182,9 @@ if (fs.existsSync(cssPath)) {
 export default "${Buffer.from(css, "utf8").toString("base64")}";
 `, "utf8");
   console.log(`  ✓ _artcraft-css.js  ${(Buffer.byteLength(css) / 1024).toFixed(1)}KB（base64）`);
+  const cssB64 = Buffer.from(css, "utf8").toString("base64");
+  fs.writeFileSync(path.join(DEST, "artcraft-css.b64.txt"), cssB64, "utf8");
+  console.log(`  ✓ artcraft-css.b64.txt  ${(cssB64.length / 1024).toFixed(1)}KB（宿主按需下发）`);
 } else {
   console.log("  ⚠ 没有 ac.css（ArtCraft 的界面会很难看）");
 }

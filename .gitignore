@@ -68,6 +68,10 @@ _snapshot-after.json
 # 使用者自行生成：pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1
 packages/dsh-comfy-workbench-tab/src/editor/_artcraft-payload.js
 packages/dsh-comfy-workbench-tab/src/editor/_artcraft-css.js
+# 2026-10-25：改成按需下发后，真实产物放在这两个纯文本里（宿主侧读）。
+# 它们不进 git 的理由同上。
+packages/dsh-comfy-workbench-tab/src/editor/artcraft-payload.b64.txt
+packages/dsh-comfy-workbench-tab/src/editor/artcraft-css.b64.txt
 # ── 构建产物：不进仓库 ──
 # lib/client.js 里【内联了 ArtCraft 的 base64 payload】，
 # 而 ArtCraft 上游未声明许可协议（默认版权保留）。
