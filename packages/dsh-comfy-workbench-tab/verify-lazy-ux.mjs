@@ -141,6 +141,56 @@ t("★ 只接管未结束的（done 的要过滤掉）", () => {
   must(/filter\(\(x\)\s*=>\s*x && !x\.done\)/.test(wbCode), "没过滤已完成任务 —— 会恢复一条旧状态误导用户");
 });
 
+console.log("\n=== ③b 切 tab 回来必须能重新接管 ===\n");
+
+/**
+ * ★★★ 2026-10-25 实测缺陷：
+ *   原实现用 resumedRef.current 做「只接管一次」的闸门。
+ *   而切走 tab 会卸载组件（轮询随之停止），切回来是【重新挂载】——
+ *   resumedRef 是 useRef，在同一次挂载内保留，回来时已经是 true
+ *   ⇒ 再也不接管。
+ *   症状：切走再切回，进度条消失、按钮变回「生成」，用户以为任务没了，
+ *   而 ComfyUI 里还在跑。
+ *
+ *   判据：闸门要回答「现在有没有在跟任务」，而不是「这次挂载跑过没有」。
+ */
+t("接管闸门用「当前是否已在跟任务」，不用一次性 flag", () => {
+  const i = wbCode.indexOf('fetch("/comfy-bridge/jobs"');
+  must(i > 0, "找不到接管 effect");
+  const seg = wbCode.slice(i, i + 2000);
+  must(/alreadyFollowing/.test(seg), "没有用 alreadyFollowing 判断「是否已在跟任务」");
+  must(
+    /jobRef\.current\?\.jobId/.test(seg),
+    "alreadyFollowing 没有读 jobRef —— 读不到当前任务，判断不成立"
+  );
+  must(
+    !/if \(!list\.length \|\| resumedRef\.current\) return;/.test(seg),
+    "还在用 resumedRef 做闸门 —— 切 tab 回来后永远不再接管"
+  );
+  /**
+   * ★★ 2026-10-25 变异盲区：只检查「有没有 alreadyFollowing / 有没有读 jobRef」
+   *   还不够 —— 把闸门写成恒真（`if (jobRef.current !== undefined) return;`，
+   *   而 useRef(null) 初始就是 null 不是 undefined）时前两条都通过，
+   *   但接管永远不会发生。
+   *   判据：闸门必须【真的是条件判断】，不能恒成立。
+   */
+  const gate = seg.match(/const alreadyFollowing = ([\s\S]{0,400}?);\s*if \(alreadyFollowing\) return;/);
+  must(gate, "闸门形状不符（应当是 alreadyFollowing = ...; if (alreadyFollowing) return;）");
+  const expr = gate[1];
+  must(/!/.test(expr), "alreadyFollowing 没有取反 —— 看起来是「有任务才继续」，逻辑反了");
+  must(
+    !/!==\s*undefined/.test(expr),
+    "alreadyFollowing 拿 undefined 判断 —— useRef(null) 初始是 null，条件恒成立，永远不会接管"
+  );
+});
+t("有 jobRef 且随 job 更新", () => {
+  must(/const jobRef = useRef\(null\)/.test(wbCode), "没有 jobRef");
+  must(
+    /useEffect\(\(\)\s*=>\s*\{\s*jobRef\.current = job;/.test(wbCode),
+    "jobRef 没有跟着 job 更新 —— always null"
+  );
+});
+
 console.log("\n=== ④ 接管提示不会自己消失 ===\n");
 
 t("有独立的 resumeNotice 状态（不共用 fillNotice）", () => {

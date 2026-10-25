@@ -462,7 +462,35 @@ function AtPicker({
                   padding: "22px 12px", textAlign: "center",
                   color: "var(--dsw-alias-label-tertiary, #81858c)",
                 },
-              }, query ? `没有匹配「${query}」的资产` : "资产库是空的")
+              },
+                /**
+                 * ★★★ 2026-10-25 修：空态不能只说「是空的」。
+                 *
+                 *   实测：全新用户（还没生成过任何东西）打开资产库，
+                 *   只看到一句「资产库是空的」—— 没有任何下一步。
+                 *   这正是审计文档 P2-6 批评过的同一类问题：
+                 *   「有『资产库是空的』，但没有『如何让它不空』的引导」。
+                 *   画布空态当时修了（给了两个可点入口），资产库这里漏了。
+                 *
+                 *   ⇒ 分两种情况给路：
+                 *     · 有搜索词 ⇒ 告诉他换个词或清空
+                 *     · 真的空   ⇒ 告诉他素材从哪来
+                 */
+                query
+                  ? h("div", null,
+                      h("div", null, `没有匹配「${query}」的资产`),
+                      h("div", { style: { marginTop: 8, fontSize: 11, opacity: .8 } },
+                        "换个词，或清空搜索框看全部"))
+                  : h("div", null,
+                      h("div", { style: { fontWeight: 600, color: "var(--dsw-alias-label-secondary, #61666b)" } },
+                        "还没有任何素材"),
+                      h("div", { style: { marginTop: 8, fontSize: 11, lineHeight: "17px" } },
+                        "素材来自两处：",
+                        h("br"),
+                        "① 在工作台生成一次，产物会自动落到这里",
+                        h("br"),
+                        "② 剪辑台点「导入」上传本地文件"))
+              )
             : grouped.map(([kind, arr]) =>
                 h("div", { key: kind },
                   h("div", {
