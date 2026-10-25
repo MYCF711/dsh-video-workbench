@@ -34,7 +34,7 @@ export const name = "dsh-comfy-workbench-tab-host";
  *   不声明就直接访问 ctx.webServer 会抛
  *   `cannot get property "webServer" without inject`。
  */
-export const inject = ["webServer", "llm"];
+export const inject = ["webServer", "llm", "tools"];
 
 /**
  * 全局资产库的 host 侧（2026-10-18）。
@@ -473,6 +473,43 @@ export async function apply(ctx, config = {}) {
 
   /**
    * ══════════════════════════════════════════════════════════════════
+   * ★★★ 2026-10-25 · 让对话框里的 LLM 能把提示词「写进工作台」
+   *
+   *   【主人原话】
+   *     「懒人一般走这里输入需求，然后让云端 llm 根据模型匹配的 skill
+   *       反推提示词，然后输入到上方的提示词框，生成。」
+   *
+   *   【实测断点】工作台的 setPrompt() 只有两个调用点：
+   *     WorkbenchView.js:1373  从 sessionStorage 恢复
+   *     WorkbenchView.js:1408  切工作流时写默认值
+   *   ⇒ 没有任何外部入口。dsh-editor 的 15 个 timeline_* 工具全在时间轴上，
+   *     够不到工作台的提示词框。
+   *   ⇒ LLM 反推出来的提示词只能打在对话里让人手动复制粘贴。
+   *
+   *   【做法】给一个队列 + 两个端点：
+   *     POST /comfy-assets/workbench-fill   LLM 侧（工具）写一条指令进队列
+   *     GET  /comfy-assets/workbench-pending 工作台侧轮询取走（取走即清）
+   *   ★ 为什么用「取走即清」而不是 SSE：
+   *     这是低频事件（一次对话一两次），SSE 要长连接 + 重连 + 多标签页去重，
+   *     为这点频率不值。轮询 1 秒一次，成本可忽略。
+   *   ★ 为什么不做成「自动点生成」：
+   *     主人 2026-10-25 明确选「填完不自动生成」——
+   *     生成一次 23s~178s，跑错太贵，要留一个用眼睛扫一遍的检查点。
+   * ══════════════════════════════════════════════════════════════════
+   */
+  const fillQueue = [];
+  const FILL_TTL_MS = 5 * 60 * 1000;   // 5 分钟没被取走就作废（会话切走了）
+
+  const dropStaleFills = () => {
+    const now = Date.now();
+    for (let i = fillQueue.length - 1; i >= 0; i--) {
+      if (now - fillQueue[i].at > FILL_TTL_MS) fillQueue.splice(i, 1);
+    }
+  };
+
+
+  /**
+   * ══════════════════════════════════════════════════════════════════
    * ★★★ 2026-10-25 · 按需下发 ArtCraft 产物（首屏从 11.5MB 降到 ~1MB）
    *
    *   【问题】实测首屏 performance.getEntriesByType('resource')：
@@ -581,6 +618,143 @@ export async function apply(ctx, config = {}) {
     });
   }, "comfy-workbench-tab: artcraft asset (lazy)");
 
+  /* ── 工作台「填入」队列：LLM 侧写，工作台侧取走 ── */
+  ctx.effect(() => {
+    const d1 = ctx.webServer.register({
+      kind: "exact",
+      path: ROUTE + "/workbench-fill",
+      handler: async (req, res) => {
+        if (req.method !== "POST") return json(res, 405, { error: "method not allowed" });
+        let body;
+        try {
+          const chunks = [];
+          for await (const c of req) chunks.push(c);
+          body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+        } catch {
+          return json(res, 400, { error: "请求体不是合法 JSON" });
+        }
+        const prompt = typeof body.prompt === "string" ? body.prompt : "";
+        if (!prompt.trim()) return json(res, 400, { error: "prompt 不能为空" });
+
+        const item = {
+          at: Date.now(),
+          prompt,
+          modeId: typeof body.modeId === "string" ? body.modeId : undefined,
+          aspect: typeof body.aspect === "string" ? body.aspect : undefined,
+          durationSec: Number.isFinite(body.durationSec) ? body.durationSec : undefined,
+          seed: Number.isFinite(body.seed) ? body.seed : undefined,
+          reason: typeof body.reason === "string" ? body.reason : undefined,
+        };
+        dropStaleFills();
+        /* ★ 只保留最新一条：连点两次「按这个写」时，用户要的是最后一次 */
+        fillQueue.length = 0;
+        fillQueue.push(item);
+        log.info?.(`[comfy-wb] 已排队填入：${prompt.slice(0, 40)}${prompt.length > 40 ? "…" : ""}`);
+        return json(res, 200, { ok: true, queued: 1 });
+      },
+    });
+
+    const d2 = ctx.webServer.register({
+      kind: "exact",
+      path: ROUTE + "/workbench-pending",
+      handler: async (req, res) => {
+        if (req.method !== "GET") return json(res, 405, { error: "method not allowed" });
+        dropStaleFills();
+        const item = fillQueue.shift();
+        /* ★ 取走即清 —— 一次填入只生效一次，不重复覆盖用户已经改过的内容 */
+        return json(res, 200, item ? { has: true, ...item } : { has: false });
+      },
+    });
+
+    return () => { try { d1?.(); } catch { /* ignore */ } try { d2?.(); } catch { /* ignore */ } };
+  }, "comfy-workbench-tab: workbench fill queue");
+
+  /**
+   * ── 工具：comfy_workbench_fill ──
+   *
+   *   懒人路径的最后一块拼图：
+   *     对话框说需求 → LLM 按 skill 反推提示词 → 调这个工具 → 提示词出现在工作台 → 人按生成
+   *
+   *   ★ 不自动生成（主人 2026-10-25 选 A）：
+   *     生成一次 23s~178s，跑错太贵，要留一个用眼睛扫一遍的检查点。
+   *     这个工具的价值是「免去复制粘贴」，不是「免去按按钮」。
+   */
+  ctx.effect(() => {
+    /**
+     * ★ 与 dsh-editor 保持同一套取值姿势（index-host.mjs:479）：
+     *   它判的是 `ctx.tools.register` 是否存在，而 defineTool 从
+     *   ctx.tools.defineTool 或全局兜底拿。只看 defineTool 会漏掉
+     *   「服务在、但 defineTool 挂在别的字段上」的版本差异。
+     */
+    if (typeof ctx?.tools?.register !== "function") {
+      log.warn?.("[comfy-wb] ctx.tools.register 不可用，comfy_workbench_fill 未注册");
+      return;
+    }
+    const defineTool = ctx.tools.defineTool ?? globalThis.__dshDefineTool;
+    if (typeof defineTool !== "function") {
+      log.warn?.("[comfy-wb] defineTool 不可用，comfy_workbench_fill 未注册");
+      return;
+    }
+    log.info?.("[comfy-wb] 已注册 comfy_workbench_fill");
+
+    const dispose = defineTool({
+      name: "comfy_workbench_fill",
+      description:
+        "把一段写好的提示词（连同工作流/画幅/时长）填进「视频工作台」的输入框，等人按生成。" +
+        "★ 这是「对话框 → 工作台」的唯一通道。用户说「帮我写个提示词」「按这个描述出图」时用它。" +
+        "★ 它【不会】自动生成 —— 填完就停，让用户自己看一眼再按。生成一次几十秒到几分钟，跑错代价高。" +
+        "写提示词前先看 comfy-mode-dispatch 技能判断该用哪个工作流，再看 h3-prompt-writing 技能（视频）。",
+      parameters: {
+        type: "object",
+        properties: {
+          prompt: {
+            type: "string",
+            description: "完整提示词。视频（yz）要按 H3 规范写；生图（krea2）用自然语言描述画面。",
+          },
+          modeId: {
+            type: "string",
+            description: "工作流：krea2（生图）/ yz（生视频）/ qwen21-edit（改图）/ qwen21（生图）。省略则不改当前工作流。",
+          },
+          aspect: { type: "string", description: "画幅，如 16:9 / 9:16 / 1:1。省略则不动。" },
+          durationSec: { type: "number", description: "时长（秒），仅 yz 有意义。省略则不动。" },
+          seed: { type: "integer", description: "种子。省略则保持随机。" },
+          reason: { type: "string", description: "一句话说明你为什么这么写（会显示给用户看）" },
+        },
+        required: ["prompt"],
+        additionalProperties: false,
+      },
+      output: {
+        schema: { type: "object" },
+        render: (_a, v) => `已填入工作台（${v.modeId ?? "保持当前工作流"}），等用户按生成`,
+      },
+      execute: async (args) => {
+        const prompt = String(args?.prompt ?? "");
+        if (!prompt.trim()) throw new Error("prompt 不能为空");
+
+        const item = {
+          at: Date.now(),
+          prompt,
+          modeId: args.modeId,
+          aspect: args.aspect,
+          durationSec: Number.isFinite(args.durationSec) ? args.durationSec : undefined,
+          seed: Number.isFinite(args.seed) ? args.seed : undefined,
+          reason: args.reason,
+        };
+        dropStaleFills();
+        fillQueue.length = 0;
+        fillQueue.push(item);
+
+        return {
+          ok: true,
+          queued: true,
+          modeId: args.modeId ?? null,
+          note: "已排队，工作台最多 1 秒后取走并填入输入框。没有自动生成。",
+        };
+      },
+    });
+
+    return () => { try { dispose?.(); } catch { /* ignore */ } };
+  }, "comfy-workbench-tab: comfy_workbench_fill tool");
 
   ctx.effect(() => {
     const dispose = ctx.webServer.register({

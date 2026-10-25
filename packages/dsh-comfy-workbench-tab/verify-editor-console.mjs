@@ -834,10 +834,22 @@ check("进度用进度条而不是一行小字",
    * 主人两次说「进度没用」。第一次我只塞了 11px 小字在状态条里，
    * 混在 jobId / 产物数之间，看不出来那是进度。
    * ⇒ 改成一个 48px 的可见进度条。
+   *
+   * ★★ 2026-10-25 修：这条原来写死 `width: \`\${pct}%\``。
+   *   当天加了「100% 之后改显示『收尾中…』」（因为采样 100% 时
+   *   VAE 解码 + 落盘还没完，满格会让人以为卡死），
+   *   宽度表达式变成 `nearlyDone ? 100 : pct`，断言就假红了 ——
+   *   而「进度条宽度由真实百分比驱动」这个不变量一点没变。
+   *
+   *   ⇒ 锚在【不变量】上：
+   *     ① 有 48px 的可见进度条容器
+   *     ② 宽度用的是变量表达式（不是写死百分比）
+   *     ③ pct 仍从 pg.pct 算出来
    */
-  /const pct = Math\.max\(0, Math\.min\(100, pg\.pct\)\)/.test(wbViewC) &&
-  /width:\s*`\$\{pct\}%`/.test(wbViewC),
-  "必须有真实的宽度百分比填充");
+  /width:\s*48,\s*height:\s*4/.test(wbViewC) &&
+  /width:\s*`\$\{[A-Za-z_$][\w$]*(?:\s*[?:][^`]*)?\}%`/.test(wbViewC) &&
+  /const pct = Math\.max\(0, Math\.min\(100, pg\.pct\)\)/.test(wbViewC),
+  "必须有一个 48px 可见进度条，且宽度由真实百分比驱动");
 
 check("进度条只在有真实数据时显示（null 不显示 0%）",
   /if \(pg && Number\.isFinite\(pg\.pct\)\)/.test(wbViewC),

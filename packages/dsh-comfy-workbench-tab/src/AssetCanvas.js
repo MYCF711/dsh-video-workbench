@@ -460,7 +460,7 @@ function navBtn() {
 // ══════════════════════════════════════════════════════════════════════
 // 画布本体
 // ══════════════════════════════════════════════════════════════════════
-export function AssetCanvas({ outputs, bridge, t, expanded, modeId, onOpenLibrary, onGenerate, libraryCount }) {
+export function AssetCanvas({ outputs, bridge, t, expanded, modeId, onOpenLibrary, onGenerate, libraryCount, onSendToTimeline }) {
   /**
    * ★ 来源角色表：/comfy-assets/roles → { [modeId]: { [nodeId]: roleKey } }
    *   拿不到就一直是 {}，classify() 会退回文件名规则 —— 功能不因此坏掉。
@@ -944,6 +944,7 @@ export function AssetCanvas({ outputs, bridge, t, expanded, modeId, onOpenLibrar
             onEnter: () => setHover(c.key),
             onLeave: () => setHover((v) => (v === c.key ? null : v)),
             onOpen: () => setLight(c.key),
+            onSendToTimeline,
           });
         }),
       ),
@@ -1015,7 +1016,7 @@ function ToolBtn({ onClick, title, children }) {
 // ══════════════════════════════════════════════════════════════════════
 // 一张卡片
 // ══════════════════════════════════════════════════════════════════════
-function Card({ card, pos, scale, hovering, onDown, onMove, onUp, onEnter, onLeave, onOpen }) {
+function Card({ card, pos, scale, hovering, onDown, onMove, onUp, onEnter, onLeave, onOpen, onSendToTimeline }) {
   const [dim, setDim] = useState(null);       // {w,h} 原始像素，用于角标
   const [failed, setFailed] = useState(false);
 
@@ -1113,7 +1114,7 @@ function Card({ card, pos, scale, hovering, onDown, onMove, onUp, onEnter, onLea
         : null,
     ),
 
-    // ── 底栏：预览 + 下载 ──
+    // ── 底栏：预览 + 下载 + 送时间轴 ──
     h("div", {
       "data-nodrag": "1",
       style: {
@@ -1128,6 +1129,21 @@ function Card({ card, pos, scale, hovering, onDown, onMove, onUp, onEnter, onLea
         title: `下载 ${name(card.out)}`,
         style: { ...mini(), textDecoration: "none", color: "var(--dsw-alias-state-business-primary, #4176e6)" },
       }, "下载"),
+      /**
+       * ★★★ 2026-10-25 · 「→ 时间轴」
+       *
+       *   懒人链路里最大的断点：生成完 → 剪辑之间完全手动。
+       *   切 tab、点导入、走系统文件选择器、从 1582 个资产里翻 ——
+       *   而刚生成的东西明明就在这张卡片上。
+       *
+       *   ⇒ 一次点击，把这张产物作为一段加进时间轴。
+       *   ★ 用产物自己的文件名当片段名，时间轴上认得出是哪张。
+       *   ★ 失败要说话 —— 静默失败比报错更糟（本项目踩过多次）。
+       */
+      h(MiniBtn, {
+        onClick: () => onSendToTimeline?.(card),
+        title: "把这张加进「剪辑台」的时间轴",
+      }, "→ 时间轴"),
       h("span", { style: { flex: "1 1 auto" } }),
       h("span", {
         style: {
