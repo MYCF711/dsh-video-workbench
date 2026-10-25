@@ -332,6 +332,36 @@ export function ArtCraftTab({
       zoomOut: () => callbacks?.onAction?.("zoomOut"),
       trackTaller: () => callbacks?.onAction?.("trackTaller"),
       trackShorter: () => callbacks?.onAction?.("trackShorter"),
+      /**
+       * ★★ 2026-10-25 修：这两个功能一直在 SHORTCUT_DEFS 里，
+       *   却从来没在处理器里注册过 —— 按了毫无反应，而且没有任何提示。
+       *
+       *   ★ 注意两侧的 id 并不同名，这是历史遗留：
+       *     快捷键 id        → 动作 id
+       *     splitRipple      → rippleDelete
+       *     toggleSnap       → snapping
+       *   这里显式写出映射，别指望它们自动对上。
+       */
+      splitRipple: () => callbacks?.onAction?.("rippleDelete"),
+      toggleSnap: () => callbacks?.onAction?.("snapping"),
+      /**
+       * ★★★ 2026-10-25 补：播放与游标导航
+       *
+       *   ★ 这里必须逐个列出来 —— installShortcutHandler 收到的是
+       *     { id: fn } 映射，不是「拿到 id 就回调」的单一函数。
+       *     ⇒ 在 SHORTCUT_DEFS 里加了新 id 却忘了在这里注册，
+       *       症状是「快捷键设置页里显示得出来，按了毫无反应」。
+       *       加新键位必须【成对改两处】：DEFS 一处、这里一处。
+       */
+      playPause: () => callbacks?.onAction?.("playPause"),
+      playReverse: () => callbacks?.onAction?.("playReverse"),
+      playForward: () => callbacks?.onAction?.("playForward"),
+      stepBack: () => callbacks?.onAction?.("stepBack"),
+      stepForward: () => callbacks?.onAction?.("stepForward"),
+      jumpBack: () => callbacks?.onAction?.("jumpBack"),
+      jumpForward: () => callbacks?.onAction?.("jumpForward"),
+      goStart: () => callbacks?.onAction?.("goStart"),
+      goEnd: () => callbacks?.onAction?.("goEnd"),
       addBookmark: () => callbacks?.onAction?.("addBookmark"),
     }, {
       enabled: () => {

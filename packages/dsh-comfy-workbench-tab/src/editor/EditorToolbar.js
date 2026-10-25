@@ -160,7 +160,13 @@ export const TOOLBAR_MORE = [
   { id: "paste", label: "粘贴到播放头", icon: "copy", shortcutId: "paste" },
   { id: "cut", label: "剪切", icon: "trash", shortcutId: "cut" },
   { id: "rippleDelete", label: "波纹删除", icon: "trash", shortcutId: "splitRipple" },
-  { id: "snapping", label: "自动吸附", icon: "check", shortcutId: "snap" },
+  /**
+   * ★★ 2026-10-25 修：shortcutId 原来写的是 "snap"，而 SHORTCUT_DEFS 里
+   *   这个功能的 id 是 "toggleSnap" ⇒ getChordLabel("snap") 查不到，
+   *   工具条的快捷键提示【永远不显示】，而且用户在设置里改了键位
+   *   工具条也不会跟着变。
+   */
+  { id: "snapping", label: "自动吸附", icon: "check", shortcutId: "toggleSnap" },
   { id: "sceneSwitch", label: "场景切换", icon: "panelLeft" },
 
   { type: "separator" },

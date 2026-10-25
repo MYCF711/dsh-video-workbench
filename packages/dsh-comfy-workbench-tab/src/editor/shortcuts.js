@@ -100,6 +100,35 @@ export const SHORTCUT_DEFS = [
   { id: "trackTaller",    group: "视图", name: "增高轨道",     default: "Mod+=" },
   { id: "trackShorter",   group: "视图", name: "减矮轨道",     default: "Mod+-" },
 
+  /**
+   * ★★★ 2026-10-25 补：播放与游标导航
+   *
+   *   【为什么必须补】原来的快捷键只有 8 个剪辑动作 + 4 个视图 + 2 个标记，
+   *   但**一个播放键都没有**。而「空格暂停/播放」是所有剪辑软件
+   *   （剪映、PR、达芬奇、Final Cut）的第一肌肉记忆 ——
+   *   用户按一下发现没反应，第一反应不是「这里不支持」，
+   *   而是「这软件坏了」。
+   *
+   *   键位照行业惯例（剪映 / PR 一致）：
+   *     Space      播放 / 暂停
+   *     ← →        逐帧后退 / 前进（按住 Shift 走 1 秒）
+   *     Home / End 跳到开头 / 结尾
+   *     J K L      倒放 / 暂停 / 正放（剪辑师通用，K 也是暂停）
+   *
+   *   ★ 为什么不和「分割」抢键：分割是 Mod+K，L/K/J 是裸键，不冲突。
+   *   ★ ← → 用 空格 做「播放」而不复用，是因为 J/K/L 里的 K 在很多软件
+   *     也是暂停，两个入口都留，习惯哪套都能用。
+   */
+  { id: "playPause",      group: "播放", name: "播放 / 暂停",   default: "Space" },
+  { id: "playReverse",    group: "播放", name: "倒放",          default: "J" },
+  { id: "playForward",    group: "播放", name: "正放",          default: "L" },
+  { id: "stepBack",       group: "播放", name: "后退一帧",      default: "ArrowLeft" },
+  { id: "stepForward",    group: "播放", name: "前进一帧",      default: "ArrowRight" },
+  { id: "jumpBack",       group: "播放", name: "后退一秒",      default: "Shift+ArrowLeft" },
+  { id: "jumpForward",    group: "播放", name: "前进一秒",      default: "Shift+ArrowRight" },
+  { id: "goStart",        group: "播放", name: "跳到开头",      default: "Home" },
+  { id: "goEnd",          group: "播放", name: "跳到结尾",      default: "End" },
+
   /* 标记 */
   { id: "addBookmark",    group: "标记", name: "添加书签",     default: "M" },
   { id: "toggleSnap",     group: "标记", name: "自动吸附",     default: "S" },
