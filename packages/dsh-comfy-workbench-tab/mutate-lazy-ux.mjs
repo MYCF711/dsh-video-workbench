@@ -26,6 +26,9 @@ const MUTANTS = [
   { name: "接管提示共用 fillNotice（会 8 秒消失）", file: WB, from: "setResumeNotice(", to: "setFillNotice(" },
   { name: "任务结束不收 resumeNotice", file: WB, from: "          setResumeNotice(null);", to: "          void 0;" },
   { name: "resumeNotice 块不渲染", file: WB, from: "      resumeNotice", to: "      null && resumeNotice" },
+  { name: "接管闸门恒拦截（切 tab 后不再接管）", file: WB, from: "        if (alreadyFollowing) return;", to: "        if (jobRef.current !== undefined) return;" },
+  { name: "alreadyFollowing 不读 jobRef", file: WB, from: "          jobRef.current?.jobId", to: "          null" },
+  { name: "jobRef 不随 job 更新", file: WB, from: "  useEffect(() => { jobRef.current = job; }, [job]);", to: "  useEffect(() => {}, [job]);" },
 ];
 
 let caught = 0;

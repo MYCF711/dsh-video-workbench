@@ -890,6 +890,27 @@ steps.push(run('服务掉线时的界面（unreachable vs lost vs 正常）', 'd
 steps.push(run('种子的可见性与可复现（留空→随机并回填）', 'dsh-comfy-workbench-tab', 'verify-seed-repro.mjs', [], 120000));
 
 /**
+ * ★★★ 2026-10-25 新增：ComfyUI 进度总线真的能报进度
+ *
+ *   这条最阴：**进度条一直不动，但没有任何报错**。
+ *
+ *   用 node 脚本直连 ws://127.0.0.1:8188/ws 抓到 ComfyUI 0.40.0 的真实消息：
+ *     {"type":"executing","data":{"node":"397"}}    ← 没有 prompt_id！
+ *     {"type":"executing","data":{"node":null}}     ← 也没有
+ *   而原代码写的是 `const pid = data.prompt_id; if (!pid) return;`
+ *   ⇒ 每条 executing 都被丢掉 ⇒ done 永远设不上 ⇒
+ *     进度走不到 100%，「收尾中…」不出现，只能靠 /history 兜底。
+ *
+ *   修法：用 lastExecutingPromptId 兜底 + 把带 prompt_id 的
+ *   progress_state 当权威来源（累计所有节点算总进度）。
+ *
+ *   实测修复后：pct 10 → 20 → 40 → 55 → 75 → 90 → 100 → completed
+ *
+ *   9 项断言 + 8 个变异全红。
+ */
+steps.push(run('进度总线（executing 不带 prompt_id / progress_state 权威）', 'dsh-comfy-bridge', 'verify-progress-bus.mjs', [], 120000));
+
+/**
  * ★★ 2026-10-23 新增：G1 验收（版本记录 + 归档）
  *
  *   G1 要求「每个里程碑做 VERSION-v<date>.md + zip 归档」。

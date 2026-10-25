@@ -1241,6 +1241,15 @@ export function WorkbenchView(props) {
   const [error, setError] = useState(null);
   const pollRef = useRef(null);
   /**
+   * ★★ 2026-10-25：job 的 ref 副本。
+   *
+   *   「接管旧任务」那段 effect 的依赖是 [bridge]（不能依赖 job，
+   *   否则每次 job 变化都会重跑一次拉取）。所以它读不到最新的 job
+   *   —— 只能走 ref。判据：它要回答「现在有没有在跟一个任务」。
+   */
+  const jobRef = useRef(null);
+  useEffect(() => { jobRef.current = job; }, [job]);
+  /**
    * ★ 2026-10-25：「AI 已填入」提示条。
    *   填完不弹提示的话，用户只会看到框里的字变了，分不清是 AI 改的
    *   还是自己刚才敲的 —— 静默改动比没有改动更让人困惑。
@@ -1611,9 +1620,30 @@ export function WorkbenchView(props) {
         if (!r.ok || !alive) return;
         const j = await r.json();
         const list = Array.isArray(j?.jobs) ? j.jobs.filter((x) => x && !x.done) : [];
-        if (!list.length || resumedRef.current) return;
+        if (!list.length || !alive) return;
+        /**
+         * ★★★ 2026-10-25 修：切 tab 回来必须能重新接管。
+         *
+         *   原实现用 resumedRef.current 做「只接管一次」的闸门。
+         *   而切走 tab 会卸载组件（useEffect(() => stopPoll, []) 停轮询），
+         *   切回来时组件重新挂载 —— resumedRef 是 useRef，在同一次挂载内
+         *   保留，回来时**它已经是 true** ⇒ 再也不接管。
+         *   症状：用户切走再切回，进度条消失、按钮变回「生成」，
+         *   以为任务没了；而 ComfyUI 里还在跑。
+         *
+         *   ⇒ 闸门判据改成「现在是否已经在跟一个任务」：
+         *       · 切走再切回 → job 已随卸载清空 → 重新接管 ✓
+         *       · 同一次挂载内重复触发 → job 有值 → 不重复接管 ✓
+         *   ★ 不用 resumedRef 了：它记的是「这次挂载跑过没有」，
+         *     而我们要的是「现在有没有在跟任务」，这是两件事。
+         */
+        const alreadyFollowing = !!(
+          jobRef.current?.jobId
+          && !jobRef.current.completed
+          && !jobRef.current.unreachable
+        );
+        if (alreadyFollowing) return;
 
-        resumedRef.current = true;
         const newest = list[0];
         /**
          * ★ 只接管「本会话自己的」任务？

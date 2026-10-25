@@ -77,6 +77,16 @@ export function createProgressBus({ base, clientId, log = console } = {}) {
   let watchers = 0;
 
   /**
+   * ★★ 2026-10-25：最近一个「正在执行」的 promptId。
+   *
+   *   ComfyUI 的 `executing` 消息不带 prompt_id（实测原文见下），
+   *   所以收到「node === null（跑完了）」时不知道该标谁。
+   *   ⇒ 用这个记住最近在跑的那个。
+   *   ★ ComfyUI 只有一个执行循环 ⇒ 「最近在跑的」就是它。
+   */
+  let lastExecutingPromptId = null;
+
+  /**
    * ★★ 2026-10-23 关键修复：WS 必须带上和提交任务相同的 client_id
    *
    * ── 实测现象（ComfyUI 0.40.0，任务在跑）
@@ -143,19 +153,75 @@ export function createProgressBus({ base, clientId, log = console } = {}) {
     }
 
     if (type === "executing") {
-      const pid = data.prompt_id;
-      if (!pid) return;
-      /* node === null ⇒ 整个 prompt 执行完了 */
+      /**
+       * ★★★ 2026-10-25 修：ComfyUI 的 executing 消息【不带 prompt_id】。
+       *
+       *   实测直连 WS 收到的原文（ComfyUI 0.40.0，node 脚本探针）：
+       *     {"type":"executing","data":{"node":"397"}}   ← 开始跑某节点
+       *     {"type":"executing","data":{"node":null}}    ← 整个 prompt 跑完
+       *   两处都【没有 prompt_id】。而这里原来写的是
+       *     const pid = data.prompt_id;
+       *     if (!pid) return;
+       *   ⇒ **每一条 executing 都被丢掉了**。
+       *
+       *   后果：`done: true` 永远设不上 ⇒ 进度条走不到 100%、
+       *   「收尾中…」不会出现，前端只能靠 /history 兜底收尾，
+       *   采样完成到落盘那段完全看不见。
+       *
+       *   ⇒ 记「当前正在跑的那个 prompt」：
+       *     · 收到 node === null ⇒ 把 lastExecutingPromptId 标 done
+       *     · 收到带 node 的 ⇒ 顺带更新 lastExecutingPromptId
+       *   ★ ComfyUI 只有一个执行循环，所以「最近在跑的那个」就是它。
+       */
       if (data.node === null) {
-        const cur = progress.get(pid);
+        const pid = data.prompt_id ?? lastExecutingPromptId;
+        if (pid) {
+          const cur = progress.get(pid);
+          progress.set(pid, {
+            value: cur?.max ?? null,
+            max: cur?.max ?? null,
+            pct: 100,
+            node: null,
+            updatedAt: Date.now(),
+            done: true,
+          });
+        }
+        return;
+      }
+      if (data.prompt_id) lastExecutingPromptId = data.prompt_id;
+      return;
+    }
+
+    /**
+     * ★★ 2026-10-25 新增：progress_state 是【带 prompt_id 的全量节点状态】。
+     *
+     *   实测原文：
+     *     {"type":"progress_state","data":{
+     *        "prompt_id":"ebda3e4a-…",
+     *        "nodes":{"263":{"value":1.0,"max":1.0,"state":"finished"},…}}}
+     *   它比单节点 progress 更可靠，拿它当【权威来源】：
+     *   累计所有节点的 value/max 得到总体进度，
+     *   全部 finished 就是 done —— 这样即使 executing 丢消息也能走完。
+     */
+    if (type === "progress_state") {
+      const pid = data.prompt_id;
+      if (!pid || !data.nodes || typeof data.nodes !== "object") return;
+      let v = 0, m = 0, allDone = true;
+      for (const n of Object.values(data.nodes)) {
+        const nv = Number(n?.value), nm = Number(n?.max);
+        if (Number.isFinite(nv) && Number.isFinite(nm)) { v += nv; m += nm; }
+        if (n?.state !== "finished") allDone = false;
+      }
+      if (m > 0) {
         progress.set(pid, {
-          value: cur?.max ?? null,
-          max: cur?.max ?? null,
-          pct: 100,
+          value: v,
+          max: m,
+          pct: Math.min(100, Math.round((v / m) * 100)),
           node: null,
           updatedAt: Date.now(),
-          done: true,
+          ...(allDone ? { done: true } : {}),
         });
+        lastExecutingPromptId = pid;
       }
       return;
     }
