@@ -664,9 +664,20 @@ export async function apply(ctx, config = {}) {
         //   前端只能靠文件名正则猜（-2ST- / -USD- / -SVR-），
         //   而那些前缀是工作流数据不是契约，改个前缀四张角标就全错位。
         outputsMap: mode.outputs ?? {},
+        /**
+         * ★ 2026-10-25：记下【实际用的种子】，供前端回填。
+         *   用户留空时是我们替他随机选的 —— 不告诉他就无法复现/微调。
+         */
+        seed: built.seed ?? null,
       });
       log.info?.(`[${name}] 提交 ${params.modeId} → ${promptId} (${jobId})`);
-      return { jobId, promptId, nodes: Object.keys(built.prompt).length };
+      return {
+        jobId,
+        promptId,
+        nodes: Object.keys(built.prompt).length,
+        /* ★ 一并直接返回，前端不用再查一次 /job 就能回填种子 */
+        seed: built.seed ?? null,
+      };
     },
 
     /**

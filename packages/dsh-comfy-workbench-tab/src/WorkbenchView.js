@@ -2183,6 +2183,26 @@ export function WorkbenchView(props) {
       if (caps.duration) params.durationSec = Number(durationSec);
       const r = await bridge.generate(modeId, params);
       setJob({ jobId: r.jobId, promptId: r.promptId, completed: false });
+      /**
+       * ★★★ 2026-10-25：回填【实际用的种子】。
+       *
+       *   实测痛点：种子留空（默认）、生成出到一张好图，想「同一张换个
+       *   发色再试」却不知道这次用了什么 —— 因为留空在我们这边是
+       *   「随机一个」，用户没法照着复现。
+       *
+       *   ⇒ 提交成功后把服务端定的种子写回输入框。
+       *   ★ 只在用户原本留空时回填 —— 他手填了值就尊重他的，别改。
+       *   ★ 判「留空」刻意【不写】`String(x).trim() === ""`：
+       *     那是本项目明令禁止的判空写法（AGENTS §6.32 —— 会把 0 / 对象 /
+       *     零宽字符都误判）。种子框是 number input，没填时值就是空串，
+       *     严格比较足够。verify-text-guard 会盯着这个 —— 它当场抓到了第一版。
+       *   ★ 回填后再点生成用的就是这个种子（可复现）；
+       *     想换一张，点骰子清空即可。
+       */
+      const seedIsBlank = seed === "" || seed === null || seed === undefined;
+      if (Number.isFinite(r?.seed) && seedIsBlank) {
+        setSeed(String(r.seed));
+      }
       startPoll(r.jobId);
     } catch (err) { setError(err.message); }
     finally { setSubmitting(false); }
@@ -2997,12 +3017,25 @@ export function WorkbenchView(props) {
                 : null
             )
           ),
-          // 种子：骰子（随机）+ 输入框
+          // 种子：骰子（换一张）+ 输入框
+          /**
+           * ★★★ 2026-10-25 修：骰子按钮的语义错了。
+           *
+           *   原来：onClick = setSeed(随机数)
+           *   ⇒ 填一个具体数字进框。用户看到的是一串数字，而不是「随机的」；
+           *     之后再生成就一直用那个固定种子 —— 连点三次骰子出的都是
+           *     三张不同的图，但每次都把种子锁死了，用户以为在「随机」，
+           *     实际上只是换了个固定值。
+           *
+           *   ⇒ 改成【清空】：空 = 这次随机（服务端定一个并回填给你看）。
+           *     这才是「换一张」的正确表达，也和输入框 placeholder
+           *     「留空随机」一致。
+           */
           h("button", {
             type: "button",
             "aria-label": t("field.seedRandom"),
-            title: t("field.seedRandom"),
-            onClick: () => setSeed(String(Math.floor(Math.random() * 1e12))),
+            title: "换一张（清空种子，下次随机）",
+            onClick: () => setSeed(""),
             style: {
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               width: 24, height: 28, padding: 0, flex: "none",
