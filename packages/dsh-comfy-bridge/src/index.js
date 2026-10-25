@@ -712,6 +712,30 @@ export async function apply(ctx, config = {}) {
     async job(jobId) {
       const job = jobs.get(jobId);
       if (!job) throw new Error(`未知任务：${jobId}`);
+      /**
+       * ★★★ 2026-10-25 修：ComfyUI 不可达时，job() 会把异常抛出去 ⇒
+       *   路由回 500/404 ⇒ 前端轮询里 catch 到「HTTP 500」，
+       *   而它只会 setError，**不会停止轮询、也不会解除「生成中」状态**。
+       *   实测（关掉 ComfyUI 后刷新页面）：状态条永远停在
+       *   「已提交，等待产出」，按钮永远是「停止」——用户以为在跑，
+       *   其实那台 ComfyUI 已经关了。
+       *
+       *   ⇒ 主动探一次连通性。不可达就返回一个【明确的未知态】，
+       *     让前端能分辨「暂时问不到」和「任务真的出事了」。
+       *   ★ 为什么不直接判 lost：ComfyUI 重启后 history 还在，
+       *     此时判 lost 会让用户以为产物没了。所以是 unreachable，不是 lost。
+       */
+      const reachable = await comfy.probe().then(() => true).catch(() => false);
+      if (!reachable) {
+        return {
+          ...job,
+          completed: false,
+          statusStr: "unreachable",
+          unreachable: true,
+          reason: "ComfyUI 现在连不上，暂时拿不到这个任务的进度。启动 ComfyUI 后会自动继续。",
+          elapsedMs: Date.now() - job.startedAt,
+        };
+      }
       const h = await comfy.history(job.promptId);
       if (!h) {
         const q = await comfy.queueState().catch(() => ({ running: 0, pending: 0 }));
@@ -1545,7 +1569,26 @@ export async function apply(ctx, config = {}) {
             try {
               json(res, 200, await handlers.job(id));
             } catch (err) {
-              json(res, 404, { error: err.message });
+              /**
+               * ★★★ 2026-10-25 修：这里原来【一律 404】。
+               *
+               *   实测（关掉 ComfyUI 后刷新页面，前端提示显示成）：
+               *     「ComfyUI 未运行或不可达：…（fetch failed）（HTTP 404）」
+               *   ⇒ 那句话本身没错，但「HTTP 404」会把人带偏 ——
+               *     404 的语义是「这个任务不存在」，而真实情况是
+               *     「服务暂时连不上」。用户会以为任务丢了。
+               *
+               *   ⇒ 按原因给状态码：
+               *     未知任务      → 404（真没有）
+               *     ComfyUI 不可达 → 503（服务暂时不可用，可重试）
+               *     其它          → 500
+               *   前端仍会把 message 显示出来，状态码只影响浏览器/日志的语义。
+               */
+              const msg = String(err?.message ?? err);
+              const code = /未知任务/.test(msg) ? 404
+                : /不可达|未运行|fetch failed|ECONNREFUSED/i.test(msg) ? 503
+                : 500;
+              json(res, code, { error: msg });
             }
           },
         })

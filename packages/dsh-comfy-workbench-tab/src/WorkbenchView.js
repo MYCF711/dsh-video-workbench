@@ -1511,7 +1511,35 @@ export function WorkbenchView(props) {
         // ★ ComfyUI 对执行失败也写 history：status_str = "error"/"failed"，completed = false。
         //   只判 completed 会让失败任务永久轮询，用户永远看不到错误。
         const st = String(j?.statusStr ?? j?.status_str ?? "").toLowerCase();
-        const isTerminal = j.completed || ["error", "failed", "cancel"].some((k) => st.includes(k));
+        /**
+         * ★★★ 2026-10-25 新增：ComfyUI 连不上 ≠ 任务还在跑。
+         *
+         *   实测（关掉 ComfyUI 后刷新页面）：状态条永远停在
+         *   「已提交，等待产出」，按钮永远是「停止」——
+         *   用户以为在跑，其实那台 ComfyUI 早关了，而且他点不了重试。
+         *
+         *   后端现在会返回 statusStr: "unreachable"，这里要：
+         *     · 不当成终态（ComfyUI 重启后 history 还在，能接着拿结果）
+         *     · 但要明确告诉用户，并把按钮从「停止」恢复成「生成」
+         */
+        if (j?.unreachable || st === "unreachable") {
+          setJob({ ...j, unreachable: true });
+          setResumeNotice(j?.reason ?? "ComfyUI 连不上，暂时拿不到这个任务的进度");
+          return;   // ★ 不 stopPoll —— 它可能只是重启
+        }
+        /**
+         * ★★★ 2026-10-25 修：lost 必须算终态。
+         *
+         *   实测（关掉 ComfyUI → 任务标 unreachable → 再启动 ComfyUI）：
+         *   任务变成 lost（ComfyUI 重启把队列清了），但 lost 不在原来的
+         *   终态列表里 ⇒ 轮询不停、提示条还挂着旧的「连不上」文案，
+         *   而任务其实永远不会再回来了。
+         *
+         *   ⇒ lost 加进终态；并且明确说「去哪儿重试」，不要只报状态。
+         */
+        const isTerminal = j.completed
+          || ["error", "failed", "cancel", "lost"].some((k) => st.includes(k))
+          || j.lost === true;
         setJob({ ...j, failed: !j.completed && isTerminal });
         // ★★ 第 ④ 件事：「生成后直接弹到画布里面」
         //   在这里并资产，而不是等 isTerminal ——
@@ -1523,6 +1551,13 @@ export function WorkbenchView(props) {
           stopPoll();
           /* ★ 任务结束 ⇒ 收掉「已接管」提示。它描述的是「正在跑」，跑完了就该走 */
           setResumeNotice(null);
+          /* ★ lost / 失败时给一句可行动的话，不要让用户自己猜 */
+          if (j.lost === true || st.includes("lost")) {
+            setError(
+              "这个任务已经不在 ComfyUI 队列里了（通常是被中断，或 ComfyUI 重启清空了队列）。\n"
+              + "产物不会有了 —— 点「生成」重跑一次即可。"
+            );
+          }
         }
       } catch (err) {
         setError(err.message);
@@ -2190,7 +2225,15 @@ export function WorkbenchView(props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, media, caps.h3Labels]);
 
-  const busy = submitting || (job && !job.completed && !job.cancelled && !job.failed && !job.lost);
+  /**
+   * ★★★ 2026-10-25：unreachable 也算「不忙」。
+   *
+   *   理由：ComfyUI 连不上时，那个任务我们既停不掉（/cancel 也打不通）
+   *   也看不出进度。此时把按钮锁在「停止」等于让用户无路可走 ——
+   *   给他「生成」按钮，至少启动 ComfyUI 后能重新提交。
+   *   ★ 但轮询不停：ComfyUI 回来后会自动接上，显示真实进度。
+   */
+  const busy = submitting || (job && !job.completed && !job.cancelled && !job.failed && !job.lost && !job.unreachable);
   const secondPassOn = caps.secondPassToggle ? toggles[caps.secondPassToggle] !== false : true;
 
   /**
