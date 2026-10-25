@@ -56,6 +56,28 @@ async function loadEsbuild() {
 
 const { build } = await loadEsbuild();
 
+/**
+ * ★★★ 2026-10-25 · 不再往产物里塞 ArtCraft payload
+ *
+ *   上一版的写法是「构建期补占位文件」，解决了「clone 后构建失败」，
+ *   但没解决更贵的那一半：只要产物里内联了 payload，
+ *   首屏就是 11.4 MB，而它只有【打开剪辑台】才用得上。
+ *
+ *   现在 editorHost.js 里已把静态 import 删掉，改成运行时
+ *   GET /comfy-assets/artcraft-asset?name=... （host 侧读 .b64.txt）。
+ *   ⇒ 打包产物 614 KB（实测），剪辑台打开时才付那 10 MB。
+ *
+ *   所以这里只需要检查「产物文件在不在」，在就提示一句，不影响构建。
+ */
+const ART_DIR = path.join(HERE, "src", "editor");
+const hasPayload = fs.existsSync(path.join(ART_DIR, "artcraft-payload.b64.txt"))
+  && fs.statSync(path.join(ART_DIR, "artcraft-payload.b64.txt")).size > 1000;
+if (!hasPayload) {
+  console.log("  · 没找到 ArtCraft 产物（artcraft-payload.b64.txt）");
+  console.log("    剪辑台将显示「需要先准备 ArtCraft 产物」，视频工作台不受影响");
+  console.log("    需要剪辑台：pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1");
+}
+
 const LIB = path.join(HERE, "lib");
 if (!fs.existsSync(LIB)) fs.mkdirSync(LIB, { recursive: true });
 const TMP = path.join(HERE, ".build");

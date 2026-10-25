@@ -783,6 +783,31 @@ steps.push(run('F1（不该进仓库的东西确实没进）', 'tools', 'verify-
 steps.push(run('D4/D5（包依赖可移植 + 四包能独立加载）', 'tools', 'verify-d4-packages.mjs', [], 180000));
 
 /**
+ * ★★★ 2026-10-25 新增：跨站请求防护
+ *
+ *   实测事故（主人说「站在人类使用角度把关」，我去测才发现）：
+ *     curl -H "Origin: https://evil.example" \
+ *          http://127.0.0.1:19387/comfy-bridge/config
+ *     → 200 OK，把本机 ComfyUI 的绝对路径吐给了任意网页。
+ *
+ *   DSH 自己的页面有 cookie 认证（GET / 不带 token → 401），
+ *   但 dsh-host-webserver 的 register(route) 是「先匹配路由」——
+ *   匹配到就直接 handler，认证只挡 index 与 fallback ⇒ 插件路由是裸的。
+ *
+ *   危险面（POST + text/plain 就能发，浏览器不发预检）：
+ *     /clean?dryRun=0 真删 output/ 里的文件
+ *     /stop           关掉主人正在用的 ComfyUI
+ *     /config         改路径
+ *
+ *   已修：所有 21 个路由统一套 rejectCrossSite（包住 register 本体，
+ *   新增路由自动受保护）。判据是「浏览器带的跨源信号」，不是鉴权 ——
+ *   所以 curl / 验收脚本照常可用。
+ *
+ *   17 项断言 + 7 个变异全红（mutate-csrf-guard.mjs）。
+ */
+steps.push(run('跨站请求防护（CSRF guard）', 'dsh-comfy-bridge', 'verify-csrf-guard.mjs', [], 120000));
+
+/**
  * ★★ 2026-10-23 新增：G1 验收（版本记录 + 归档）
  *
  *   G1 要求「每个里程碑做 VERSION-v<date>.md + zip 归档」。

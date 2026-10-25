@@ -471,6 +471,117 @@ export async function apply(ctx, config = {}) {
   const prefix = config.routePrefix ?? ROUTE;
   const base = config.comfyBase ?? process.env.COMFY_BASE_URL ?? "http://127.0.0.1:8188";
 
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * ★★★ 2026-10-25 · 按需下发 ArtCraft 产物（首屏从 11.5MB 降到 ~1MB）
+   *
+   *   【问题】实测首屏 performance.getEntriesByType('resource')：
+   *     client.js 传输 5096 KB / 解码 14559 KB
+   *     其中 10.43 MB 是 ArtCraft 的 base64 payload
+   *   ⇒ 而它只在【打开剪辑台那一刻】用得上。
+   *     不打开剪辑台的人，每次刷新都要白下 10MB、再 atob 一遍（再吃 ~7MB 内存）。
+   *
+   *   【做法】把 payload / css 从打包产物里拆出来，改成这条路由按需取。
+   *     前端 editorHost.js 的 ARTCRAFT_SRC 变成""（占位），
+   *     真正要用时 fetch 这里拿文本。
+   *
+   *   【为什么不用 lib/ 静态文件】DSH 的 /plugins/?? 只服务 client.js 入口，
+   *     不暴露包内任意文件（实测 /plugins/<包名>/lib/index.js → 404）。
+   *     所以只能由 host 侧自己吐。
+   *
+   *   【安全】只允许固定的两个文件名，不接受路径。
+   * ══════════════════════════════════════════════════════════════════
+   */
+  const ART_ASSET_DIR = nodePath.resolve(
+    nodePath.dirname(fileURLToPath(import.meta.url)), "..", "src", "editor"
+  );
+  const ART_ASSETS = {
+    "payload.js": "artcraft-payload.b64.txt",
+    "css.js": "artcraft-css.b64.txt",
+  };
+
+  /**
+   * 内容指纹（给 ETag 用）。
+   * ★ 不用 crypto：10MB 的 sha256 每次都要算，而这里只是想让
+   *   「内容变了」能反映出来，长度 + 头尾采样 + 简单累加足够。
+   *   碰撞概率对「同一个文件改了一点」这种场景可以忽略。
+   */
+  const hashOf = (s) => {
+    let h = 2166136261;
+    const step = Math.max(1, Math.floor(s.length / 4096));
+    for (let i = 0; i < s.length; i += step) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h.toString(16);
+  };
+
+  ctx.effect(() => {
+    return ctx.webServer.register({
+      kind: "exact",
+      path: ROUTE + "/artcraft-asset",
+      handler: async (req, res) => {
+        if (req.method !== "GET") return json(res, 405, { error: "method not allowed" });
+        const u = new URL(req.url ?? "/", "http://x");
+        const which = String(u.searchParams.get("name") ?? "");
+        const file = ART_ASSETS[which];
+        if (!file) {
+          return json(res, 400, { error: `name 只允许 ${Object.keys(ART_ASSETS).join(" / ")}` });
+        }
+        const abs = nodePath.join(ART_ASSET_DIR, file);
+        let text;
+        try {
+          /* ★ 本文件其它地方都是作用域内 await import("node:fs")，
+             这里同理 —— 不在模块顶层多引一份。 */
+          const fsp = await import("node:fs/promises");
+          text = await fsp.readFile(abs, "utf8");
+        } catch {
+          /* 没准备过产物 —— 这是正常的降级态，不是错误 */
+          return json(res, 404, {
+            error: "ART_MISSING",
+            hint: "剪辑台需要 ArtCraft 产物。在仓库根目录执行：\n" +
+                  "pwsh -NoProfile -File ./scripts/fetch-artcraft.ps1",
+          });
+        }
+        const b64 = text.trim();
+        if (!b64) {
+          return json(res, 404, { error: "ART_MISSING", hint: "产物文件是空的，请重新生成" });
+        }
+        const etag = `"${Buffer.byteLength(b64).toString(16)}-${hashOf(b64)}"`;
+        /* ★ 内容没变回 304 —— 省掉 10MB 重传，但状态仍是现查的 */
+        if (req.headers?.["if-none-match"] === etag) {
+          res.writeHead(304, {
+            "ETag": etag,
+            "Cache-Control": "private, no-cache",
+          });
+          res.end();
+          return;
+        }
+        res.writeHead(200, {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Length": Buffer.byteLength(b64),
+          /**
+           * ★★ 2026-10-25 实测踩到：原来写 max-age=300，结果——
+           *   把产物文件删掉后，5 分钟内打开剪辑台【仍然正常渲染】，
+           *   因为浏览器直接吃了缓存。使用者会以为「产物还在」，
+           *   直到某次缓存过期才突然看到降级提示 —— 时序诡异、无法解释。
+           *
+           *   ⇒ 改成立刻过期 + ETag 协商：
+           *     · 每次都向宿主确认一次（请求很小，304 只有几百字节）
+           *     · 内容没变 ⇒ 304，不重传 10MB
+           *     · 内容变了/被删 ⇒ 真值立刻反映出来
+           *   代价是每次开剪辑台多一次 304 往返，换来「状态永远是真的」。
+           */
+          "Cache-Control": "private, no-cache",
+          "ETag": `"${Buffer.byteLength(b64).toString(16)}-${hashOf(b64)}"`,
+          "X-Content-Type-Options": "nosniff",
+        });
+        res.end(b64);
+      },
+    });
+  }, "comfy-workbench-tab: artcraft asset (lazy)");
+
+
   ctx.effect(() => {
     const dispose = ctx.webServer.register({
       kind: "exact",

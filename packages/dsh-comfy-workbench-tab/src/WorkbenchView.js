@@ -2296,7 +2296,7 @@ export function WorkbenchView(props) {
                       style: {
                         display: "flex", alignItems: "flex-start", gap: 5,
                         fontSize: 11, lineHeight: "15px",
-                        color: "rgb(163,106,3)",
+                        color: "var(--dsw-alias-state-warning-primary, #d29922)",
                       },
                     },
                       h("span", { style: { flex: "none", opacity: 0.8 } }, "⚠"),
@@ -2539,7 +2539,7 @@ export function WorkbenchView(props) {
                   style: {
                     display: "flex", alignItems: "flex-start", gap: 5,
                     fontSize: 11, lineHeight: "15px",
-                    color: "rgb(163,106,3)",
+                    color: "var(--dsw-alias-state-warning-primary, #d29922)",
                   },
                 },
                   h("span", { style: { flex: "none", opacity: 0.8 } }, "⚠"),
@@ -2578,10 +2578,10 @@ export function WorkbenchView(props) {
                 height: 28, padding: "0 9px", flex: "none",
                 border: 0, borderRadius: 8, cursor: "pointer",
                 background: atMentions.lib.s === "error"
-                  ? "rgba(248,81,73,.10)"
+                  ? "var(--dsw-alias-state-error-primary, #f25a5a)"
                   : "transparent",
                 color: atMentions.lib.s === "error"
-                  ? "rgb(207,34,46)"
+                  ? "var(--dsw-alias-label-primary-foreground, #fff)"
                   : "var(--dsw-alias-label-secondary, #61666b)",
                 fontFamily: "inherit", fontSize: 12, fontWeight: 400,
               },
@@ -2726,7 +2726,8 @@ function renderResultBar({ job, assets, t, onClear, modesState, error }) {
       style: {
         flex: "none", padding: "8px 10px", borderRadius: 12,
         fontSize: 12, lineHeight: "18px", whiteSpace: "pre-wrap",
-        background: "rgba(248,81,73,.08)", color: "rgb(207,34,46)",
+        background: "rgba(248,81,73,.08)",
+        color: "var(--dsw-alias-state-error-primary, #f25a5a)",
       },
     }, error ?? t("modes.error"));
   }
@@ -2752,7 +2753,8 @@ function renderResultBar({ job, assets, t, onClear, modesState, error }) {
       style: {
         flex: "none", padding: "8px 10px", borderRadius: 12,
         fontSize: 12, lineHeight: "18px", whiteSpace: "pre-wrap",
-        background: "rgba(248,81,73,.08)", color: "rgb(207,34,46)",
+        background: "rgba(248,81,73,.08)",
+        color: "var(--dsw-alias-state-error-primary, #f25a5a)",
         display: "flex", alignItems: "flex-start", gap: 8,
       },
     },
@@ -2774,16 +2776,16 @@ function renderResultBar({ job, assets, t, onClear, modesState, error }) {
   }
 
   if (job?.completed) {
-    bits.push(h("span", { key: "s", style: { color: "rgb(46,160,67)", fontWeight: 600 } }, t("result.done")));
+    bits.push(h("span", { key: "s", style: { color: "var(--dsw-alias-state-success-primary, #22c55e)", fontWeight: 600 } }, t("result.done")));
     bits.push(h("span", { key: "e" }, `${((job.elapsedMs ?? 0) / 1000).toFixed(1)}s`));
     bits.push(h("span", { key: "n" }, `${n} ${t("unit.outputs")}`));
     if (n === 0) {
       // 完成却 0 产物 —— 必须显式说，否则画布空着像「还在跑」
-      bits.push(h("span", { key: "z", style: { color: "rgb(163,106,3)" } },
+      bits.push(h("span", { key: "z", style: { color: "var(--dsw-alias-state-warning-primary, #d29922)" } },
         "completed 但 0 产物 —— 检查 bind 的 outputs"));
     }
   } else if (job?.failed) {
-    bits.push(h("span", { key: "f", style: { color: "rgb(207,34,46)", fontWeight: 600 } }, t("result.failed")));
+    bits.push(h("span", { key: "f", style: { color: "var(--dsw-alias-state-error-primary, #f25a5a)", fontWeight: 600 } }, t("result.failed")));
     bits.push(h("span", { key: "i", style: { fontSize: 11 } }, String(job.jobId ?? "")));
   } else if (job?.cancelled) {
     bits.push(h("span", { key: "c" }, t("result.cancelled")));

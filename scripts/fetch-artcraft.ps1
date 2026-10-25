@@ -131,7 +131,31 @@ if ($size -lt 100000) {
 }
 
 Ok "产物已就绪：$([math]::Round($size/1MB,1)) MB"
+
+# ── ⑥ 导出宿主侧要读的纯文本（2026-10-25 按需下发）──
+#
+# 原来 payload 静态 import 进打包产物 ⇒ 首屏 11.4 MB，
+# 而它只有打开剪辑台才用得上。现在改成宿主侧按需吐给浏览器，
+# 宿主读的就是下面这两个 .b64.txt。
+$editorDir = Join-Path $repo "packages\dsh-comfy-workbench-tab\src\editor"
+foreach ($pair in @(
+    @{ js = "_artcraft-payload.js"; txt = "artcraft-payload.b64.txt" },
+    @{ js = "_artcraft-css.js";     txt = "artcraft-css.b64.txt"     }
+)) {
+    $jsPath = Join-Path $editorDir $pair.js
+    $txtPath = Join-Path $editorDir $pair.txt
+    if (-not (Test-Path $jsPath)) { continue }
+    $raw = Get-Content $jsPath -Raw
+    $m = [regex]::Match($raw, 'export default\s+"([A-Za-z0-9+/=]*)"')
+    if (-not $m.Success) {
+        Warn "解析不出 $($pair.js) 里的 base64，跳过"
+        continue
+    }
+    [System.IO.File]::WriteAllText($txtPath, $m.Groups[1].Value, [System.Text.Encoding]::ASCII)
+    Ok "已导出 $($pair.txt)（$([math]::Round($m.Groups[1].Value.Length/1MB,2)) MB）"
+}
+
 Write-Host ""
 Write-Host "  下一步：重启 DSH，剪辑台就能用了。"
-Write-Host "  ★ 该文件在 .gitignore 里 —— 生成物不会被提交到仓库。"
+Write-Host "  ★ 这些文件都在 .gitignore 里 —— 生成物不会被提交到仓库。"
 Write-Host ""
