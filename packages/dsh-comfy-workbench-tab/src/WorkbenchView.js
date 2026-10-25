@@ -1203,6 +1203,14 @@ export function WorkbenchView(props) {
   const [job, setJob] = useState(null);
   const [error, setError] = useState(null);
   const pollRef = useRef(null);
+  /**
+   * ★ 2026-10-25：「AI 已填入」提示条。
+   *   填完不弹提示的话，用户只会看到框里的字变了，分不清是 AI 改的
+   *   还是自己刚才敲的 —— 静默改动比没有改动更让人困惑。
+   */
+  const [fillNotice, setFillNotice] = useState(null);
+  /* ★ modeIdRef 在下面（mergeAssets 那段）已经定义过，这里不再重复声明 ——
+     重复声明会让 esbuild 直接报 "has already been declared"。 */
 
   /**
    * ★ 画布资产（主人第 ④ 件事：「生成后直接弹到画布里面」）
@@ -1477,6 +1485,63 @@ export function WorkbenchView(props) {
 
   useEffect(() => stopPoll, []);
 
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * ★★★ 2026-10-25 · 接收「对话框 → 工作台」的填入指令
+   *
+   *   主人原话：
+   *     「懒人一般走这里输入需求，然后让云端 llm 根据模型匹配的 skill
+   *       反推提示词，然后输入到上方的提示词框，生成。」
+   *
+   *   实测断点：setPrompt 原来只有 2 个调用点（sessionStorage 恢复、
+   *   切工作流写默认值），没有任何外部入口。LLM 写好的提示词
+   *   只能打在对话里让人手动复制粘贴。
+   *
+   *   现在：宿主侧 /comfy-assets/workbench-pending 里排着 LLM 刚写的指令，
+   *   这里每 1 秒取一次，取到就填进输入框。
+   *
+   *   ★ 为什么不自动生成（主人 2026-10-25 选 A）：
+   *     生成一次 23s~178s，跑错太贵，要留一个用眼睛扫一遍的检查点。
+   *   ★ 为什么轮询而不是 SSE：
+   *     低频事件（一次对话一两次），SSE 要长连接 + 重连 + 多标签页去重，
+   *     为这点频率不值。
+   *   ★ 填完必须弹一条可见提示 —— 否则用户只是看到框里的字变了，
+   *     不知道是 AI 改的还是自己刚才敲的。
+   * ══════════════════════════════════════════════════════════════════
+   */
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      if (!alive || document.hidden) return;
+      try {
+        const r = await fetch("/comfy-assets/workbench-pending", {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (!j?.has || !alive) return;
+
+        /* ★ 顺序：先切工作流（会写该工作流的默认值），再覆盖提示词。
+             反过来的话，切工作流那一下会把刚填的提示词冲掉。 */
+        if (j.modeId && j.modeId !== modeIdRef.current) {
+          setModeId(j.modeId);
+        }
+        if (typeof j.prompt === "string") setPrompt(j.prompt);
+        if (typeof j.aspect === "string") setAspect(j.aspect);
+        if (Number.isFinite(j.durationSec)) setDurationSec(j.durationSec);
+        if (Number.isFinite(j.seed)) setSeed(String(j.seed));
+
+        setFillNotice(j.reason ? `AI 已填入：${j.reason}` : "AI 已把提示词填入下面的输入框");
+        setTimeout(() => { if (alive) setFillNotice(null); }, 8000);
+      } catch { /* 网络抖动忽略，下一轮再试 */ }
+    };
+    const timer = setInterval(tick, 1000);
+    tick();
+    return () => { alive = false; clearInterval(timer); };
+  }, []);
+
+
   // ★ 2026-10-18（质检 P1-4）：参数变化就落 sessionStorage。
   //   防抖 300ms —— 拖提示词框 / 连续上下调步数时不要每帧都写。
   //   只存「用户填的东西」，不存 job / 轮询 / error 这些瞬时状态。
@@ -1668,6 +1733,62 @@ export function WorkbenchView(props) {
     );
   }
 
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * ★★★ 2026-10-25 · 「→ 时间轴」：把产物一键送进剪辑台
+   *
+   *   懒人链路里最大的断点：生成完 → 剪辑之间完全手动。
+   *   切 tab、点导入、走系统文件选择器、从 1582 个资产里翻 ——
+   *   而刚生成的东西明明就在画布那张卡片上。
+   *
+   *   实现：POST /timeline/cmd/add-shots（dsh-editor 已有这条命令）
+   *   参数形状照 commands.mjs 的 add-shots：
+   *     { shots: [{ prompt, modeId, aspect, durationSec, name }] }
+   *
+   *   ★ 为什么用「片段」而不是「直接塞素材」：
+   *     时间轴的模型是 shot（有提示词/工作流/时长），不是裸文件。
+   *     先建一段，之后想重跑这一镜时 timeline_generate 直接能用。
+   *   ★ 片段名用产物文件名 —— 时间轴上认得出是哪张。
+   * ══════════════════════════════════════════════════════════════════
+   */
+  async function onSendToTimeline(card) {
+    const out = card?.out ?? {};
+    const fname = out.filename ?? out.name ?? "产物";
+    const isVid = /\.(mp4|webm|mov|mkv)$/i.test(fname);
+    try {
+      setFillNotice(`正在把 ${fname} 加进时间轴…`);
+      const r = await fetch("/timeline/cmd/add-shots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shots: [{
+            prompt: prompt || fname,
+            modeId: modeId ?? "krea2",
+            aspect: aspect || "16:9",
+            durationSec: isVid ? Number(durationSec) || 5 : 5,
+            name: fname.replace(/\.[^.]+$/, "").slice(0, 40),
+          }],
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setFillNotice(null);
+        setError(
+          `加进时间轴失败：${j?.error ?? `HTTP ${r.status}`}\n`
+          + "（剪辑台（dsh-editor）可能没装在这个 profile 里）"
+        );
+        return;
+      }
+      setFillNotice(
+        `已加入时间轴：「${fname}」—— 切到「剪辑台」就能看到。`
+      );
+      setTimeout(() => setFillNotice(null), 6000);
+    } catch (e) {
+      setFillNotice(null);
+      setError(`加进时间轴失败：${e?.message ?? e}`);
+    }
+  }
+
   async function onGenerate() {
     setError(null);
     if (!modeId) return;
@@ -1739,13 +1860,67 @@ export function WorkbenchView(props) {
         }
       }
     }
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * ★★★ 2026-10-25 · 提示词引用了不存在的素材
+     *
+     *   实测现状：yz 的 defaults.prompt 里写着
+     *     subject_definitions:
+     *     <Subject 1> is the character in <Picture 1>.
+     *   而 15 个素材槽 required 全是 false。
+     *   ⇒ 用户不传图直接点生成：
+     *       tagReferences([]) 返回 lines: []（一个标签都不发）
+     *       但 prompt 里的 <Picture 1> 还在
+     *   ⇒ H3 收到「指向一张不存在的图的指令」，结果不可预期且不报错。
+     *
+     *   主人的判定（2026-10-25）：
+     *     「关于没参考图变成文生是正常的」
+     *   ⇒ 不能拦。文生视频是合法用法。
+     *     要做的是把【指向空图的那几行】从提示词里摘掉，让 H3 收到干净的文生指令。
+     *
+     *   ★ 只在「一个素材都没绑」时才动手 ——
+     *     用户绑了 2 张图但提示词写了 Picture 3，那是他自己写多了，
+     *     该由 refWarnings 提示（下面已有），不该替他改字。
+     * ══════════════════════════════════════════════════════════════════
+     */
+    let finalPrompt = prompt;
+    const anyMedia = Object.values(files ?? {}).some((f) => f?.base64);
+    if (caps.h3Labels && !anyMedia) {
+      const referenced = new Set();
+      for (const m of String(prompt).matchAll(/<(Subject|Picture|Video|Audio)\s*(\d+)>/g)) {
+        referenced.add(`${m[1]} ${m[2]}`);
+      }
+      if (referenced.size) {
+        /* 摘掉「整行都在描述这些不存在素材」的行；正文里顺带提到的保留 */
+        const kept = String(prompt).split("\n").filter((line) => {
+          const refs = [...line.matchAll(/<(Subject|Picture|Video|Audio)\s*(\d+)>/g)];
+          if (!refs.length) return true;
+          /* 该行提到的那几个标签，是否全都不存在（= 一个素材都没绑 ⇒ 全不存在） */
+          return false;   // 一行素材都没绑时，凡是提到素材的行都该走
+        });
+        finalPrompt = kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+        if (!finalPrompt) {
+          setError(
+            "这段提示词全部在描述参考素材，但一个素材都没选。\n"
+            + "要么先引一张图（从资产库拖进来 / 用 @ 引用），要么改写成像「一个人在咖啡馆」这样的纯文字描述。"
+          );
+          return;
+        }
+        setError(null);
+        setFillNotice(
+          `这段提示词引用了 ${referenced.size} 个参考素材，但你一个都没选 —— `
+          + `已自动去掉那几行，按纯文字生成。（想用参考图就先引素材）`
+        );
+      }
+    }
+
     // ★ 2026-10-18（质检 P1-3）：同步互斥门。
     //   这里必须先于任何 await 置位 —— 否则连点 5 次会真的提交 5 个任务
     //   （实测 fetch 拦截到 5 次相同 body，/queue 里 pending 排到 2）。
     if (submitting) return;
     setSubmitting(true);
     try {
-      const params = { prompt, steps: Number(steps), toggles };
+      const params = { prompt: finalPrompt, steps: Number(steps), toggles };
     // ★ 2026-10-18（质检 P1-6）：把素材槽一起发出去。
     //   只发 base64 + filename —— 后端 uploadImage 后会把 ComfyUI 的文件名
     //   填进该槽对应的节点。preview（objectURL）不发，那是本地预览用的。
@@ -2069,6 +2244,33 @@ export function WorkbenchView(props) {
       // ── 状态条（只在有内容可报时出现，占 18px，不再是一片空白）──
       renderResultBar({ job, assets, t, onClear: clearAssets, modesState, error }),
 
+      /* ── AI 填入提示（2026-10-25）──
+         用户从对话框让 LLM 写了提示词后，工作台这边要有一句「这是 AI 填的」。
+         没有它，用户看到框里的字变了会以为是自己刚才敲的。 */
+      fillNotice
+        ? h("div", {
+            style: {
+              flex: "none", padding: "6px 10px", borderRadius: 8,
+              fontSize: 12, lineHeight: "18px",
+              background: "rgba(65,118,230,.10)",
+              color: "var(--dsw-alias-state-business-primary, #7aaaff)",
+              display: "flex", alignItems: "center", gap: 8,
+            },
+          },
+            h("span", { style: { flex: "1 1 auto" } }, fillNotice),
+            h("button", {
+              type: "button",
+              onClick: () => setFillNotice(null),
+              title: "收起这条提示（不改动提示词）",
+              style: {
+                flex: "none", border: 0, background: "transparent",
+                color: "inherit", opacity: .6, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 12, padding: "0 2px",
+              },
+            }, "×"))
+        : null,
+
+
       // ── 画布本体 ──
       //   modeId 传下去：不同工作流的 bind.outputs 表不同，
       //   画布靠它取对应的「nodeId → 来源角色」映射。
@@ -2103,6 +2305,7 @@ export function WorkbenchView(props) {
         onGenerate: () => {
           try { promptRef.current?.focus(); } catch { /* ignore */ }
         },
+        onSendToTimeline,
       })
         : null
     ),
@@ -2842,6 +3045,18 @@ function renderResultBar({ job, assets, t, onClear, modesState, error }) {
      */
     const pg = job.progress;
     if (pg && Number.isFinite(pg.pct)) {
+      /**
+       * ★★★ 2026-10-25 · 「100% 但画布还是空的」
+       *
+       *   实测截图：状态条显示「8/8 · 100%」，画布仍然是「还没有产物」。
+       *   用户看到满格会以为卡死了。
+       *
+       *   原因是 ComfyUI 的 progress 只统计【采样】那一段：
+       *     采样 100% ⇒ 还有 VAE 解码 / SaveImage 落盘 / /history 写入。
+       *     这段时间实测 2~6 秒（5.17s 输出那段就包含它）。
+       *   ⇒ 100% 之后不该显示满格，要改成「收尾中」并给条流动感。
+       */
+      const nearlyDone = pg.pct >= 99.5;
       const pct = Math.max(0, Math.min(100, pg.pct));
       bits.push(h("span", {
         key: "pg",
@@ -2849,9 +3064,11 @@ function renderResultBar({ job, assets, t, onClear, modesState, error }) {
           display: "inline-flex", alignItems: "center", gap: 6,
           fontVariantNumeric: "tabular-nums",
         },
-        title: Number.isFinite(pg.value) && Number.isFinite(pg.max)
-          ? `${pg.value} / ${pg.max} 步`
-          : undefined,
+        title: nearlyDone
+          ? "采样已完成，正在解码画面并写入文件（通常 2~6 秒）"
+          : (Number.isFinite(pg.value) && Number.isFinite(pg.max)
+              ? `${pg.value} / ${pg.max} 步`
+              : undefined),
       },
         /* 底槽 */
         h("span", {
@@ -2866,17 +3083,21 @@ function renderResultBar({ job, assets, t, onClear, modesState, error }) {
           h("span", {
             style: {
               position: "absolute", left: 0, top: 0, bottom: 0,
-              width: `${pct}%`, borderRadius: 2,
+              width: `${nearlyDone ? 100 : pct}%`, borderRadius: 2,
               background: "var(--dsw-alias-state-business-primary, #4176e6)",
               transition: "width .2s ease",
+              /* ★ 收尾阶段给个呼吸感，让「满格但没结果」看起来是在动而不是卡死 */
+              opacity: nearlyDone ? 0.55 : 1,
             },
           })
         ),
         /* 数字：带步数（不同节点总步数不同，只看百分比看不出「在动」） */
         h("span", null,
-          Number.isFinite(pg.value) && Number.isFinite(pg.max)
-            ? `${pg.value}/${pg.max} · ${pct}%`
-            : `${pct}%`)
+          nearlyDone
+            ? "收尾中…"
+            : (Number.isFinite(pg.value) && Number.isFinite(pg.max)
+                ? `${pg.value}/${pg.max} · ${pct}%`
+                : `${pct}%`))
       ));
     }
 

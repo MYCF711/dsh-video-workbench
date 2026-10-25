@@ -318,6 +318,8 @@ function AtPicker({
   anchorRect, onPick, onClose, onlyCompatible, setOnlyCompatible, slotKinds, hasSlots, t,
   // ★ 2026-10-20：整组引用（@角色名 一次绑多张定妆图）
   charGroup, onApplyCharacter,
+  // ★ 2026-10-25：只看「今天生成的」（懒人找刚生成的东西）
+  recentOnly, setRecentOnly, recentCount,
 }) {
   const listRef = useRef(null);
 
@@ -379,6 +381,31 @@ function AtPicker({
           h("span", {
             style: { flex: "1 1 auto", minWidth: 0, color: "var(--dsw-alias-label-tertiary, #81858c)" },
           }, query ? `@${query}` : (t?.("asset.pickerHint") ?? "继续打字可筛选 · ↑↓ 选择 · Enter 插入 · Esc 关闭")),
+          /**
+           * ★★ 2026-10-25 · 「今天」筛选
+           *
+           *   实测痛点：资产库 1582 项，刚生成的两张图混在里面翻不出来。
+           *   懒人不会按文件名搜索，他只知道「刚才那个」。
+           *   ⇒ 一键只看今天生成/修改过的。
+           *   ★ 数量为 0 时不显示 —— 空按钮只会让人点一下然后失望。
+           */
+          recentCount > 0
+            ? h("button", {
+                type: "button",
+                onClick: () => setRecentOnly((v) => !v),
+                title: "只显示今天生成或改过的素材",
+                style: {
+                  flex: "none", height: 22, padding: "0 8px", border: 0, borderRadius: 999,
+                  cursor: "pointer", fontFamily: "inherit", fontSize: 11, lineHeight: "20px",
+                  background: recentOnly
+                    ? "var(--dsw-alias-state-business-primary, #4176e6)"
+                    : "var(--dsw-alias-interactive-bg-hover, rgba(0,0,0,.05))",
+                  color: recentOnly
+                    ? "var(--dsw-alias-label-primary-foreground, #fff)"
+                    : "var(--dsw-alias-label-secondary, #61666b)",
+                },
+              }, recentOnly ? `今天 ${recentCount}` : `今天 ${recentCount}`)
+            : null,
           hasSlots
             ? h("button", {
                 type: "button",
@@ -3497,6 +3524,8 @@ export function useAssetAtMentions({
   const [at, setAt] = useState(null);       // { start: number, query: string }
   const [cursor, setCursor] = useState(0);
   const [onlyCompatible, setOnlyCompatible] = useState(false);
+  /** ★ 2026-10-25：只看今天生成/改过的（懒人找「刚才那个」） */
+  const [recentOnly, setRecentOnly] = useState(false);
   const [panel, setPanel] = useState(false);
   const [chooser, setChooser] = useState(null); // { asset, kind }
   const [hover, setHover] = useState(null);
@@ -3519,9 +3548,37 @@ export function useAssetAtMentions({
    * ★ 这个 useMemo 必须放在【任何 early return 之前】，且所有 filter 逻辑
    *   都在这里 —— AtPicker 只渲染它。理由见 AtPicker 上的注释。
    */
+  /**
+   * ★★ 2026-10-25 · 「今天」的时间下界。
+   *
+   *   ★ 用「本地今天零点」而不是「24 小时前」：
+   *     用户的「今天」= 日历上的今天。凌晨 1 点看「今天」，
+   *     不该把昨天下午生成的东西也算进来。
+   */
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+
+  /** 该资产是否「今天动过」。资产记录里可用时间是 mtime / mtimeMs / at。 */
+  const isToday = useCallback((it) => {
+    const t = Number(it?.mtimeMs ?? it?.mtime ?? it?.at ?? 0);
+    if (!Number.isFinite(t) || t <= 0) return false;
+    /* mtime 可能是秒级（1666...），也可能是毫秒；秒级乘 1000 */
+    const ms = t < 1e12 ? t * 1000 : t;
+    return ms >= todayStart;
+  }, [todayStart]);
+
+  const recentCount = useMemo(
+    () => (lib.items ?? []).filter(isToday).length,
+    [lib.items, isToday]
+  );
+
   const atFiltered = useMemo(() => {
     const q = String(at?.query ?? "").trim().toLowerCase();
     let out = lib.items ?? [];
+    if (recentOnly) out = out.filter(isToday);
     if (onlyCompatible && hasSlots) out = out.filter((it) => slotKinds.has(it.kind));
     if (q) {
       out = out.filter((it) =>
@@ -3533,7 +3590,7 @@ export function useAssetAtMentions({
       );
     }
     return out.slice(0, 300);
-  }, [lib.items, at?.query, onlyCompatible, hasSlots, slotKinds]);
+  }, [lib.items, at?.query, onlyCompatible, hasSlots, slotKinds, recentOnly, isToday]);
 
   /**
    * ★★ 2026-10-20 新增：「整组引用」的目标角色。
@@ -4064,6 +4121,7 @@ export function useAssetAtMentions({
         onPick: (it) => applyAsset(it, at),
         onClose: () => setAt(null),
         onlyCompatible, setOnlyCompatible,
+        recentOnly, setRecentOnly, recentCount,
         slotKinds, hasSlots,
         // ★ 2026-10-20：整组引用（@角色名 一次绑多张定妆图）
         charGroup,
