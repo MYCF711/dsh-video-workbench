@@ -857,6 +857,22 @@ steps.push(run('懒人链路体验保障（技能引用/会话隔离/任务恢�
 steps.push(run('快捷键接线（DEFS/handler/onAction/工具条 四处一致）', 'dsh-comfy-workbench-tab', 'verify-shortcut-wiring.mjs', [], 120000));
 
 /**
+ * ★★★ 2026-10-25 新增：ComfyUI 掉线 / 任务丢失时的界面表现
+ *
+ *   最容易漏测的场景：**服务挂了之后界面长什么样**。
+ *   实测（关掉 ComfyUI 后刷新页面）发现：
+ *     · 状态条永远停在「已提交，等待产出」，按钮永远「停止」
+ *       —— 任务不可能再回来，而用户既看不到真相也点不了重试
+ *     · 提示是「…（fetch failed）（HTTP 404）」
+ *       —— 404 的语义是「任务不存在」，真实情况是「服务连不上」
+ *     · ComfyUI 重启后任务变 lost，但 lost 不在前端终态列表里
+ *
+ *   修法：把 unreachable / lost / 正常 三种状态分开表达，
+ *   每种都给「现在能做什么」。10 项断言 + 9 个变异全红。
+ */
+steps.push(run('服务掉线时的界面（unreachable vs lost vs 正常）', 'dsh-comfy-workbench-tab', 'verify-offline-ux.mjs', [], 120000));
+
+/**
  * ★★ 2026-10-23 新增：G1 验收（版本记录 + 归档）
  *
  *   G1 要求「每个里程碑做 VERSION-v<date>.md + zip 归档」。
