@@ -669,6 +669,46 @@ export async function apply(ctx, config = {}) {
       return { jobId, promptId, nodes: Object.keys(built.prompt).length };
     },
 
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * ★★★ 2026-10-25 新增：列出任务（供前端刷新/切会话后恢复）
+     *
+     *   【为什么必须加】实测缺失导致的真实事故：
+     *     前端任务状态只活在 React 内存里。刷新页面 ⇒ 全丢。
+     *     但 ComfyUI 里任务【还在跑】（yz 一次 178 秒）。
+     *     ⇒ 用户看到空白工作台，以为没生成；再点一次 → 两个任务抢显存。
+     *
+     *   返回最近 N 条（按 startedAt 倒序），每条只给前端恢复所需的最小字段。
+     *   ★ 不返回 prompt / outputs：那可能有几十 KB，而恢复只需要知道
+     *     「哪个 jobId 在跑、跑到哪了」。
+     *   ★ 默认只回「未结束」的；带 ?all=1 才回全部（含已完成的最近记录）。
+     * ══════════════════════════════════════════════════════════════════
+     */
+    async jobs({ all = false, limit = 20 } = {}) {
+      const now = Date.now();
+      const TERMINAL_MS = 10 * 60 * 1000;   // 完成的任务留 10 分钟可查
+      const out = [];
+      for (const j of jobs.values()) {
+        const age = now - (j.startedAt ?? 0);
+        /* 太老的丢掉，Map 不是无限长的 —— 避免长期运行后积累 */
+        if (age > 6 * 60 * 60 * 1000) continue;
+        const finished = j.finishedAt ?? null;
+        const isDone = finished !== null;
+        if (!all && isDone && now - finished > TERMINAL_MS) continue;
+        out.push({
+          jobId: j.jobId,
+          promptId: j.promptId,
+          modeId: j.modeId,
+          startedAt: j.startedAt,
+          finishedAt: finished,
+          done: isDone,
+          failed: j.failed === true ? true : undefined,
+        });
+      }
+      out.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0));
+      return { ok: true, jobs: out.slice(0, Math.max(1, Math.min(200, limit))) };
+    },
+
     async job(jobId) {
       const job = jobs.get(jobId);
       if (!job) throw new Error(`未知任务：${jobId}`);
@@ -745,6 +785,16 @@ export async function apply(ctx, config = {}) {
       if (h.completed) {
         releaseWatch(jobId);
         progressBus.forget(job.promptId);
+        /**
+         * ★ 2026-10-25：记下结束时间，给 /jobs 用。
+         *   ★ 只在第一次记（??=）—— 前端可能轮询很多次，
+         *     每次覆盖会把「完成多久了」算错，/jobs 的清理逻辑就失效。
+         */
+        job.finishedAt ??= Date.now();
+        const st = String(h.statusStr ?? "").toLowerCase();
+        if (st.includes("error") || st.includes("fail") || st.includes("cancel")) {
+          job.failed = true;
+        }
       }
 
       return {
@@ -1453,6 +1503,37 @@ export async function apply(ctx, config = {}) {
         if (!p.startsWith(full)) return "";
         return decodeURIComponent(p.slice(full.length));
       };
+
+      /**
+       * ★★★ 2026-10-25：GET /comfy-bridge/jobs —— 列出任务
+       *
+       *   ！！必须是 exact，不能是 prefix ！！
+       *   dsh-host-webserver 的 match() 逐字：
+       *     const exact = this.exact.get(pathname);
+       *     if (exact !== void 0) return exact;      ← 精确表先命中
+       *     …最长前缀胜…
+       *   所以 exact 的 /jobs 会先于 prefix 的 /job 命中。
+       *   若这里也写成 prefix，"/comfy-bridge/jobs" 会满足
+       *   startsWith("/comfy-bridge/job/") 吗？—— 不会（缺斜杠），
+       *   但为了不依赖这个细节，明确用 exact 更稳。
+       */
+      disposers.push(
+        ws.register({
+          kind: "exact",
+          path: prefix + "/jobs",
+          handler: async (req, res) => {
+            if (req.method !== "GET") return json(res, 405, { error: "method not allowed" });
+            try {
+              const u = new URL(req.url ?? "/", "http://x");
+              const all = u.searchParams.get("all") === "1";
+              const limit = Number(u.searchParams.get("limit") ?? 20);
+              json(res, 200, await handlers.jobs({ all, limit: Number.isFinite(limit) ? limit : 20 }));
+            } catch (err) {
+              json(res, 500, { error: String(err?.message ?? err) });
+            }
+          },
+        })
+      );
 
       disposers.push(
         ws.register({

@@ -825,6 +825,22 @@ steps.push(run('跨站请求防护（CSRF guard）', 'dsh-comfy-bridge', 'verify
 steps.push(run('预设能被发现 + 技能挂载正确', 'dsh-comfy-preset', 'verify-preset-discovery.mjs', [], 120000));
 
 /**
+ * ★★★ 2026-10-25 新增：懒人链路的四项体验保障
+ *
+ *   按「懒人画像」逐段体检发现，全部静默失效：
+ *     ① 三个提示词技能（krea2-prompt-suite / h3-prompt-writing /
+ *        qwen-image-2-1-prompter）本机现成有，技能文档里一个字没提
+ *        ⇒ LLM 反推提示词全靠通用理解，写出来的词模型不吃
+ *     ② PERSIST_KEY 写死，不按会话分 ⇒ 会话 A 的提示词出现在会话 B
+ *     ③ 任务状态只在 React 内存里，刷新即丢；而 ComfyUI 里还在跑
+ *        （yz 一次 178 秒）⇒ 用户以为没生成，再点一次抢显存
+ *     ④ 「已接管」提示 8 秒后消失，用户慢一点切过来就看不到
+ *
+ *   23 项断言 + 16 个变异全红（mutate-lazy-ux.mjs）。
+ */
+steps.push(run('懒人链路体验保障（技能引用/会话隔离/任务恢复/提示不消失）', 'dsh-comfy-workbench-tab', 'verify-lazy-ux.mjs', [], 120000));
+
+/**
  * ★★ 2026-10-23 新增：G1 验收（版本记录 + 归档）
  *
  *   G1 要求「每个里程碑做 VERSION-v<date>.md + zip 归档」。
