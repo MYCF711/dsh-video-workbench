@@ -549,8 +549,27 @@ export function buildPrompt(mode, params, resolvers) {
   }
 
   // ---- 采样 ----
-  if (params.seed != null && mode.vars.seed) {
-    setInput(mode.vars.seed.node, mode.vars.seed.input, Number(params.seed));
+  /**
+   * ★★★ 2026-10-25 修：用户没给种子时，【由我们定一个并回报】。
+   *
+   *   【实测问题】原来写的是「params.seed != null 才 setInput」——
+   *   用户留空（默认行为）时，种子节点保留工作流里的原始固定值。
+   *   后果：
+   *     · 前端不知道这次用了哪个种子 ⇒ 出到好图想「同一张微调」做不到
+   *     · 用户以为「留空 = 随机」，而实际每次都跑同一个固定种子，
+   *       连续生成出几乎一样的图，还以为模型不听话
+   *
+   *   ⇒ 留空时生成一个随机种子，写进节点，并在返回值里带出去（usedSeed）。
+   *     判据：**凡是「用户留空」的参数，系统替他选的值必须可见**，
+   *          否则他既不能复现也不能微调。
+   *   ★ 上限用 2147483647 而不是 Number.MAX_SAFE_INTEGER ——
+   *     ComfyUI 的 seed 是 INT32，超范围会被 schema 校验直接拒。
+   */
+  let usedSeed = null;
+  if (mode.vars.seed) {
+    const want = params.seed != null ? Number(params.seed) : NaN;
+    usedSeed = Number.isFinite(want) ? Math.trunc(want) : Math.floor(Math.random() * 2147483647);
+    setInput(mode.vars.seed.node, mode.vars.seed.input, usedSeed);
   }
   if (params.steps != null && mode.vars.steps) {
     setInput(mode.vars.steps.node, mode.vars.steps.input, Number(params.steps));
@@ -975,7 +994,12 @@ export function buildPrompt(mode, params, resolvers) {
     }
   }
 
-  return { prompt: wf, applied, length: frames ?? null, pruned, toggles: toggleState, skipped };
+  /**
+   * ★ 2026-10-25：把【实际用的种子】传出去。
+   *   前端要把它回填进输入框，用户才能「同一张换个细节再试」。
+   *   null 表示这个工作流没有种子变量（不声明 vars.seed 的就不该有）。
+   */
+  return { prompt: wf, applied, length: frames ?? null, pruned, toggles: toggleState, skipped, seed: usedSeed };
 }
 
 /**
