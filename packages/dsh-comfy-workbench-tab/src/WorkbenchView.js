@@ -17,6 +17,28 @@
 const PERSIST_KEY = "dsh-comfy-workbench:v1";
 
 /**
+ * ★★★ 2026-10-25 修：持久化的 key 必须【按会话隔离】。
+ *
+ *   【实测问题】原来 key 是写死的 "dsh-comfy-workbench:v1"，
+ *   而 sessionStorage 是【按标签页共享】的，不按 DSH 会话分。
+ *   ⇒ 用户在会话 A 写了提示词 / 选了画幅，切到会话 B，
+ *     B 的工作台直接把 A 的那套读出来显示。
+ *   ⇒ 同时开两个会话做两条片，两边互相覆盖。
+ *
+ *   而 sessionId **一直就在 props 里**（client.js 的 inject 有传），只是没人用。
+ *
+ *   ★ 为什么带 v1 前缀：以后改结构时旧 key 自动失效，不用写迁移逻辑。
+ *   ★ 为什么 persistKeyFor(null) 用 "_nosession" 而不是报错：
+ *     sessionId 可能还没就绪，那时退化成「共用一份」也比崩了强。
+ */
+function persistKeyFor(sessionId) {
+  const sid = typeof sessionId === "string" && sessionId.trim()
+    ? sessionId.trim().replace(/[^\w.-]/g, "_")
+    : "_nosession";
+  return `${PERSIST_KEY}:${sid}`;
+}
+
+/**
  * ★★ 2026-10-21 加防线：读出时剥掉「用户不该看到的内容」
  *
  *   实测事故：
@@ -51,9 +73,23 @@ export function stripInternalFormat(text) {
   return arr.slice(i).join("\n").trim();
 }
 
-function loadPersisted() {
+function loadPersisted(sessionId) {
+  const key = persistKeyFor(sessionId);
   try {
-    const raw2 = sessionStorage.getItem(PERSIST_KEY);
+    let raw2 = sessionStorage.getItem(key);
+    /**
+     * ★ 一次性迁移：老版本存的是不带会话后缀的那个 key。
+     *   用户升级后第一次打开，如果新 key 没有值、旧 key 有，
+     *   就把旧值接过来 —— 否则他会以为「刚才写的提示词没了」。
+     *   ★ 迁移后旧 key 保留不删：用户回退版本时还能用，且删它有风险。
+     */
+    if (!raw2 && key !== PERSIST_KEY) {
+      const legacy = sessionStorage.getItem(PERSIST_KEY);
+      if (legacy) {
+        raw2 = legacy;
+        try { sessionStorage.setItem(key, legacy); } catch { /* ignore */ }
+      }
+    }
     if (!raw2) return null;
     const j = JSON.parse(raw2);
     // ★ 读出时清理 prompt 里的内部格式（见 stripInternalFormat）
@@ -61,17 +97,18 @@ function loadPersisted() {
       const cleaned = stripInternalFormat(j.prompt);
       if (cleaned !== j.prompt) {
         j.prompt = cleaned;
-        try { sessionStorage.setItem(PERSIST_KEY, JSON.stringify(j)); } catch { /* ignore */ }
+        try { sessionStorage.setItem(key, JSON.stringify(j)); } catch { /* ignore */ }
       }
     }
     return j;
   } catch { return null; }
 }
 
-function savePersisted(patch) {
+function savePersisted(sessionId, patch) {
   try {
-    const cur = loadPersisted() ?? {};
-    sessionStorage.setItem(PERSIST_KEY, JSON.stringify({ ...cur, ...patch }));
+    const key = persistKeyFor(sessionId);
+    const cur = loadPersisted(sessionId) ?? {};
+    sessionStorage.setItem(key, JSON.stringify({ ...cur, ...patch }));
   } catch { /* 隐私模式 / 配额满 —— 静默降级，不持久化而已 */ }
 }
 
@@ -1150,7 +1187,7 @@ function SafeMount({ Comp, Boundary }) {
 
 export function WorkbenchView(props) {
   /* ★ 2026-10-22：hostRequire 由 client.js 注入，用于取 DSH 原生图标 */
-  const { bridge, t, hostRequire } = props;
+  const { bridge, t, hostRequire, sessionId } = props;
 
   const [health, setHealth] = useState({ state: "probing" });
   const [modes, setModes] = useState([]);
@@ -1209,6 +1246,17 @@ export function WorkbenchView(props) {
    *   还是自己刚才敲的 —— 静默改动比没有改动更让人困惑。
    */
   const [fillNotice, setFillNotice] = useState(null);
+  /**
+   * ★★★ 2026-10-25：「已接管上次任务」提示。
+   *
+   *   与 fillNotice 分开存，因为生命周期完全不同：
+   *     fillNotice  —— 一次事件，8 秒后自动消失（用户点完就完了）
+   *     resumeNotice —— 持续状态，只要任务还在跑就【一直显示】
+   *
+   *   实测教训：用 fillNotice 那套 8 秒超时，用户刷新后慢一点切到
+   *   工作台（>8 秒）就完全看不到提示，只看到进度条自己在动。
+   */
+  const [resumeNotice, setResumeNotice] = useState(null);
   /* ★ modeIdRef 在下面（mergeAssets 那段）已经定义过，这里不再重复声明 ——
      重复声明会让 esbuild 直接报 "has already been declared"。 */
 
@@ -1360,7 +1408,7 @@ export function WorkbenchView(props) {
         setModes(list);
         setModesState(list.length ? "ok" : "empty");
         if (list.length) {
-          const saved = loadPersisted();
+          const saved = loadPersisted(sessionId);
           // ★ 恢复上次的工作流（若它还在列表里），否则退回 order 最小的
           const want = saved?.modeId && list.some((m) => m.id === saved.modeId)
             ? list.find((m) => m.id === saved.modeId)
@@ -1471,7 +1519,11 @@ export function WorkbenchView(props) {
         //   每轮都调 mergeAssets 是幂等的（按键去重），所以不影响任何时序。
         //   轮询周期 1500ms ⇒ 产物出现后最迟约 1.5s 上画布。
         if (Array.isArray(j?.outputs) && j.outputs.length) mergeAssets(j.outputs);
-        if (isTerminal) stopPoll();
+        if (isTerminal) {
+          stopPoll();
+          /* ★ 任务结束 ⇒ 收掉「已接管」提示。它描述的是「正在跑」，跑完了就该走 */
+          setResumeNotice(null);
+        }
       } catch (err) {
         setError(err.message);
         stopPoll();
@@ -1484,6 +1536,78 @@ export function WorkbenchView(props) {
   }
 
   useEffect(() => stopPoll, []);
+
+  /**
+   * ══════════════════════════════════════════════════════════════════
+   * ★★★ 2026-10-25 · 刷新 / 切会话后【自动接管】还在跑的任务
+   *
+   *   【实测事故】任务状态只活在 React 内存里。刷新页面 ⇒ 全丢。
+   *   但 ComfyUI 里任务【还在跑】（yz 一次 178 秒）。
+   *   ⇒ 用户看到空白工作台，以为没生成；再点一次 → 两个任务抢 16GB 显存。
+   *
+   *   现在：
+   *     · 后端 GET /comfy-bridge/jobs 列出未结束的任务
+   *     · 挂载时拉一次，有就跑 startPoll 接管
+   *     · 接管时弹「已接管上一次还在跑的任务」—— 不弹的话用户
+   *       看到进度条自己动起来会以为见了鬼
+   *
+   *   ★ 为什么只接管「未结束」的，不恢复历史：
+   *     已完成的产物已经在资产库里（画布能拉到），恢复它反而会让
+   *     状态条显示一条旧的「完成 · 23.0s」，与本次会话无关，误导。
+   *
+   *   ★ 为什么接管而不是询问：
+   *     询问要用户点一下，而这时候他往往刚打开页面、还没反应过来。
+   *     直接接管 + 一条可见提示，是「它一直记得」的体验。
+   *     如果他确实不想跑，停止按钮就在那里。
+   *   ★ 多个未结束任务时只接管最新的一个，其余提示「还有 N 个在跑」——
+   *     同时轮询多个会让状态条抖动，且用户一次只关心一个。
+   * ══════════════════════════════════════════════════════════════════
+   */
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (!bridge) return;
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch("/comfy-bridge/jobs", {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!r.ok || !alive) return;
+        const j = await r.json();
+        const list = Array.isArray(j?.jobs) ? j.jobs.filter((x) => x && !x.done) : [];
+        if (!list.length || resumedRef.current) return;
+
+        resumedRef.current = true;
+        const newest = list[0];
+        /**
+         * ★ 只接管「本会话自己的」任务？
+         *   这里【不】按 sessionId 过滤：任务属于这台机器上的 ComfyUI，
+         *   不是属于某个 DSH 会话。用户切到新会话时，他刚才那个任务
+         *   仍然是他要的结果 —— 让他看到进度比藏起来好。
+         */
+        setJob({ jobId: newest.jobId, promptId: newest.promptId, completed: false });
+        startPoll(newest.jobId);
+        /**
+         * ★★ 2026-10-25 实测踩到：原来这里 8 秒后无条件清掉提示，
+         *   而用户刷新页面后可能【十几秒才切到工作台】——
+         *   等他看到的时候提示已经没了，只剩一个进度条自己动，
+         *   完全不知道发生了什么。
+         *
+         *   ⇒ 只要任务还在跑，提示就不消失。
+         *     任务结束时由 startPoll 的 setJob 触发收起（见下面 useEffect）。
+         */
+        setResumeNotice(
+          list.length > 1
+            ? `已接管上次还在跑的任务（${newest.modeId ?? "?"}）—— 另有 ${list.length - 1} 个也在跑`
+            : `已接管上次还在跑的任务（${newest.modeId ?? "?"}），进度接着走`
+        );
+      } catch { /* ComfyUI 离线 / 桥未就绪 —— 静默，不影响正常使用 */ }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bridge]);
+
 
   /**
    * ══════════════════════════════════════════════════════════════════
@@ -1547,13 +1671,13 @@ export function WorkbenchView(props) {
   //   只存「用户填的东西」，不存 job / 轮询 / error 这些瞬时状态。
   useEffect(() => {
     const t = setTimeout(() => {
-      savePersisted({
+      savePersisted(sessionId, {
         modeId, prompt, negative, aspect, durationSec,
         steps, steps2, batch, megapixels, seedvrModel, seed, toggles,
       });
     }, 300);
     return () => clearTimeout(t);
-  }, [modeId, prompt, negative, aspect, durationSec,
+  }, [sessionId, modeId, prompt, negative, aspect, durationSec,
       steps, steps2, batch, megapixels, seedvrModel, seed, toggles]);
 
   /**
@@ -2262,6 +2386,35 @@ export function WorkbenchView(props) {
               type: "button",
               onClick: () => setFillNotice(null),
               title: "收起这条提示（不改动提示词）",
+              style: {
+                flex: "none", border: 0, background: "transparent",
+                color: "inherit", opacity: .6, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 12, padding: "0 2px",
+              },
+            }, "×"))
+        : null,
+
+      /* ── 「已接管上次任务」提示（2026-10-25）──
+         与上一条的区别：它描述【正在跑】这件事，所以只要任务没结束就一直显示，
+         不受 8 秒超时约束。任务结束时由 startPoll 清掉。 */
+      resumeNotice
+        ? h("div", {
+            style: {
+              flex: "none", padding: "6px 10px", borderRadius: 8,
+              fontSize: 12, lineHeight: "18px",
+              background: "rgba(63,185,80,.10)",
+              color: "var(--dsw-alias-state-success-primary, #22c55e)",
+              display: "flex", alignItems: "center", gap: 8,
+            },
+          },
+            h("span", { style: { flex: "1 1 auto" } }, resumeNotice),
+            h("button", {
+              type: "button",
+              onClick: () => {
+                /* ★ 收起只是不再提醒，不停止任务 —— 停止要走「停止」按钮 */
+                setResumeNotice(null);
+              },
+              title: "收起这条提示（任务会继续跑）",
               style: {
                 flex: "none", border: 0, background: "transparent",
                 color: "inherit", opacity: .6, cursor: "pointer",
