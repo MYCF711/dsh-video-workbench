@@ -117,7 +117,8 @@ dsh plugin --profile <你的profile> add github:<owner>/<repo>
     "dsh-comfy-bridge":         "link:D:/path/to/DSH视频工作台/packages/dsh-comfy-bridge",
     "dsh-comfy-workbench-tab":  "link:D:/path/to/DSH视频工作台/packages/dsh-comfy-workbench-tab",
     "dsh-editor":               "link:D:/path/to/DSH视频工作台/packages/dsh-editor",
-    "dsh-video-knowledge":      "link:D:/path/to/DSH视频工作台/packages/dsh-video-knowledge"
+    "dsh-video-knowledge":      "link:D:/path/to/DSH视频工作台/packages/dsh-video-knowledge",
+    "dsh-comfy-preset":         "link:D:/path/to/DSH视频工作台/packages/dsh-comfy-preset"
   },
   "dsh": {
     "profile": {
@@ -135,7 +136,15 @@ dsh plugin --profile <你的profile> add github:<owner>/<repo>
 
 ★ `dsh-video-knowledge` 只作依赖、不进 bundles（它没有插件入口）。
 
-★ 那 4 个 `link:` **必须**是绝对路径 —— profile 与仓库不在同一个
+★ **`dsh-comfy-preset` 必须装**，否则技能不加载 ——
+  对话框里的 LLM 不知道该选哪个工作流、也不知道有 `comfy_workbench_fill`，
+  「说一句话 → LLM 写提示词 → 填进工作台」这条懒人路径整个失效。
+  它也是**不进 bundles** 的（属 agentPreset 类型），
+  装完还要在 DSH 的「Agent 预设」里选中它才生效。
+  ★ 实测踩过：`install.ps1` 的包清单里漏了它，
+    结果测试 profile 的预设列表只有 standard / ptc / minimal / cordis 四个内置。
+
+★ 那 5 个 `link:` **必须**是绝对路径 —— profile 与仓库不在同一个
 workspace 里，写成相对路径（`link:../../../...`）任何一边移动就断。
 `install.ps1` 会按当前仓库位置自动生成，不用手算。
 
@@ -148,7 +157,7 @@ cd packages
 node verify-all.mjs --static
 ```
 
-期望：`97 / 97`，全部通过。
+期望：`98 / 98`，全部通过。
 
 （这个数字由 `packages/tools/verify-readme-consistency.mjs` 保证与
 `verify-all.mjs` 的实际步数一致 —— 每加一个验收它就会提醒改这里。）

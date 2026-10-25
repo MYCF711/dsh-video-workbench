@@ -808,6 +808,23 @@ steps.push(run('D4/D5（包依赖可移植 + 四包能独立加载）', 'tools',
 steps.push(run('跨站请求防护（CSRF guard）', 'dsh-comfy-bridge', 'verify-csrf-guard.mjs', [], 120000));
 
 /**
+ * ★★★ 2026-10-25 新增：预设能否被 DSH 发现
+ *
+ *   实测事故：dsh-comfy-preset 三重失效，而所有验收都是绿的。
+ *     ① package.json 用 dsh.agentPreset 字段 —— DSH 根本不读它
+ *        （它是 cordis 插件，靠组合里 insert 一行才注册）
+ *     ② install.ps1 的包清单里没有它 —— 连装都没装
+ *     ③ 技能挂 config.dirs:[./skills] —— 字段名错、路径基准也错
+ *        （baseUrl 实测是 profile 目录），skill-filesystem 静默跳过
+ *
+ *   共同点：全部【静默】。界面无异常，只是 LLM 不知道该选哪个工作流、
+ *   不知道有 comfy_workbench_fill ⇒ 主人设计的懒人路径整个失效。
+ *
+ *   10 项断言 + 5 个变异全红（mutate-preset-discovery.mjs）。
+ */
+steps.push(run('预设能被发现 + 技能挂载正确', 'dsh-comfy-preset', 'verify-preset-discovery.mjs', [], 120000));
+
+/**
  * ★★ 2026-10-23 新增：G1 验收（版本记录 + 归档）
  *
  *   G1 要求「每个里程碑做 VERSION-v<date>.md + zip 归档」。

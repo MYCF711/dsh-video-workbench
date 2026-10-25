@@ -154,6 +154,29 @@ if (bundleMatch) {
     "dsh-video-knowledge 不注册任何 slot，进 bundles 会要求它有 dsh 字段");
 }
 
+/**
+ * ★★★ 2026-10-25 新增：packages/ 下每个包都必须在 install.ps1 的清单里
+ *
+ *   【实测事故】dsh-comfy-preset 从来没被 install.ps1 装过。
+ *   后果不是「少一个包」，而是：
+ *     · 技能 comfy-mode-dispatch 不存在
+ *     · ⇒ 对话框里的 LLM 不知道该选哪个工作流、不知道有 comfy_workbench_fill
+ *     · ⇒ 主人设计的「懒人路径」整个失效
+ *   而所有验收都是绿的 —— 因为没人检查「有哪些包 vs 装了哪些包」。
+ *
+ *   ★ 这条判据是【目录枚举】对【安装清单】的差集，
+ *     不是「清单内部自洽」（那正是上面那条漏掉的方向）。
+ */
+const pkgDirs = fs.readdirSync(PKG_ROOT, { withFileTypes: true })
+  .filter((d) => d.isDirectory() && d.name.startsWith("dsh-"))
+  .map((d) => d.name);
+const notInstalled = pkgDirs.filter((n) => !listed.includes(n));
+check(
+  "packages/ 下每个 dsh-* 包都在 install.ps1 的清单里",
+  notInstalled.length === 0,
+  notInstalled.length ? `漏装：${notInstalled.join(", ")}` : ""
+);
+
 console.log("");
 console.log("═".repeat(70));
 console.log("  安装配置自检（install.ps1 / package.json / README 是否自洽）");

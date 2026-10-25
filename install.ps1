@@ -52,10 +52,18 @@ $pkgs = @(
     "dsh-comfy-bridge",
     "dsh-comfy-workbench-tab",
     "dsh-editor",
-    "dsh-video-knowledge"
+    "dsh-video-knowledge",
+    # ★★ 2026-10-25 补：原来漏了这一个 ⇒ 技能装不上 ⇒ 对话框里的 LLM
+    #   拿不到 comfy-mode-dispatch，也就不知道该怎么选工作流、怎么用
+    #   comfy_workbench_fill。实测：测试 profile 的 agentPresets/list
+    #   只有 standard/ptc/minimal/cordis 四个内置，没有本预设。
+    "dsh-comfy-preset"
 )
-# 只有前三个有插件入口，第四个是被 dsh-editor 引用的库
-$bundleNames = @("dsh-comfy-bridge", "dsh-comfy-workbench-tab", "dsh-editor")
+# 有插件入口的（进 bundles）
+$bundleNames = @("dsh-comfy-bridge", "dsh-comfy-workbench-tab", "dsh-editor", "dsh-comfy-preset")
+
+# ★ dsh-comfy-preset 是 agentPreset 类型，不进 bundles ——
+#   它要用户在「Agent 预设」里选中才生效。装完会提示。
 
 # ── 校验包都在 ──────────────────────────────────────────
 foreach ($p in $pkgs) {
