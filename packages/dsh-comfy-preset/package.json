@@ -15,14 +15,14 @@
   "files": [
     "preset.yml",
     "agent.cordis.yml",
+    "cordis.patch.yml",
     "skills",
     "index.js"
   ],
   "license": "MIT",
   "dsh": {
-    "agentPreset": {
-      "entry": "agent.cordis.yml",
-      "meta": "preset.yml"
+    "bundle": {
+      "patch": "./cordis.patch.yml"
     }
   }
 }
