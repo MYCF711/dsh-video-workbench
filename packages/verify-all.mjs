@@ -841,6 +841,22 @@ steps.push(run('预设能被发现 + 技能挂载正确', 'dsh-comfy-preset', 'v
 steps.push(run('懒人链路体验保障（技能引用/会话隔离/任务恢复/提示不消失）', 'dsh-comfy-workbench-tab', 'verify-lazy-ux.mjs', [], 120000));
 
 /**
+ * ★★★ 2026-10-25 新增：快捷键「三处一致」
+ *
+ *   实测发现三类静默失效，症状全是「按了没反应」或「提示不显示」：
+ *     · splitRipple / toggleSnap 在 DEFS 里，却从没注册到 handler
+ *       ⇒ 波纹删除、自动吸附的键一直按不动，界面毫无提示
+ *     · 工具条写 shortcutId: "snap"，DEFS 里叫 "toggleSnap"
+ *       ⇒ 按钮上的键位提示永远空白
+ *     · **一个播放键都没有** —— 而「空格播放/暂停」是所有剪辑软件的
+ *       第一肌肉记忆，按了没反应用户只会觉得软件坏了
+ *
+ *   新增了 9 个播放/导航键（Space / ← → / Home End / J K L）。
+ *   12 项断言 + 9 个变异全红（mutate-shortcut-wiring.mjs）。
+ */
+steps.push(run('快捷键接线（DEFS/handler/onAction/工具条 四处一致）', 'dsh-comfy-workbench-tab', 'verify-shortcut-wiring.mjs', [], 120000));
+
+/**
  * ★★ 2026-10-23 新增：G1 验收（版本记录 + 归档）
  *
  *   G1 要求「每个里程碑做 VERSION-v<date>.md + zip 归档」。

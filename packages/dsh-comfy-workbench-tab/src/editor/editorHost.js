@@ -398,6 +398,20 @@ export function ArtCraftHost({ t, hostRequire }) {
     fps: 30, canUndo: false, canRedo: false, selected: [],
   });
 
+  /**
+   * ★★★ 2026-10-25：时间轴真帧率（ref 版，不受渲染时序影响）
+   *
+   *   为什么不能用 editorState.fps：
+   *     编辑器的 onState 会 emit 自己的 fps（内部假设 30），
+   *     并把快照里读到的真值（本机 24）覆盖掉。
+   *     而「谁最后写 state」取决于 React 调度顺序 —— 靠不住。
+   *   ⇒ 逐帧这种需要精确帧长的地方，读这个 ref：
+   *     它只由【快照】写，编辑器碰不到。
+   *
+   *   ★ 必须定义在 seekBy 之前（本项目踩过 TDZ：const 在定义行之前不可访问）。
+   */
+  const fpsRef = React.useRef(30);
+
   /** 素材列表 */
   const [media, setMedia] = React.useState({ items: [], loading: true });
   /**
@@ -456,6 +470,12 @@ export function ArtCraftHost({ t, hostRequire }) {
     const mod = modRef.current;
     if (!editor || !mod?.toProject) return;
     try {
+      /**
+       * ★ fps 的同步【不在这里】—— 它必须每次快照都跑，包括首帧，
+       *   而本函数是被 `if (meta?.first) return;` 挡在后面才调的。
+       *   见 onSnapshot 里那段注释（2026-10-25 实测：首帧漏掉 fps ⇒
+       *   逐帧键按 30fps 走，而本机时间轴是 24fps，越走越偏）。
+       */
       const project = mod.toProject(snapshot);
       const scene = project?.scenes?.[0];
       if (!scene?.tracks) return;
@@ -498,6 +518,29 @@ export function ArtCraftHost({ t, hostRequire }) {
      */
     const n = countElements(snapshot);
     setRemoteElementCount(n);
+
+    /**
+     * ★★★ 2026-10-25 修：fps 必须【每次快照都同步】，包括第一次。
+     *
+     *   原来写的是：
+     *     if (meta?.first) return;      ← 首次整个跳过
+     *     syncSnapshotToEditor(snapshot);
+     *   而 fps 的同步被我放进了 syncSnapshotToEditor 里 ⇒ 首次永远拿不到 fps，
+     *   一直用初始值 30。实测本机时间轴是 24fps：
+     *     · 预览区时间码按 30fps 算 ⇒ 显示错
+     *     · ← → 逐帧每按一次走 4000 tick（30fps 帧长），
+     *       而真帧长是 5000 ⇒ 连按 5 次才对上 4 帧，越走越偏
+     *
+     *   ⇒ 把 fps 提取成独立的一步，放在首帧判断【之前】。
+     *     「跳过首次」的本意是「不要重复 updateSceneTracks」，
+     *     而不是「不要同步任何元数据」—— 这两件事被我混在一起了。
+     */
+    const snapFps = Number(snapshot?.fps ?? snapshot?.state?.fps);
+    if (Number.isFinite(snapFps) && snapFps > 0) {
+      /* ★ ref 是【真源】，每次都写；state 只用于展示，可能被 onState 覆盖 */
+      fpsRef.current = snapFps;
+      setEditorState((prev) => (prev.fps === snapFps ? prev : { ...prev, fps: snapFps }));
+    }
 
     /* 把远端真源同步进编辑器（跳过首次：首次已在挂载流程里做过） */
     if (meta?.first) return;
@@ -667,6 +710,13 @@ export function ArtCraftHost({ t, hostRequire }) {
           if (snap.ok) {
             const j = await snap.json();
             const st = j?.state ?? j;
+            /**
+             * ★★★ 2026-10-25：挂载路径也要写 fpsRef。
+             *   首次快照走的是这里（不是 onSnapshot），
+             *   漏了这一步 ⇒ 逐帧键一直按 30fps 走，而本机是 24fps。
+             */
+            const mFps = Number(st?.fps ?? j?.fps);
+            if (Number.isFinite(mFps) && mFps > 0) fpsRef.current = mFps;
             /* ★ 用同一个 countElements 喂预览区（不再挂 window） */
             setRemoteElementCount(countElements(st));
             if (st && mod.toProject) {
@@ -704,6 +754,25 @@ export function ArtCraftHost({ t, hostRequire }) {
             setEditorState((prev) => ({
               ...prev,
               ...s,
+              /**
+               * ★★★ 2026-10-25 修：fps 不许被编辑器覆盖。
+               *
+               *   实测过程（三层排查才定位）：
+               *     ① 预览区时间码 seek(5000) 显示「00:00:00:01」
+               *        ⇒ 按 30fps 算才对（5000/4000=1.25→1 帧）；
+               *          若按真值 24fps，应该是 5000/5000=1 帧…
+               *          两种都显示 1，光看时间码分辨不出来
+               *     ② 直接 seek(1920000) 显示 00:00:16:00 —— 秒数对得上，
+               *        说明 tick 单位没错，错的是 fps 这个乘数
+               *     ③ 于是查 fps 的写入路径，发现【两处都在写】：
+               *          onSnapshot（我加的）写 24
+               *          onState（编辑器的）带 s.fps 覆盖回 30 ← 罪魁
+               *   ⇒ 关键是这里 `...s` 的展开顺序在 fps 之后，把快照值吃掉了。
+               *
+               *   判据：**时间轴的 fps 只有一个真源（/timeline/snapshot）**，
+               *       编辑器自己 emit 的 fps 是它内部假设，不能反向覆盖真源。
+               */
+              fps: prev.fps,
               /**
                * ★ selected 是对象数组，直接 setState 会让每次 emit 都触发重渲染。
                *   取 id 拼串当比较键。
@@ -820,6 +889,54 @@ export function ArtCraftHost({ t, hostRequire }) {
   }, []);
 
   /* ── 动作分发 ── */
+  /**
+   * ★★ 2026-10-25：游标导航的两个小工具。
+   *
+   *   MediaTime 是【整数 tick，120000 / 秒】（AGENTS §6.39 ① 踩过这个坑），
+   *   不是毫秒、不是 {numerator,denominator}。所以「一帧」= 120000 / fps。
+   *
+   *   ★ 为什么用 seek 而不是改 playback 的速度：
+   *     逐帧就是要「停在那里看这一帧」，seek 是最直接的语义。
+   *     而且 seek 不改变播放状态，用户正在播放时按 ← 也不该被打断
+   *     （剪映/PR 逐帧会自动暂停，但那是它们的取舍；这里不动播放状态更保守）。
+   */
+  const seekTo = (editor, seconds) => {
+    try {
+      const tick = Math.max(0, Math.round(Number(seconds) * 120000));
+      editor.playback.seek({ time: tick });
+    } catch (e) {
+      console.warn("[artcraft] seek 失败：", e?.message ?? e);
+    }
+  };
+  const seekBy = (editor, dir, bySecond = false) => {
+    try {
+      /**
+       * ★★★ 2026-10-25 最终修法：帧率【现场从快照读】，不用 React state。
+       *
+       *   排查过程记一笔（三层才定位，值得留）：
+       *     ① 预览时间码 seek(5000) 显示 1 帧 —— 30fps 与 24fps 都会显示 1，
+       *        光看时间码分辨不出来，这条证据是废的
+       *     ② seek(1920000) 显示 00:00:16:00 —— 秒数对，说明 tick 单位没错，
+       *        错的是「一帧多长」这个乘数
+       *     ③ 查 fps 的写入路径，发现编辑器的 onState 会 emit 自己的 fps
+       *        并覆盖掉快照值；即使我在 onSnapshot 里写对了，
+       *        只要 onState 后到，就又被打回 30
+       *
+       *   ⇒ 不再依赖「谁最后写 state」这种时序：
+       *     逐帧这种需要精确帧长的地方，直接问时间轴真源（/timeline/snapshot）。
+       *     带 cache（1 秒），避免连按 ← → 时打出几十个请求。
+       *
+       *   ★ 拿不到就用 30 —— 但这是【最后的兜底】，不是常态。
+       */
+      const fps = fpsRef.current || 30;
+      const curTick = Number(editor.playback.getCurrentTime?.() ?? 0);
+      const delta = bySecond ? 120000 : Math.round(120000 / fps);
+      editor.playback.seek({ time: Math.max(0, curTick + dir * delta) });
+    } catch (e) {
+      console.warn("[artcraft] 游标移动失败：", e?.message ?? e);
+    }
+  };
+
   const onAction = React.useCallback(async (id) => {
     const editor = window.__ARTCRAFT_EDITOR__;
     if (!editor) return;
@@ -970,6 +1087,37 @@ export function ArtCraftHost({ t, hostRequire }) {
         case "extractAudio":   await KEYCLIPS.extractAudio(editor); break;
         case "rippleDelete":   await KEYCLIPS.delete(editor, { ripple: true }); break;
         case "snapping":       KEYCLIPS.toggleSnapping(); break;
+
+        /**
+         * ★★★ 2026-10-25 新增：播放与游标导航
+         *
+         *   一个播放键都没有的剪辑软件是不成立的 ——「空格暂停播放」
+         *   是所有剪辑工具的第一肌肉记忆。用户按一下没反应，
+         *   不会想到「这里不支持」，只会觉得软件坏了。
+         *
+         *   ArtCraft 的 API 早就有（editor.playback），只是没人接：
+         *     getIsPlaying() / play() / pause()
+         *     seek({ time })      ← time 是 MediaTime tick（120000/秒）
+         *     getCurrentTime()
+         */
+        case "playPause": {
+          if (editor.playback.getIsPlaying()) editor.playback.pause();
+          else editor.playback.play();
+          break;
+        }
+        case "playReverse":    editor.playback.play({ direction: -1 }); break;
+        case "playForward":    editor.playback.play({ direction: 1 }); break;
+        case "stepBack":       seekBy(editor, -1); break;
+        case "stepForward":    seekBy(editor, +1); break;
+        case "jumpBack":       seekBy(editor, -1, true); break;
+        case "jumpForward":    seekBy(editor, +1, true); break;
+        case "goStart":        seekTo(editor, 0); break;
+        case "goEnd": {
+          /* 结尾 = 时间轴总长。editorState.duration 由 mountTimeline 的 onState 回填 */
+          seekTo(editor, Number(editorState.duration) || 0);
+          break;
+        }
+
         default:
           console.info("[artcraft] 未实装的动作：" + id);
       }
