@@ -239,7 +239,7 @@ export function createHttpAdapters({ openPicker, toProject, onSave, log = consol
        *   实测（2026-10-21，1×1 PNG 走 JSON 上传）：
        *     {"ok":true,
        *      "id":"input:wb_probe-json_fqdlbr.png",
-       *      "absPath":"D:\\Comfy-Desktop\\ComfyUI-Shared\\input\\wb_probe-json_fqdlbr.png",
+       *      "absPath":"<COMFY_ROOT>\\ComfyUI-Shared\\input\\wb_probe-json_fqdlbr.png",
        *      "filename":"wb_probe-json_fqdlbr.png",
        *      "sizeBytes":70,
        *      "displayName":null}

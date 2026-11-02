@@ -54,8 +54,8 @@ export const MEDIA_KINDS = new Set(["image", "video", "audio"]);
  * ★★ 2026-10-23 去敏：不再硬编码本机路径
  *
  *   原来 DEFAULT_ROOTS 写死：
- *     output: "D:/Comfy-Desktop/ComfyUI-Shared/output"
- *     input:  "D:/Comfy-Desktop/ComfyUI-Shared/input"
+ *     output: "<COMFY_ROOT>/ComfyUI-Shared/output"
+ *     input:  "<COMFY_ROOT>/ComfyUI-Shared/input"
  *   ⇒ 换一台机器扫描不到任何东西，资产库直接空。
  *
  * ── 现在的解析顺序
@@ -213,7 +213,7 @@ export function loadCharacterTags(file) {
 
 /* ── 状态文件：收藏 / 别名 / 隐藏 ─────────────────────────────────── */
 /* ★ 2026-10-23：DEFAULT_STATE 已在文件上部按「profile 目录 / 包内 .state」推导，
-   这里不再重复定义（原先是写死的 D:/主工作区/... 绝对路径）。 */
+   这里不再重复定义（原先是写死的 <WORKSPACE>/... 绝对路径）。 */
 
 /**
  * ★★ 2026-10-20 新增：把角色标签写回工作站的 assets.json。

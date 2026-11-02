@@ -339,7 +339,7 @@ export function collectMediaIds(project) {
  * ══════════════════════════════════════════════════════════════════════
  * 为什么需要这一步（实测抓到的真 bug）
  *
- *   音频资产的 id 是 "editor:D:\\主工作区\\资产库\\音频\\test-mix.m4a"
+ *   音频资产的 id 是 "editor:<WORKSPACE>\\资产库\\音频\\test-mix.m4a"
  *   （src="editor"，rel 是绝对路径）
  *   但投影（纯函数，无资产表）猜出 "output:test-mix.m4a"
  *   ⇒ 这个 id 在资产表里不存在

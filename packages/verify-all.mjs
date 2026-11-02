@@ -47,7 +47,7 @@ const steps = [];
  */
 const OUT_BASELINE = (() => {
   try {
-    return new Set(fs.readdirSync('D:/Comfy-Desktop/ComfyUI-Shared/output'));
+    return new Set(fs.readdirSync('<COMFY_ROOT>/ComfyUI-Shared/output'));
   } catch {
     return null;   // 读不到就不清（不能因为读不到就把整个目录当新增）
   }
@@ -1077,7 +1077,7 @@ console.log('─'.repeat(64));
  *   统一在出口清，等于「最后一道闸」，谁漏都被挡住。
  */
 const OUT_DIRS = [
-  'D:/Comfy-Desktop/ComfyUI-Shared/output',
+  '<COMFY_ROOT>/ComfyUI-Shared/output',
 ];
 
 /** 跑之前拍的快照（在 steps 执行前就拍）—— 见文件开头的 OUT_BASELINE */

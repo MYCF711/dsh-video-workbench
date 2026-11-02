@@ -11,7 +11,7 @@
  *   · 中间的「第 15/30 步」ComfyUI 只在 WebSocket 上推
  *
  * ── 协议实证（不是凭记忆）
- *   D:\Comfy-Desktop\ComfyUI-Installs\My_Comfy_UI\ComfyUI\main.py:450-464
+ *   <COMFY_ROOT>\ComfyUI-Installs\My_Comfy_UI\ComfyUI\main.py:450-464
  *     progress = {"value": value, "max": total, "prompt_id": prompt_id, "node": node_id}
  *     server_instance.send_sync("progress", progress, ...)
  *

@@ -88,7 +88,7 @@ const RENDERED_ONLY = {
   id: "c_rendered_only",
   name: "分镜 3",
   rendered: {
-    path: "D:\\主工作区\\DSH视频工作台\\docs\\evidence\\yz-result.mp4",
+    path: "<WORKSPACE>\\DSH视频工作台\\docs\\evidence\\yz-result.mp4",
     url: null, filename: "yz-result.mp4", durationSec: null,
     generatedAt: 1792248820967, replaced: true,
   },

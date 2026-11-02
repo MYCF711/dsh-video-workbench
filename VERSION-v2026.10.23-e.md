@@ -23,12 +23,12 @@
 `comfy-launcher.mjs` 原来写死 7 处：
 
 ```js
-const DESKTOP_ROOT = "D:\\Comfy-Desktop\\ComfyUI-Installs\\My_Comfy_UI";
+const DESKTOP_ROOT = "<COMFY_ROOT>\\ComfyUI-Installs\\My_Comfy_UI";
 const DESKTOP_PY   = ...;
 const DESKTOP_MAIN = ...;
 const EXTRA_YAML   = ...;
-const SHARED_OUTPUT = "D:\\Comfy-Desktop\\ComfyUI-Shared\\output";
-const SHARED_INPUT  = "D:\\Comfy-Desktop\\ComfyUI-Shared\\input";
+const SHARED_OUTPUT = "<COMFY_ROOT>\\ComfyUI-Shared\\output";
+const SHARED_INPUT  = "<COMFY_ROOT>\\ComfyUI-Shared\\input";
 ```
 
 改成 `resolveComfyPaths()`，四级来源：

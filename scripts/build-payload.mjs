@@ -5,7 +5,7 @@
  * ★★ 为什么从 build.mjs 里抽出来
  *
  *   合包前，dsh-artcraft-tab/build.mjs 每次构建都做两件事：
- *     ① 读 ArtsCraft 上游产物（D:/主工作区/_upstream/artcraft-demo/dsh-dist/）
+ *     ① 读 ArtsCraft 上游产物（<WORKSPACE>/_upstream/artcraft-demo/dsh-dist/）
  *        → base64 → 写成 src/_artcraft-payload.js（10.43MB）
  *     ② 打本插件的 client.js（把 payload 内联进去）
  *
@@ -54,7 +54,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 /**
  * ★★ 2026-10-24：上游路径改为可配 —— 不再写死本机绝对路径。
  *
- *   原来：const ART = "D:/主工作区/_upstream/artcraft-demo";
+ *   原来：const ART = "<WORKSPACE>/_upstream/artcraft-demo";
  *   ⇒ 别的机器上必失败，而且错误信息只说「找不到产物」，看不出该配什么。
  *
  *   现在按顺序找：

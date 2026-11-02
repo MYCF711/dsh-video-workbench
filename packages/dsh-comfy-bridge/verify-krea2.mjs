@@ -29,18 +29,18 @@ import fs from 'node:fs';
  */
 const __OUT_SNAPSHOT__ = (() => {
   try {
-    return new Set(fs.readdirSync("D:/Comfy-Desktop/ComfyUI-Shared/output"));
+    return new Set(fs.readdirSync("<COMFY_ROOT>/ComfyUI-Shared/output"));
   } catch { return null; }
 })();
 
 function __cleanupNow__(label = "") {
   if (!__OUT_SNAPSHOT__) return 0;
   try {
-    const now = fs.readdirSync("D:/Comfy-Desktop/ComfyUI-Shared/output");
+    const now = fs.readdirSync("<COMFY_ROOT>/ComfyUI-Shared/output");
     let removed = 0;
     for (const n of now) {
       if (__OUT_SNAPSHOT__.has(n)) continue;      // 跑之前就有，不碰
-      try { fs.unlinkSync(`D:/Comfy-Desktop/ComfyUI-Shared/output/${n}`); removed++; } catch { /* 占用中，跳过 */ }
+      try { fs.unlinkSync(`<COMFY_ROOT>/ComfyUI-Shared/output/${n}`); removed++; } catch { /* 占用中，跳过 */ }
     }
     if (removed) {
       console.log(`  （${label}已清理本次生成的 ${removed} 个中间产物，证据副本保留在 docs/evidence）`);
@@ -213,7 +213,7 @@ check('关闭后产物更少（开关生效）',
  *     而工作流一改（加一个保存节点）那个上限就失效了。
  */
 async function waitOutDirStable(ms = 8000, interval = 400, needStable = 3) {
-  const dir = "D:/Comfy-Desktop/ComfyUI-Shared/output";
+  const dir = "<COMFY_ROOT>/ComfyUI-Shared/output";
   const t0 = Date.now();
   let last = -1;
   let stable = 0;

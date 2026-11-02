@@ -27,7 +27,7 @@ const execFileAsync = promisify(execFile);
 /** dsh-editor 自带的 ffmpeg。可用环境变量覆盖。 */
 const FFMPEG =
   process.env.FFMPEG_PATH ??
-  "D:\\主工作区\\DSH视频工作站\\packages\\dsh-editor\\bin\\ffmpeg.exe";
+  "<WORKSPACE>\\DSH视频工作站\\packages\\dsh-editor\\bin\\ffmpeg.exe";
 
 /**
  * 抽出来的帧放哪。
@@ -35,7 +35,7 @@ const FFMPEG =
  * ★ 实测（2026-10-18）：不能放 ComfyUI 的 input 目录。
  *   DSH 的文件沙箱只允许写工作区，写到
  *     <HOME>\*.png   → Could not open file（I/O error）
- *     D:\Comfy-Desktop\ComfyUI-Shared\input\*.png → 同样失败
+ *     <COMFY_ROOT>\ComfyUI-Shared\input\*.png → 同样失败
  *   写到工作区内的目录 → 成功。
  *
  *   ⇒ 落盘在工作区，之后走已有的 comfy.uploadImage() 传给 ComfyUI。
@@ -43,7 +43,7 @@ const FFMPEG =
  */
 const FRAME_DIR =
   process.env.COMFY_FRAME_DIR ??
-  "D:\\主工作区\\DSH视频工作台\\.frames";
+  "<WORKSPACE>\\DSH视频工作台\\.frames";
 
 function ensureDir(d) {
   if (!existsSync(d)) mkdirSync(d, { recursive: true });

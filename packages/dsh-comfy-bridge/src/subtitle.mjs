@@ -76,7 +76,7 @@ const FFMPEG = (() => {
 const PYTHON = process.env.PYTHON_BIN ?? "python";
 
 const WORK_DIR =
-  process.env.COMFY_FRAME_DIR ?? "D:\\主工作区\\DSH视频工作台\\.frames";
+  process.env.COMFY_FRAME_DIR ?? "<WORKSPACE>\\DSH视频工作台\\.frames";
 
 /** 默认模型档位。small 是中文可用性与体积的平衡点（463MB/实测可用）。 */
 export const DEFAULT_MODEL = "small";

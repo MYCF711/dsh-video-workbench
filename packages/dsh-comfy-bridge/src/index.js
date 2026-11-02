@@ -231,7 +231,7 @@ export async function apply(ctx, config = {}) {
    *   ⇒ 想显示进度，只能自己连 WS。
    *
    * ── 协议的实证来源（不是凭记忆）
-   *   D:\Comfy-Desktop\ComfyUI-Installs\My_Comfy_UI\ComfyUI\main.py:450-464
+   *   <COMFY_ROOT>\ComfyUI-Installs\My_Comfy_UI\ComfyUI\main.py:450-464
    *     progress = {"value": value, "max": total, "prompt_id": prompt_id, "node": node_id}
    *     server_instance.send_sync("progress", progress, ...)
    *
@@ -1461,7 +1461,7 @@ export async function apply(ctx, config = {}) {
               /**
                * ★★ 2026-10-23 去敏：输出目录不再硬编码本机路径。
                *   顺序：用户配置 → 环境变量 → comfy-launcher 自动解析的 <comfy>/output
-               *   （原来写死 "D:\\Comfy-Desktop\\ComfyUI-Shared\\output"，换机器就错）。
+               *   （原来写死 "<COMFY_ROOT>\\ComfyUI-Shared\\output"，换机器就错）。
                */
               const { resolveComfyPaths } = await import("./comfy-launcher.mjs");
               const outDir = paths.outputDir

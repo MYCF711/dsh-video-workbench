@@ -22,7 +22,7 @@ import path from "node:path";
 import { extractFrame } from "./frames.mjs";
 
 /** 尾帧缓存目录（同 frames.mjs 的理由：沙箱只允许写工作区）。 */
-const FRAME_DIR = process.env.COMFY_FRAME_DIR ?? "D:\\主工作区\\DSH视频工作台\\.frames";
+const FRAME_DIR = process.env.COMFY_FRAME_DIR ?? "<WORKSPACE>\\DSH视频工作台\\.frames";
 
 /**
  * 给一镜取上一镜的尾帧，返回可写进 media 槽的对象。

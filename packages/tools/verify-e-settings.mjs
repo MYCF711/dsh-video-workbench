@@ -18,9 +18,9 @@
  *     有「体检」按钮
  *
  *   点「体检」后显示「1 项有问题」，逐项：
- *     ComfyUI 安装目录    D:\Comfy-Desktop\ComfyUI-Installs\My_Comfy_UI
- *     输出目录可写        D:\Comfy-Desktop\ComfyUI-Shared\output
- *     输入目录可写        D:\Comfy-Desktop\ComfyUI-Shared\input
+ *     ComfyUI 安装目录    <COMFY_ROOT>\ComfyUI-Installs\My_Comfy_UI
+ *     输出目录可写        <COMFY_ROOT>\ComfyUI-Shared\output
+ *     输入目录可写        <COMFY_ROOT>\ComfyUI-Shared\input
  *     ffmpeg              <repo>\packages\dsh-editor\bin\ffmpeg.exe
  *     模型                共 26 项：25 就位，缺 1
  *     端到端探活          HTTP 200 · 576ms · ComfyUI 0.40.0

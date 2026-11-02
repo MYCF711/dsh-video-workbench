@@ -35,7 +35,7 @@ import { hasVisibleText } from "./src/text-guard.mjs";
 
 // ★ 2026-10-19：跑之前记下 ComfyUI input 目录的快照，跑完删掉新增的。
 //   原因见下方 cleanup 的注释 —— 验收不该留垃圾。
-const INPUT_DIR = "D:\\Comfy-Desktop\\ComfyUI-Shared\\input";
+const INPUT_DIR = "<COMFY_ROOT>\\ComfyUI-Shared\\input";
 const SNAPSHOT = (() => {
   try { return new Set(fs.readdirSync(INPUT_DIR)); } catch { return new Set(); }
 })();
@@ -389,7 +389,7 @@ try {
  *   ★ 「等落盘」不能用固定 sleep：双采工作流有两个保存节点，
  *     固定 1.2 秒不够（verify-krea2 实测漏过）。改成观察目录数量稳定。
  */
-const OUTPUT_DIR = "D:\\Comfy-Desktop\\ComfyUI-Shared\\output";
+const OUTPUT_DIR = "<COMFY_ROOT>\\ComfyUI-Shared\\output";
 const OUT_SNAPSHOT = (() => {
   try { return new Set(fs.readdirSync(OUTPUT_DIR)); } catch { return new Set(); }
 })();

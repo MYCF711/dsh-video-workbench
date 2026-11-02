@@ -45,8 +45,8 @@ const execFileAsync = promisify(execFile);
  * ★★ 2026-10-23 去敏改造：路径全部改为【可配置】，不再硬编码本机绝对路径
  *
  *   原来这里写死：
- *     const DESKTOP_ROOT = "D:\\Comfy-Desktop\\ComfyUI-Installs\\My_Comfy_UI";
- *     const SHARED_OUTPUT = "D:\\Comfy-Desktop\\ComfyUI-Shared\\output";
+ *     const DESKTOP_ROOT = "<COMFY_ROOT>\\ComfyUI-Installs\\My_Comfy_UI";
+ *     const SHARED_OUTPUT = "<COMFY_ROOT>\\ComfyUI-Shared\\output";
  *   ⇒ 换一台机器就找不到 python，开关直接失效。
  *
  * ── 现在的解析顺序（从高到低）
@@ -63,7 +63,7 @@ const execFileAsync = promisify(execFile);
  * 自动探测候选（只是便利，不是依赖）。
  *
  * ★★ 2026-10-23 去敏：不再包含「本机专有」的绝对路径。
- *   原来这里有 "D:\\Comfy-Desktop\\ComfyUI-Installs\\My_Comfy_UI" ——
+ *   原来这里有 "<COMFY_ROOT>\\ComfyUI-Installs\\My_Comfy_UI" ——
  *   那是我这台机器的安装位置，写进发布代码里毫无意义，
  *   还会让别人以为「必须装在 D 盘这个位置」。
  *

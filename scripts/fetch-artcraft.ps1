@@ -59,7 +59,7 @@ if ($env:ARTCRAFT_UPSTREAM) { $candidates += (Split-Path -Parent (Split-Path -Pa
 $candidates += @(
     (Join-Path $repo "..\_upstream\artcraft-demo\video-editor"),
     (Join-Path $repo "_upstream\artcraft-demo\video-editor"),
-    "D:\主工作区\_upstream\artcraft-demo\video-editor"
+    "<WORKSPACE>\_upstream\artcraft-demo\video-editor"
 )
 
 $found = $null

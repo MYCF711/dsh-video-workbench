@@ -69,7 +69,7 @@ t("Sec-Fetch-Site: none（地址栏直接访问）", () => {
  *   （Hindsight 有「备用笔记本改造为局域网/云端记忆主机」这条）
  */
 t("局域网 IP 同源访问（不能写死 localhost）", () => {
-  eq(isCrossSite({ headers: { host: "<LAN_HOST>:19387", origin: "http://<LAN_HOST>:19387" } }), false, "LAN 同源");
+  eq(isCrossSite({ headers: { host: "<LAN_HOST>", origin: "http://<LAN_HOST>" } }), false, "LAN 同源");
 });
 t("HTTP/1.0 无 Host 头（老脚本）", () => {
   eq(isCrossSite({ headers: {} }), false, "无 Host");

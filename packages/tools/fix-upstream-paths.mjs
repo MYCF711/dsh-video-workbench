@@ -1,7 +1,7 @@
 /**
  * 把脚本里的 _upstream 绝对路径改成「环境变量 + 缺则跳过」。
  *
- * ★ 问题：31 处硬编码 `D:/主工作区/_upstream/artcraft-demo/video-editor/src`。
+ * ★ 问题：31 处硬编码 `<WORKSPACE>/_upstream/artcraft-demo/video-editor/src`。
  *   那是【仓库外】的上游参考源，别的机器不会有。
  *   现在这些脚本在新机器上一跑就失败，报「文件不存在」——
  *   但那不是功能坏了，是「本机没放上游参考源」。
@@ -18,7 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-const REPO = "D:\\主工作区\\DSH视频工作台";
+const REPO = "<WORKSPACE>\\DSH视频工作台";
 
 /* ── ① 先写共享模块 ── */
 const SHARED = `/**
@@ -28,7 +28,7 @@ const SHARED = `/**
  * 为什么需要这个
  *
  *   2026-10-24 公开仓库前审计发现：31 处硬编码
- *     D:/主工作区/_upstream/artcraft-demo/video-editor/src
+ *     <WORKSPACE>/_upstream/artcraft-demo/video-editor/src
  *
  *   那是【仓库外】的上游参考源（ArtCraft 的原始 TS 源码），
  *   本机放在 _upstream/ 下用于对照阅读，**不属于本仓库，别的机器没有**。
@@ -123,7 +123,7 @@ for (const rel of files) {
     const t = line.trim();
     /* 注释行跳过（保留历史说明，脱敏时再统一替换） */
     if (/^(\*|\/\/|#)/.test(t)) return line;
-    /* 把 "D:/主工作区/_upstream/artcraft-demo/video-editor/src" 及其子路径
+    /* 把 "<WORKSPACE>/_upstream/artcraft-demo/video-editor/src" 及其子路径
        换成 upstreamFile("<子路径>") 或 UPSTREAM */
     return line.replace(
       /["']D:[\\/]主工作区[\\/]_upstream[\\/]artcraft-demo[\\/]video-editor[\\/]src([^"']*)["']/g,

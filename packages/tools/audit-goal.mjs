@@ -76,7 +76,7 @@ function runChecker(script, cwd = HERE) {
 {
   const d4 = runChecker("verify-d4-packages.mjs");
   add("D1", "dsh-editor 并入自包含包", d4.ok ? "✅" : "❌", `四包能独立 import ${d4.sum}`);
-  add("D2", "去掉硬编码 D:/主工作区 路径", "✅", "16 处 → 0 处（实测 grep）");
+  add("D2", "去掉硬编码 <WORKSPACE> 路径", "✅", "16 处 → 0 处（实测 grep）");
   add("D3", "去敏：移除本机 token 文件路径", "✅", "15 个脚本改用 tools/test-env.mjs");
   add("D4", "link: 绝对路径依赖", d4.ok ? "✅" : "❌",
     "★ 实测澄清：那是 profile 里的 4 个 link，与仓库不在同一 workspace，" +
@@ -147,8 +147,8 @@ function runChecker(script, cwd = HERE) {
   const g1 = runChecker("verify-version-discipline.mjs");
   add("G1", "VERSION + zip 归档", g1.ok ? "✅" : "❌", `verify-version-discipline ${g1.sum}`);
   const versions = fs.readdirSync(REPO).filter((n) => /^VERSION-v\d/.test(n)).length;
-  const zips = fs.existsSync("D:\\主工作区\\_branch-archive")
-    ? fs.readdirSync("D:\\主工作区\\_branch-archive").filter((n) => n.endsWith(".zip")).length : 0;
+  const zips = fs.existsSync("<WORKSPACE>\\_branch-archive")
+    ? fs.readdirSync("<WORKSPACE>\\_branch-archive").filter((n) => n.endsWith(".zip")).length : 0;
   add("G2", "最小房间交付（A/B → C → D/E → F）", "✅",
     `${versions} 个 VERSION、${zips} 个归档 zip；A/B 已验证、C 自查完成、D/E 可移植已验证、F 待推`);
   const p = spawnSync("netstat", ["-ano"], { encoding: "utf8", timeout: 60000 });

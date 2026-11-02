@@ -52,9 +52,9 @@ function t(name, cond, extra) {
 
 const FFMPEG =
   process.env.FFMPEG_PATH ??
-  'D:\\主工作区\\DSH视频工作站\\packages\\dsh-editor\\bin\\ffmpeg.exe';
-const WORK = 'D:\\主工作区\\DSH视频工作台\\.frames\\qtest';
-const OUT = 'D:\\Comfy-Desktop\\ComfyUI-Shared\\output';
+  '<WORKSPACE>\\DSH视频工作站\\packages\\dsh-editor\\bin\\ffmpeg.exe';
+const WORK = '<WORKSPACE>\\DSH视频工作台\\.frames\\qtest';
+const OUT = '<COMFY_ROOT>\\ComfyUI-Shared\\output';
 
 console.log('═'.repeat(58));
 console.log('  F10 衔接质检验收');

@@ -30,7 +30,7 @@ import fs from 'node:fs';
  */
 const __OUT_SNAPSHOT__ = (() => {
   try {
-    return new Set(fs.readdirSync("D:/Comfy-Desktop/ComfyUI-Shared/output"));
+    return new Set(fs.readdirSync("<COMFY_ROOT>/ComfyUI-Shared/output"));
   } catch { return null; }
 })();
 
@@ -51,26 +51,26 @@ const __OUT_SNAPSHOT__ = (() => {
  */
 const __IN_SNAPSHOT__ = (() => {
   try {
-    return new Set(fs.readdirSync("D:/Comfy-Desktop/ComfyUI-Shared/input"));
+    return new Set(fs.readdirSync("<COMFY_ROOT>/ComfyUI-Shared/input"));
   } catch { return null; }
 })();
 
 function __cleanupNow__(label = "") {
   if (!__OUT_SNAPSHOT__) return 0;
   try {
-    const now = fs.readdirSync("D:/Comfy-Desktop/ComfyUI-Shared/output");
+    const now = fs.readdirSync("<COMFY_ROOT>/ComfyUI-Shared/output");
     let removed = 0;
     for (const n of now) {
       if (__OUT_SNAPSHOT__.has(n)) continue;      // 跑之前就有，不碰
-      try { fs.unlinkSync(`D:/Comfy-Desktop/ComfyUI-Shared/output/${n}`); removed++; } catch { /* 占用中，跳过 */ }
+      try { fs.unlinkSync(`<COMFY_ROOT>/ComfyUI-Shared/output/${n}`); removed++; } catch { /* 占用中，跳过 */ }
     }
     /* ★ 2026-10-23：连 input/ 里本脚本上传的那份一起清 */
     if (__IN_SNAPSHOT__) {
       try {
-        const ins = fs.readdirSync("D:/Comfy-Desktop/ComfyUI-Shared/input");
+        const ins = fs.readdirSync("<COMFY_ROOT>/ComfyUI-Shared/input");
         for (const n of ins) {
           if (__IN_SNAPSHOT__.has(n)) continue;
-          try { fs.unlinkSync(`D:/Comfy-Desktop/ComfyUI-Shared/input/${n}`); removed++; } catch { /* 占用中 */ }
+          try { fs.unlinkSync(`<COMFY_ROOT>/ComfyUI-Shared/input/${n}`); removed++; } catch { /* 占用中 */ }
         }
       } catch { /* input 读不到就算了 */ }
     }

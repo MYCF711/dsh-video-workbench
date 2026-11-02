@@ -35,7 +35,7 @@ import { spawnSync } from "node:child_process";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(HERE, "..", "..");
-const ARCHIVE = "D:\\主工作区\\_branch-archive";
+const ARCHIVE = "<WORKSPACE>\\_branch-archive";
 
 let pass = 0;
 const fails = [];

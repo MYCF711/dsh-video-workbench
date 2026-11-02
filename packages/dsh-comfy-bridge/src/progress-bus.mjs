@@ -11,7 +11,7 @@
  *   ⇒ 想显示进度，只能自己连 WS。
  *
  * ── 协议（源码实证，不是凭记忆）
- *   本机 ComfyUI：D:\Comfy-Desktop\ComfyUI-Installs\My_Comfy_UI\ComfyUI\main.py:450-464
+ *   本机 ComfyUI：<COMFY_ROOT>\ComfyUI-Installs\My_Comfy_UI\ComfyUI\main.py:450-464
  *
  *     def hook(value, total, preview_image, prompt_id=None, node_id=None):
  *         progress = {"value": value, "max": total, "prompt_id": prompt_id, "node": node_id}

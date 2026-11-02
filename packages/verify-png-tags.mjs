@@ -20,7 +20,7 @@ import os from "node:os";
 import crypto from "node:crypto";
 import { parseChunks, readTextTags, writeTextTags, clearTextTags } from "./dsh-comfy-workbench-tab/lib/png-tags.mjs";
 
-const SRC = process.argv[2] ?? "D:/Comfy-Desktop/ComfyUI-Shared/output/Krea2-USD-20261018_00008_.png";
+const SRC = process.argv[2] ?? "<COMFY_ROOT>/ComfyUI-Shared/output/Krea2-USD-20261018_00008_.png";
 
 let pass = 0, fail = 0;
 function ok(name, cond, detail = "") {

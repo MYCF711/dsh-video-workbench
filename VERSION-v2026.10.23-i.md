@@ -16,10 +16,10 @@
 | `lib/asset-scan.js` | `DEFAULT_WS_ASSETS` | `<WORKSPACE>/outputs/assets.json` |
 | `lib/asset-scan.js` | `DEFAULT_STATE` | `<REPO>/.state/asset-library.json` |
 | `lib/index.js` | `DEFAULT_WORKFLOWS_DIR` | `<WORKSPACE>/.../dsh-comfy-bridge/workflows` |
-| `lib/index.js` | 字幕路径白名单 | `"D:\\主工作区"` |
+| `lib/index.js` | 字幕路径白名单 | `"<WORKSPACE>"` |
 | `lib/index.js` | `TMP_ROOT` | `<REPO>\.frames` |
 | `lib/index.js` | `FFMPEG` | `<OLD_REPO>\...\ffmpeg.exe` |
-| `lib/index.js` | `PYTHON` | `D:\Comfy-Desktop\...\.venv\Scripts\python.exe` |
+| `lib/index.js` | `PYTHON` | `<COMFY_ROOT>\...\.venv\Scripts\python.exe` |
 | `lib/index.js` | `MODEL_DIR` | `<REPO>\.models\whisper` |
 
 **为什么上一版漏了**：我只扫了 `dsh-comfy-bridge/src/`，没扫
@@ -61,7 +61,7 @@ const REPO = path.resolve(PKG, "..", "..");
 ```
 check("生产代码里没有硬编码的本机绝对路径")
   扫描：lib/ 与 src/
-  正则：C:\Users | C:/Users | <WORKSPACE> | <WORKSPACE> | D:\Comfy-Desktop | D:/Comfy-Desktop
+  正则：C:\Users | C:/Users | <WORKSPACE> | <WORKSPACE> | <COMFY_ROOT> | <COMFY_ROOT>
   剥注释：整块 /* */ 与行 // —— 注释里记录「原先是写死的」是有价值的历史
 ```
 

@@ -45,7 +45,7 @@ t("已经是绝对 http URL 时原样保留", () => {
 });
 
 t("★ Windows 绝对路径走宿主文件路由", () => {
-  const r = resolvePreviewUrl({ rendered: { path: "D:\\主工作区\\outputs\\a.mp4" } }, OPTS);
+  const r = resolvePreviewUrl({ rendered: { path: "<WORKSPACE>\\outputs\\a.mp4" } }, OPTS);
   return r.url?.startsWith("/timeline/file?path=") ? true : r.url;
 });
 

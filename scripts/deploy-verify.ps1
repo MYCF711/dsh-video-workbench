@@ -23,7 +23,7 @@ $repo = Split-Path -Parent $PSScriptRoot
 $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { "D:\DeepSeek Harness\home" }
 $cli = "D:\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd"
 $profDir = Join-Path $dshHome "profiles\$Profile"
-$outputDir = "D:\Comfy-Desktop\ComfyUI-Shared\output"
+$outputDir = "<COMFY_ROOT>\ComfyUI-Shared\output"
 $cookie = "dsh-auth-CK36o8O6fn6VWHrnbEp0bsjzKPKRmilHp-TBfPBH65k"
 
 function Step($n, $msg) { Write-Host "`n=== $n · $msg ===" -ForegroundColor Cyan }

@@ -81,3 +81,6 @@ packages/dsh-comfy-workbench-tab/src/editor/artcraft-css.b64.txt
 packages/dsh-comfy-workbench-tab/lib/client.js
 
 
+
+# 脱敏工具的个人标识清单（真值不进仓库）
+packages/tools/.desens-exact.json

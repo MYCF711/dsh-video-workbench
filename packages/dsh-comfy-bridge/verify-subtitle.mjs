@@ -43,8 +43,8 @@ const BASE = getArg('--base', 'http://127.0.0.1:19499');
  */
 import { TOKEN, skipWithoutToken } from "../tools/test-env.mjs";
 if (!TOKEN) skipWithoutToken("verify-subtitle.mjs");
-const FFMPEG = process.env.FFMPEG_PATH ?? 'D:\\主工作区\\DSH视频工作站\\packages\\dsh-editor\\bin\\ffmpeg.exe';
-const WORK = 'D:\\主工作区\\DSH视频工作台\\.frames\\subtest';
+const FFMPEG = process.env.FFMPEG_PATH ?? '<WORKSPACE>\\DSH视频工作站\\packages\\dsh-editor\\bin\\ffmpeg.exe';
+const WORK = '<WORKSPACE>\\DSH视频工作台\\.frames\\subtest';
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -87,8 +87,8 @@ console.log('\n② toSrt');
 
 // ─── 准备 ──────────────────────────────────────────────────
 fs.mkdirSync(WORK, { recursive: true });
-const WITH_AUDIO = 'D:\\Comfy-Desktop\\ComfyUI-Shared\\output\\YZ_H3__00001-audio.mp4';
-const NO_AUDIO = 'D:\\主工作区\\DSH视频工作站\\docs\\evidence\\roughcut-test\\video-only.mp4';
+const WITH_AUDIO = '<COMFY_ROOT>\\ComfyUI-Shared\\output\\YZ_H3__00001-audio.mp4';
+const NO_AUDIO = '<WORKSPACE>\\DSH视频工作站\\docs\\evidence\\roughcut-test\\video-only.mp4';
 
 // ─── C · hasAudioStream ───────────────────────────────────
 console.log('\n③ 音轨探测');

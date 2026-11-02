@@ -1382,7 +1382,7 @@ export async function apply(ctx, config = {}) {
                *   调用直接抛 TypeError，被下面的 catch 吃掉，
                *   于是永远返回「都找不到这个文件」。
                *
-               *   实测症状：文件明明在 D:\Comfy-Desktop\ComfyUI-Shared\input\，
+               *   实测症状：文件明明在 <COMFY_ROOT>\ComfyUI-Shared\input\，
                *   但接口说找不到。
                *   ⇒ 本文件其它地方都用 `await import("node:fs")`，
                *     跟着它的既有风格走，别引入新的顶层 import。
@@ -1823,7 +1823,7 @@ export async function apply(ctx, config = {}) {
           /**
            * ★ 2026-10-21 修（实测第一版失败）：
            *   临时 wav 原本写到 os.tmpdir()，ffmpeg 报
-           *     Error opening output C:\Users\ADMINI~1\AppData\Local\Temp\dsh_asr_xxx.wav:
+           *     Error opening output <HOME>\AppData\Local\Temp\dsh_asr_xxx.wav:
            *     Permission denied（退出码 4294967283）
            *
            *   根因：本机 DSH 文件沙箱只允许写【工作区】。

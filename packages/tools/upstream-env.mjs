@@ -5,7 +5,7 @@
  * 为什么需要这个
  *
  *   2026-10-24 公开仓库前审计发现：31 处硬编码
- *     D:/主工作区/_upstream/artcraft-demo/video-editor/src
+ *     <WORKSPACE>/_upstream/artcraft-demo/video-editor/src
  *
  *   那是【仓库外】的上游参考源（ArtCraft 的原始 TS 源码），
  *   本机放在 _upstream/ 下用于对照阅读，**不属于本仓库，别的机器没有**。

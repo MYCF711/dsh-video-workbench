@@ -573,7 +573,7 @@ export function buildTimelineTools(store, { defineTool, bridge } = {}) {
             // SRT 要先落盘，ffmpeg 的 subtitles 滤镜吃文件不吃字符串
             const fs = await import("node:fs/promises");
             const pathm = await import("node:path");
-            const dir = "D:\\\\主工作区\\\\DSH视频工作台\\\\.frames\\\\subs";
+            const dir = "<WORKSPACE>\\\\DSH视频工作台\\\\.frames\\\\subs";
             await fs.mkdir(dir, { recursive: true });
             const srtPath = pathm.join(dir, `clip-${c.id}.srt`);
             await fs.writeFile(srtPath, r.srt, "utf8");

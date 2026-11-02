@@ -90,8 +90,8 @@ async function snapshot() {
  *   不依赖每个验收脚本自己清（实测那样会漏）。
  */
 const FS_ROOTS = {
-  output: "D:/Comfy-Desktop/ComfyUI-Shared/output",
-  input: "D:/Comfy-Desktop/ComfyUI-Shared/input",
+  output: "<COMFY_ROOT>/ComfyUI-Shared/output",
+  input: "<COMFY_ROOT>/ComfyUI-Shared/input",
 };
 
 function snapshotFiles() {

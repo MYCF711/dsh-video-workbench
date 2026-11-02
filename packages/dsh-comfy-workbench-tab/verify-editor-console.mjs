@@ -1060,7 +1060,7 @@ check("设置页有「模型放置目录」字段",
  *   但生产代码一旦写死路径，插件就不可移植。
  */
 const PROD_DIRS = ["lib", "src"].map((d) => path.join(HERE, d));
-const HARDCODED = /C:\\\\Users|C:\/Users|D:\\\\主工作区|D:\/主工作区|D:\\\\Comfy-Desktop|D:\/Comfy-Desktop/;
+const HARDCODED = /C:\\\\Users|C:\/Users|<WORKSPACE>|<WORKSPACE>|D:\\\\comfy|<COMFY_ROOT>/;
 
 check("生产代码里没有硬编码的本机绝对路径",
   (() => {

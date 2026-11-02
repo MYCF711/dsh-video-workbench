@@ -49,7 +49,7 @@ KENIC-1/minimax_h3_latent_upscaler_3d_fp16_V2
 本机现有文件：
 
 ```
-D:\Comfy-Desktop\ComfyUI-Shared\models\latent_upscale_models\
+<COMFY_ROOT>\ComfyUI-Shared\models\latent_upscale_models\
   minimax_h3_latent_upscaler_3d_fp16.safetensors
   sha256: 043e5a48e161610ef6c3ea974645220354d06fa618abca15f76d084812eb55c2
 ```

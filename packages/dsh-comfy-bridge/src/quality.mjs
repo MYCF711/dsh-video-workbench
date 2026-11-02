@@ -82,7 +82,7 @@ const FFMPEG = (() => {
 export const SSIM_THRESHOLD = 0.65;
 
 /** 工作目录（沙箱只允许写工作区，见 AGENTS §6.11）。 */
-const WORK_DIR = process.env.COMFY_FRAME_DIR ?? "D:\\主工作区\\DSH视频工作台\\.frames";
+const WORK_DIR = process.env.COMFY_FRAME_DIR ?? "<WORKSPACE>\\DSH视频工作台\\.frames";
 
 /**
  * 抽单帧到临时文件，返回路径。

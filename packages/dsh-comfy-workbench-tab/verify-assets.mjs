@@ -274,7 +274,7 @@ console.log("\n[2] 收藏 / 改名 / 删除");
         miss("删除 → 回收区 → 撤销", "output/ 里没有可复制的图片做样本");
       } else {
         // donor.rel 形如 "Krea2-xxx.png"；用路径拼出绝对路径
-        const outRoot = "D:/Comfy-Desktop/ComfyUI-Shared/output";
+        const outRoot = "<COMFY_ROOT>/ComfyUI-Shared/output";
         const srcAbs = `${outRoot}/${donor.rel}`;
         const testRel = `_verify-assets-${Date.now()}.png`;
         const testAbs = `${outRoot}/${testRel}`;

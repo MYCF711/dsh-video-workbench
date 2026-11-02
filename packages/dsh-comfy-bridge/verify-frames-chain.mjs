@@ -82,8 +82,8 @@ async function api(p, init = {}) {
 /** 找一个真实的视频做测试源。找不到就整份跳过（不误报失败）。 */
 function findTestVideo() {
   const dirs = [
-    'D:\\Comfy-Desktop\\ComfyUI-Shared\\output',
-    'D:\\主工作区\\DSH视频工作台\\docs\\evidence',
+    '<COMFY_ROOT>\\ComfyUI-Shared\\output',
+    '<WORKSPACE>\\DSH视频工作台\\docs\\evidence',
   ];
   for (const d of dirs) {
     if (!fs.existsSync(d)) continue;
