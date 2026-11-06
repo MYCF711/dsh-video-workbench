@@ -587,6 +587,7 @@ if (!STATIC) {
 }
 
 /* ══ 以下都是纯静态检查（不碰 ComfyUI），两个模式都跑 ══ */
+steps.push(run('M2 host 路由生命周期（两个 suggest 路由随 dispose 清理）', 'dsh-comfy-workbench-tab', 'verify-route-lifecycle.mjs'));
 /**
  * ★★ 2026-10-23 新增：ui-to-api 转换器验收
  *

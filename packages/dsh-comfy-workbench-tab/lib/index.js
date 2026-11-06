@@ -1179,7 +1179,7 @@ export async function apply(ctx, config = {}) {
        *
        *   ★ 只建议，不自动写 —— 主人的要求是「询问用户」。
        */
-      ctx.webServer.register({
+      const suggestFolderDispose = ctx.webServer.register({
         kind: "exact",
         path: prefix + "/suggest-folder",
         handler: async (req, res) => {
@@ -1215,7 +1215,7 @@ export async function apply(ctx, config = {}) {
         },
       });
 
-      ctx.webServer.register({
+      const suggestNameDispose = ctx.webServer.register({
         kind: "exact",
         path: prefix + "/suggest-name",
         handler: async (req, res) => {
@@ -2043,6 +2043,7 @@ export async function apply(ctx, config = {}) {
 
       dispose?.(); rolesDispose?.();
       libDispose?.(); bytesDispose?.(); mutateDispose?.();
+      suggestFolderDispose?.(); suggestNameDispose?.();
       canvasDispose?.(); uploadDispose?.();
       transcribeDispose?.();
     };
