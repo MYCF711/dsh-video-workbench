@@ -12,6 +12,16 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-session"
+      ],
+      "platform": "web"
     }
   },
   "bin": {
@@ -30,7 +40,8 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=22",
+    "dsh": ">=0.2.2-rc.1 <0.3.0-0"
   },
   "license": "MIT",
   "keywords": [
@@ -41,7 +52,7 @@
     "ffmpeg"
   ],
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.0.4"
+    "@deepseek-ai/cordis": "~4.1.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"
