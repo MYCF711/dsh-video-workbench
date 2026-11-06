@@ -9,6 +9,9 @@
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
+  "engines": {
+    "dsh": ">=0.2.2-rc.1 <0.3.0-0"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
@@ -48,7 +51,7 @@
     "build-payload": "node ../../scripts/build-payload.mjs"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/cordis": "~4.1.0",
     "dsh-comfy-bridge": "*"
   }
 }
